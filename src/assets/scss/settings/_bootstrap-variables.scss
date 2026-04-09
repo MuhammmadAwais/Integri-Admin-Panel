@@ -38,13 +38,13 @@ $colors: (
 );
 // scss-docs-end colors-map
 
-$primary: $blue; // change
-$secondary: $secondary; // change
-$success: $green; // change
-$info: $cyan; // change
-$warning: $yellow; // change
-$danger: $red; // change
-$light: $gray-100; // change
+$primary:   #D4AF37; // Imperial Gold — overrides $blue
+$secondary: $gray-600;
+$success:   #DC143C; // Crimson Red — per Integri spec
+$info:      $cyan;
+$warning:   $yellow;
+$danger:    $red;
+$light:     $gray-300; // darkened for Obsidian surfaces
 
 // scss-docs-start theme-colors-map
 $theme-colors: (
@@ -272,8 +272,8 @@ body {
   font-feature-settings: 'salt';
 }
 
-$body-bg: #f4f7fa; // change
-$body-color: #888; // change
+$body-bg:    #050505; // Obsidian Black
+$body-color: #e0d5b8; // Warm parchment — legible on Obsidian
 $body-text-align: null;
 
 // Links
@@ -452,7 +452,7 @@ $headings-font-family: null;
 $headings-font-style: null;
 $headings-font-weight: 400;
 $headings-line-height: 1.2;
-$headings-color: #262626;
+$headings-color: #D4AF37; // Imperial Gold headings
 $label-color: $gray-900;
 
 // scss-docs-start display-headings

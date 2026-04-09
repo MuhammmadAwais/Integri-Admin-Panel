@@ -1,34 +1,47 @@
 // =======================================
-//   List of variables for Preset color
+//   Integri App — Imperial Obsidian Palette
+//   Theme: Black · Gold · Crimson
 // =======================================
-// theme color
-$brand-color1: linear-gradient(-135deg, #1de9b6 0%, #1dc4e9 100%);
-$brand-color2: linear-gradient(-135deg, #899fd4 0%, #a389d4 100%);
-$brand-color3: linear-gradient(207.92deg, #0398f2 11.42%, #38b9e7 106.55%);
 
-// Gray color
+// ---- Integri Brand Colors ----
+$imperial-gold:   #D4AF37;
+$obsidian-black:  #050505;
+$crimson-red:     #DC143C;
+$gold-muted:      #a8956b;
+$gold-glow:       rgba(212, 175, 55, 0.2);
+
+// ---- Brand Gradients ----
+$brand-color1: linear-gradient(-135deg, #D4AF37 0%, #a8956b 100%);
+$brand-color2: linear-gradient(-135deg, #DC143C 0%, #8b0a1a 100%);
+$brand-color3: linear-gradient(207.92deg, #D4AF37 11.42%, #f0d060 106.55%);
+
+// ---- Base Colors ----
 $white: #ffffff;
-$gray-100: #f8f9fa;
-$gray-200: #f3f5f7;
-$gray-300: #dbe0e5;
-$gray-400: #bec8d0;
-$gray-500: #8996a4;
-$gray-600: #5b6b79;
-$gray-700: #3e4853;
-$gray-800: #1d2630;
-$gray-900: #131920;
+$gray-100: #1a1a1a;
+$gray-200: #222222;
+$gray-300: #2e2e2e;
+$gray-400: #3d3d3d;
+$gray-500: #5a5a5a;
+$gray-600: #7a7a7a;
+$gray-700: #9a9a9a;
+$gray-800: #c0b090;
+$gray-900: #e0d5b8;
 $black: #000000;
 
-$blue: #04a9f5;
+// ---- Semantic Color Primitives ----
+$blue:   #D4AF37;  // remapped → Imperial Gold
 $indigo: #6610f2;
-$purple: #a389d4;
-$pink: #e83e8c;
-$red: #f44236;
+$purple: #8b5cf6;
+$pink:   #e83e8c;
+$red:    #DC143C;  // Crimson Red
 $orange: #fd7e14;
-$yellow: #f4c22b;
-$green: #1de9b6;
-$teal: #008080;
-$cyan: #3ebfea;
+$yellow: #f0d060;
+$green:  #22c55e;
+$teal:   #14b8a6;
+$cyan:   #06b6d4;
+
+// ---- Theme Background ----
+$theme-background: #050505;
 
 // fusv-disablex
 $blue-100: tint-color($blue, 80%);

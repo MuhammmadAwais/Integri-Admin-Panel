@@ -1,0 +1,111 @@
+// ==============================|| FEATURE: DASHBOARD — KpiCard Styles ||============================== //
+
+.kpi-card {
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+
+  // Gold glow on hover — amplifies the card's base effect
+  &:hover {
+    box-shadow: 0 0 32px rgba(212, 175, 55, 0.25), 0 8px 32px rgba(0, 0, 0, 0.8) !important;
+  }
+
+  // Subtle radial gold shimmer in the top-right corner
+  &::before {
+    content: '';
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+    border-radius: 50%;
+    transition: opacity 0.3s ease;
+  }
+
+  &:hover::before {
+    opacity: 1.5;
+  }
+
+  // Icon container
+  .kpi-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: rgba(212, 175, 55, 0.1);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    color: #D4AF37;
+    flex-shrink: 0;
+    transition: background 0.3s, box-shadow 0.3s;
+
+    &:hover {
+      background: rgba(212, 175, 55, 0.18);
+      box-shadow: 0 0 12px rgba(212, 175, 55, 0.2);
+    }
+  }
+
+  // Animated numeric value
+  .kpi-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #D4AF37;
+    letter-spacing: -0.5px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .kpi-prefix {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: rgba(212, 175, 55, 0.7);
+    margin-right: 2px;
+    vertical-align: super;
+  }
+
+  .kpi-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #a8956b;
+    margin-top: 4px;
+  }
+
+  // Trend badge
+  .kpi-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+
+    &.kpi-trend--up {
+      color: #22c55e;
+      background: rgba(34, 197, 94, 0.1);
+    }
+
+    &.kpi-trend--down {
+      color: #DC143C;
+      background: rgba(220, 20, 60, 0.1);
+    }
+
+    &.kpi-trend--neutral {
+      color: #a8956b;
+      background: rgba(168, 149, 107, 0.1);
+    }
+  }
+
+  // Bottom divider line in gold
+  .kpi-divider {
+    height: 2px;
+    border-radius: 1px;
+    background: linear-gradient(90deg, rgba(212, 175, 55, 0.6) 0%, transparent 100%);
+    margin-top: 12px;
+  }
+}

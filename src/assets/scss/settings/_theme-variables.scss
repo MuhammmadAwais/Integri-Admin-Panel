@@ -7,27 +7,27 @@
   --#{$variable-prefix}body-bg: #{$body-bg};
   --bs-body-bg-rgb: #{to-rgb($body-bg)};
 
-  --pc-heading-color: #{$gray-800};
-  --pc-active-background: #{$gray-200};
+  --pc-heading-color: #D4AF37; // Imperial Gold
+  --pc-active-background: rgba(212, 175, 55, 0.08);
 
-  // Navbar
-  --pc-sidebar-background: #3f4d67;
-  --pc-sidebar-color: #a9b7d0;
-  --pc-sidebar-color-rgb: #{to-rgb(#a9b7d0)};
-  --pc-sidebar-active-color: #{$primary};
-  --pc-sidebar-active-background: rgba(0, 0, 0, 0.1);
-  --pc-sidebar-main-active-color: #fff;
-  --pc-sidebar-shadow: 1px 0 20px 0 #3f4d67;
-  --pc-sidebar-caption-color: #e8edf7;
-  --pc-sidebar-border: none;
+  // Navbar — Obsidian Sidebar
+  --pc-sidebar-background: #080808;
+  --pc-sidebar-color: #a8956b;
+  --pc-sidebar-color-rgb: #{to-rgb(#a8956b)};
+  --pc-sidebar-active-color: #D4AF37;
+  --pc-sidebar-active-background: rgba(212, 175, 55, 0.12);
+  --pc-sidebar-main-active-color: #D4AF37;
+  --pc-sidebar-shadow: 1px 0 30px 0 rgba(212, 175, 55, 0.1);
+  --pc-sidebar-caption-color: #a8956b;
+  --pc-sidebar-border: 1px solid rgba(212, 175, 55, 0.1);
 
-  // header
-  --pc-header-background: rgba(#{var(--bs-body-bg-rgb)}, 0.7);
-  --pc-header-color: #{$gray-600};
-  --pc-header-shadow: none;
+  // Header — Frosted Obsidian
+  --pc-header-background: rgba(5, 5, 5, 0.85);
+  --pc-header-color: #a8956b;
+  --pc-header-shadow: 0 1px 0 rgba(212, 175, 55, 0.1);
 
-  // card
-  --pc-card-box-shadow: 0 1px 20px 0 rgba(69, 90, 100, 0.08);
+  // Card — Glassmorphic Obsidian
+  --pc-card-box-shadow: 0 4px 24px 0 rgba(212, 175, 55, 0.07), 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 $header-height: 74px;

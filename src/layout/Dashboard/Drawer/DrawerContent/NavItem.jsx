@@ -1,13 +1,41 @@
 import PropTypes from 'prop-types';
-import { useLocation, matchPath, Link } from 'react-router-dom';
+import { useLocation, matchPath, Link, useNavigate } from 'react-router-dom';
 
 // project-imports
 import { handlerDrawerOpen } from 'api/menu';
 
 // ==============================|| NAVIGATION - ITEM ||============================== //
 
+/**
+ * Renders the nav item icon.
+ * Supports two formats:
+ *   1. CSS class string (legacy template): e.g. 'ph ph-house-line'
+ *   2. Lucide React component (Integri App): e.g. LayoutDashboard
+ */
+function NavIcon({ icon }) {
+  if (!icon) return null;
+
+  const isReactComponent = typeof icon === 'function';
+
+  return (
+    <span className="pc-micon">
+      {isReactComponent ? (
+        // Lucide React icon — render as component
+        (() => {
+          const Icon = icon;
+          return <Icon size={18} strokeWidth={1.75} />;
+        })()
+      ) : (
+        // Legacy CSS icon
+        <i className={icon} />
+      )}
+    </span>
+  );
+}
+
 export default function NavItem({ item }) {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
 
   const itemPath = item?.link || item?.url;
   const itemTarget = item?.target ? '_blank' : '_self';
@@ -15,25 +43,24 @@ export default function NavItem({ item }) {
   const isMobile = window.innerWidth <= 1024;
 
   const handleClick = () => {
-    // close drawer on mobile
+    // Close drawer on mobile
     if (isMobile) handlerDrawerOpen(false);
-  };
 
-  const renderIcon = () =>
-    item?.icon && (
-      <span className="pc-micon">
-        <i className={item.icon} />
-      </span>
-    );
+    // Handle logout action type
+    if (item?.type === 'logout') {
+      navigate('/login');
+    }
+  };
 
   return (
     <li className={`pc-item ${isSelected ? 'active' : ''}`}>
       <Link className="pc-link" to={item?.url || '#'} target={itemTarget} onClick={handleClick}>
-        {renderIcon()}
-        {item.title}
+        <NavIcon icon={item?.icon} />
+        <span className="pc-mtext">{item.title}</span>
       </Link>
     </li>
   );
 }
 
 NavItem.propTypes = { item: PropTypes.any };
+NavIcon.propTypes = { icon: PropTypes.oneOfType([PropTypes.string, PropTypes.func]) };

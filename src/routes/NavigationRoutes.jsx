@@ -4,10 +4,16 @@ import { lazy } from 'react';
 import Loadable from 'components/Loadable';
 import DashboardLayout from 'layout/Dashboard';
 
-// render - dashboard pages
-const DefaultPages = Loadable(lazy(() => import('views/navigation/dashboard/Default')));
+// ── Core Dashboard ──
+const DefaultPage = Loadable(lazy(() => import('views/navigation/dashboard/Default')));
 
-// ==============================|| NAVIGATION ROUTING ||============================== //
+// ── Integri Feature Pages ──
+const NewsPage      = Loadable(lazy(() => import('features/news/NewsPage')));
+const UsersPage     = Loadable(lazy(() => import('features/users/UsersPage')));
+const TokensPage    = Loadable(lazy(() => import('features/tokens/TokensPage')));
+const SubAdminsPage = Loadable(lazy(() => import('features/sub-admins/SubAdminsPage')));
+
+// ==============================|| INTEGRI APP — NAVIGATION ROUTES ||============================== //
 
 const NavigationRoutes = {
   path: '/',
@@ -16,10 +22,11 @@ const NavigationRoutes = {
       path: '/',
       element: <DashboardLayout />,
       children: [
-        {
-          path: '/',
-          element: <DefaultPages />
-        }
+        { path: '/',           element: <DefaultPage /> },
+        { path: '/news',       element: <NewsPage /> },
+        { path: '/users',      element: <UsersPage /> },
+        { path: '/tokens',     element: <TokensPage /> },
+        { path: '/sub-admins', element: <SubAdminsPage /> }
       ]
     }
   ]

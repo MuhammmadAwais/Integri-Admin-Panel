@@ -1,16 +1,12 @@
 // project-imports
-import chartsMaps from './charts-maps';
-import formComponents from './forms';
-import other from './other';
-import pages from './pages';
-import uiComponents from './ui-components';
-import tableRoutes from './tables';
-import navigation from './navigation';
+import integriNav from './integri-nav';
 
-// ==============================|| MENU ITEMS ||============================== //
+// ==============================|| INTEGRI APP — MENU ITEMS ||============================== //
+// All old template groups (forms, tables, charts-maps, other, pages, ui-components)
+// have been intentionally removed. Only Integri App routes are exported here.
 
 const menuItems = {
-  items: [navigation, uiComponents, formComponents, tableRoutes, chartsMaps, pages, other]
+  items: [integriNav]
 };
 
 export default menuItems;
