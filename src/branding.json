@@ -1,30 +1,30 @@
 {
   "brandName": "Integri AI",
-  "title": "React Admin Dashboard Template",
-  "Docs": "https://codedthemes.gitbook.io/datta",
-  "changeLog": "https://codedthemes.gitbook.io/datta/changelog",
-  "buyNow": "https://codedthemes.com/item/datta-able-react-admin-template/",
+  "title": "Intelligence Command Dashboard",
+  "Docs": "#",
+  "changeLog": "#",
+  "buyNow": "#",
   "company": {
-    "name": "CodedThemes",
-    "url": "https://codedthemes.com",
-    "support": "https://codedthemes.support-hub.io/",
-    "privacyPolicy": "https://codedthemes.com/privacy-policy/",
-    "license": "https://codedthemes.com/license/",
+    "name": "Awais Latif",
+    "url": "#",
+    "support": "#",
+    "privacyPolicy": "#",
+    "license": "#",
     "socialLink": {
-      "linkedin": "https://www.linkedin.com/company/codedthemes/",
-      "twitter": "https://x.com/codedthemes",
-      "instagram": "https://www.instagram.com/codedthemes/",
-      "facebook": "https://www.facebook.com/codedthemes",
-      "youtube": "https://www.youtube.com/@codedthemes",
-      "github": "https://github.com/codedthemes",
-      "dribble": "https://dribbble.com/codedthemes",
-      "discord": "https://discord.com/invite/p2E2WhCb6s"
+      "linkedin": "#",
+      "twitter": "#",
+      "instagram": "#",
+      "facebook": "#",
+      "youtube": "#",
+      "github": "#",
+      "dribble": "#",
+      "discord": "#"
     }
   },
   "logo": {
-    "main": "",
-    "logoIcon": "",
-    "logoFab": "",
-    "logoWatermark": ""
+    "main": "/favicon.png",
+    "logoIcon": "/favicon.png",
+    "logoFab": "/favicon.png",
+    "logoWatermark": "/favicon.png"
   }
 }

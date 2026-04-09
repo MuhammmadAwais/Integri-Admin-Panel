@@ -32,7 +32,7 @@
 .dark-theme {
   /* Integri Palette — Imperial Obsidian */
   --integri-bg: #050505;
-  --integri-surface: rgba(10, 10, 10, 0.85);
+  --integri-surface: rgba(8, 8, 8, 0.92); /* Deeper obsidian */
   --integri-text: #e0d5b8;
   --integri-text-muted: #a8956b;
   --integri-border: rgba(212, 175, 55, 0.22);
@@ -44,10 +44,11 @@
   --bs-heading-color: var(--integri-gold);
   --bs-border-color: var(--integri-border);
   
-  /* Sidebar Dark */
+  /* Sidebar & Header Dark Fixes */
   --pc-sidebar-bg: #080808;
   --pc-sidebar-color: #a8956b;
   --pc-sidebar-border: rgba(212, 175, 55, 0.1);
+  --pc-header-background: rgba(10, 10, 10, 0.95) !important;
 }
 
 /* Global Sync Overrides */
@@ -81,4 +82,26 @@ body {
   height: 100% !important;
   width: auto !important;
   object-fit: contain;
+}
+
+/* Cursor Polish — Enhanced Usability */
+.pc-sidebar .pc-link,
+.pc-header .pc-head-link,
+.pc-header .pc-h-item,
+.card,
+.btn,
+button,
+[role="button"],
+.dropdown-item,
+.dropdown-toggle,
+.pc-header .pc-head-link i,
+.pc-header .pc-head-link svg,
+.table thead th,
+.table tbody tr {
+  cursor: pointer !important;
+}
+
+/* Ensure non-interactive table cells inside tr don't override the pointer if explicitly set */
+.table td {
+  cursor: inherit;
 }

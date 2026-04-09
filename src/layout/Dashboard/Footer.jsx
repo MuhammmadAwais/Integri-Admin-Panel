@@ -16,9 +16,9 @@ export default function Footer() {
           {/* Footer Text */}
           <Col xs="auto" className="my-1">
             <p className="m-0">
-              {branding.brandName} ♥ Crafted By Team{' '}
+              {branding.brandName} ♥ Crafted By {' '}
               <a href="https://codedthemes.com/" target="_blank" rel="noopener noreferrer" className="text-primary">
-                CodedThemes
+                Awais Latif
               </a>
             </p>
           </Col>

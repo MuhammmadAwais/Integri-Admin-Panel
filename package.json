@@ -1,6 +1,7 @@
 {
-  "name": "datta-able-free-react-admin-templete",
+  "name": "integri-ai-admin",
   "version": "4.1.0",
+  "author": "Awais Latif",
   "private": true,
   "type": "module",
   "scripts": {
