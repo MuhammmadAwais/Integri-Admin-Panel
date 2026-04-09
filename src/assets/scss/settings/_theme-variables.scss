@@ -7,27 +7,28 @@
   --#{$variable-prefix}body-bg: #{$body-bg};
   --bs-body-bg-rgb: #{to-rgb($body-bg)};
 
-  --pc-heading-color: #D4AF37; // Imperial Gold
+  --pc-heading-color: var(--integri-gold);
   --pc-active-background: rgba(212, 175, 55, 0.08);
 
-  // Navbar — Obsidian Sidebar
-  --pc-sidebar-background: #080808;
-  --pc-sidebar-color: #a8956b;
+  // Navbar — Theme-aware Sidebar
+  --pc-sidebar-background: var(--pc-sidebar-bg);
+  --pc-sidebar-color: var(--pc-sidebar-color);
   --pc-sidebar-color-rgb: #{to-rgb(#a8956b)};
-  --pc-sidebar-active-color: #D4AF37;
+  --pc-sidebar-active-color: var(--integri-gold);
   --pc-sidebar-active-background: rgba(212, 175, 55, 0.12);
-  --pc-sidebar-main-active-color: #D4AF37;
+  --pc-sidebar-main-active-color: var(--integri-gold);
   --pc-sidebar-shadow: 1px 0 30px 0 rgba(212, 175, 55, 0.1);
-  --pc-sidebar-caption-color: #a8956b;
-  --pc-sidebar-border: 1px solid rgba(212, 175, 55, 0.1);
+  --pc-sidebar-caption-color: var(--integri-text-muted);
+  --pc-sidebar-border: 1px solid var(--pc-sidebar-border);
 
-  // Header — Frosted Obsidian
-  --pc-header-background: rgba(5, 5, 5, 0.85);
-  --pc-header-color: #a8956b;
-  --pc-header-shadow: 0 1px 0 rgba(212, 175, 55, 0.1);
+  // Header — Glassmorphic
+  --pc-header-background: var(--integri-surface);
+  --pc-header-color: var(--integri-text-muted);
+  --pc-header-shadow: 0 1px 0 var(--integri-border);
+  --pc-header-blur: var(--integri-glass-blur);
 
-  // Card — Glassmorphic Obsidian
-  --pc-card-box-shadow: 0 4px 24px 0 rgba(212, 175, 55, 0.07), 0 1px 4px rgba(0, 0, 0, 0.6);
+  // Card — Theme-aware
+  --pc-card-box-shadow: var(--integri-card-shadow);
 }
 
 $header-height: 74px;

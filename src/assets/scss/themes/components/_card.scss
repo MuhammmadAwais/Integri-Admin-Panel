@@ -3,15 +3,17 @@
 // ============================
 
 .card {
-  box-shadow: var(--pc-card-box-shadow);
-  margin-bottom: 24px;
-  transition: box-shadow 0.3s ease-in-out, border-color 0.3s ease-in-out;
+  --#{$variable-prefix}card-bg: var(--integri-surface);
+  --#{$variable-prefix}card-color: var(--integri-text);
+  --#{$variable-prefix}card-border-color: var(--integri-border);
+  --#{$variable-prefix}card-box-shadow: var(--pc-card-box-shadow);
 
-  // — Imperial Obsidian Glass Effect —
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 0.5px solid rgba(212, 175, 55, 0.2);
-  background-color: rgba(10, 10, 10, 0.85);
+  background-color: var(--integri-surface);
+  backdrop-filter: var(--integri-glass-blur);
+  border: 0.5px solid var(--integri-border);
+  color: var(--integri-text);
+  transition: all 0.3s ease-in-out;
+  margin-bottom: 24px;
 
   &:hover {
     border-color: rgba(212, 175, 55, 0.45);

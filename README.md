@@ -1,4 +1,7 @@
-# Datta Able Free React Admin Template
+# Integri AI
+
+
+ Free React Admin Template
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Price](https://img.shields.io/badge/price-FREE-0098f7.svg)](https://codedthemes.com/item/datta-able-react-admin-template/)
@@ -6,7 +9,10 @@
 [![Download ZIP](https://img.shields.io/badge/Download-ZIP-blue?style=flat-square&logo=github)](https://github.com/codedthemes/datta-able-free-react-admin-template)
 [![Join Discord](https://img.shields.io/badge/Join-Discord-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.com/invite/p2E2WhCb6s)
 
-Datta Able Admin Template comes with variety of components like Button, Badges, Tabs, Breadcrumb, Icons, Form elements, Table, Charts & Authentication pages.
+Integri AI
+
+
+ Admin Template comes with variety of components like Button, Badges, Tabs, Breadcrumb, Icons, Form elements, Table, Charts & Authentication pages.
 
 The code structure is high flexible to use and modify.
 
@@ -15,13 +21,19 @@ Its design adapt any screen size easily even if retina screens.
 It is modern concept dashboard design with eye catchy colors. Wish you happy to use our product in your project.
 ✨ Support us! If you like this theme, click the ⭐ (Top right) and let it shine
 
-![Datta Able Free Admin Template Preview Image](https://org-public-assets.s3.us-west-2.amazonaws.com/Free-Version-Banners/GITHUB-FREE-REACT-REPO+-+Datta+able.jpg)
+![Integri AI
+
+
+ Free Admin Template Preview Image](https://org-public-assets.s3.us-west-2.amazonaws.com/Free-Version-Banners/GITHUB-FREE-REACT-REPO+-+Datta+able.jpg)
 
 ## Table of contents
 
 - [Getting Started](#getting-started)
 - [Download](#download)
-- [Why Datta Able?](#why-datta-able)
+- [Why Integri AI
+
+
+?](#why-datta-able)
 - [What's included in Premium Version?](#whats-included-in-the-premium-version)
 - [Documentation](#documentation)
 - [Browser support](#browser-support)
@@ -58,14 +70,23 @@ npm run start
 
 ## Download
 
-- Datta Able Free
+- Integri AI
+
+
+ Free
   - [Live Preview](https://codedthemes.com/demos/admin-templates/datta-able/react/free/)
   - [Download](https://github.com/codedthemes/datta-able-free-react-admin-template)
-- Datta Able Pro
+- Integri AI
+
+
+ Pro
   - [Live Preview](https://codedthemes.com/demos/admin-templates/datta-able/react/default/)
   - [Download](https://codedthemes.com/item/datta-able-react-admin-template/)
 
-## Why Datta Able?
+## Why Integri AI
+
+
+?
 
 Get started with a sweet set of features, including:
 
@@ -77,9 +98,18 @@ Get started with a sweet set of features, including:
 
 ## What's included in the Premium Version?
 
-[Pro version](https://codedthemes.com/item/datta-able-react-admin-template/) of Datta Able Vue Admin Template contains features like customize with light/dark/system, collapse, LTR / RTL, color presets, and many more.
+[Pro version](https://codedthemes.com/item/datta-able-react-admin-template/) of Integri AI
 
-| [Datta Able Free](https://github.com/codedthemes/datta-able-free-react-admin-template) | [Datta able Pro](https://codedthemes.com/item/datta-able-react-admin-template//)                |
+
+ Vue Admin Template contains features like customize with light/dark/system, collapse, LTR / RTL, color presets, and many more.
+
+| [Integri AI
+
+
+ Free](https://github.com/codedthemes/datta-able-free-react-admin-template) | [Integri AI
+
+
+ Pro](https://codedthemes.com/item/datta-able-react-admin-template//)                |
 | -------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------ |
 | **9** Demo pages                                                                                   | **130+** demo pages                                                |
 | -                                                                                                  | ✓ Multi-language                                                  |
@@ -90,7 +120,10 @@ Get started with a sweet set of features, including:
 
 ## Documentation
 
-[Datta Able Vue Documentation](https://codedthemes.gitbook.io/datta) helps you with installation, deployment, and troubleshooting.
+[Integri AI
+
+
+ Vue Documentation](https://codedthemes.gitbook.io/datta) helps you with installation, deployment, and troubleshooting.
 
 ## Browser support
 

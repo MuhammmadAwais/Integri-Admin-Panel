@@ -12,6 +12,7 @@ import Stack from 'react-bootstrap/Stack';
 // project-imports
 import MainCard from 'components/MainCard';
 import SimpleBarScroll from 'components/third-party/SimpleBar';
+import ThemeToggle from 'components/ThemeToggle';
 import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
 
 // assets
@@ -109,7 +110,10 @@ export default function Header() {
           </Nav>
         </div>
         <div className="ms-auto">
-          <Nav className="list-unstyled">
+          <Nav className="list-unstyled align-items-center">
+            <Nav.Item className="pc-h-item me-2">
+              <ThemeToggle />
+            </Nav.Item>
             <Dropdown className="pc-h-item" align="end">
               <Dropdown.Toggle className="pc-head-link me-0 arrow-none" variant="link" id="notification-dropdown">
                 <i className="ph ph-bell" />

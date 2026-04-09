@@ -1,0 +1,84 @@
+/**
+ * INTEGRI APP — DYNAMIC THEME ENGINE
+ * =========================================================================
+ * Core CSS Variables for Theme Swapping.
+ * This file is pure CSS to avoid Sass compilation conflicts.
+ */
+
+:root {
+  /* Integri Palette — Luxe Light */
+  --integri-bg: #F8F9FA;
+  --integri-surface: rgba(255, 255, 255, 0.85);
+  --integri-text: #18181B;
+  --integri-text-muted: #52525B;
+  --integri-border: rgba(212, 175, 55, 0.15);
+  --integri-gold: #D4AF37;
+  --integri-crimson: #DC143C;
+  --integri-glass-blur: blur(12px);
+  --integri-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+
+  /* Bootstrap Overrides (Light) */
+  --bs-body-bg: var(--integri-bg);
+  --bs-body-color: var(--integri-text);
+  --bs-heading-color: var(--integri-gold);
+  --bs-border-color: var(--integri-border);
+  
+  /* Sidebar Light */
+  --pc-sidebar-bg: #ffffff;
+  --pc-sidebar-color: #18181B;
+  --pc-sidebar-border: rgba(212, 175, 55, 0.2);
+}
+
+.dark-theme {
+  /* Integri Palette — Imperial Obsidian */
+  --integri-bg: #050505;
+  --integri-surface: rgba(10, 10, 10, 0.85);
+  --integri-text: #e0d5b8;
+  --integri-text-muted: #a8956b;
+  --integri-border: rgba(212, 175, 55, 0.22);
+  --integri-card-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+
+  /* Bootstrap Overrides (Dark) */
+  --bs-body-bg: var(--integri-bg);
+  --bs-body-color: var(--integri-text);
+  --bs-heading-color: var(--integri-gold);
+  --bs-border-color: var(--integri-border);
+  
+  /* Sidebar Dark */
+  --pc-sidebar-bg: #080808;
+  --pc-sidebar-color: #a8956b;
+  --pc-sidebar-border: rgba(212, 175, 55, 0.1);
+}
+
+/* Global Sync Overrides */
+body {
+  background-color: var(--bs-body-bg) !important;
+  color: var(--bs-body-color) !important;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Sidebar Wrapper Sync */
+.pc-sidebar {
+  background: var(--pc-sidebar-bg) !important;
+  color: var(--pc-sidebar-color) !important;
+  border-right: var(--pc-sidebar-border) !important;
+}
+
+.pc-sidebar .navbar-wrapper {
+   background: var(--pc-sidebar-bg) !important;
+}
+
+/* Logo Fixes */
+.integri-logo-container {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  height: 42px !important;
+}
+
+.integri-logo-container img {
+  height: 100% !important;
+  width: auto !important;
+  object-fit: contain;
+}

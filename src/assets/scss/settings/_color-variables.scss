@@ -40,8 +40,11 @@ $green:  #22c55e;
 $teal:   #14b8a6;
 $cyan:   #06b6d4;
 
-// ---- Theme Background ----
+// ---- Theme Background & Core Colors ----
 $theme-background: #050505;
+$gray-900:         #e0d5b8;
+$gray-800:         #c0b090;
+$gold-glow:        rgba(212, 175, 55, 0.2);
 
 // fusv-disablex
 $blue-100: tint-color($blue, 80%);
