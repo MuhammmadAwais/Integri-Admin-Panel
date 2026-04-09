@@ -24,7 +24,7 @@ const countryCoordinates = {
   "China": [104.1954, 35.8617]
 };
 
-export default function UserMap({ users, countryFilter, setCountryFilter }) {
+export default function UserMap({ users, globalFilter, setGlobalFilter }) {
   const markerGroupRef = useRef(null);
 
   // Aggregate users by country
@@ -71,19 +71,19 @@ export default function UserMap({ users, countryFilter, setCountryFilter }) {
 
   return (
     <MainCard title="Geo-Pulse" bodyClassName="p-0 position-relative">
-      {countryFilter && (
+      {globalFilter && (
         <div style={{ position: 'absolute', top: 15, right: 15, zIndex: 10 }}>
           <button 
             className="btn btn-sm" 
             style={{ backgroundColor: '#DC143C', color: '#fff', border: 'none', borderRadius: '4px' }}
-            onClick={() => setCountryFilter('')}
+            onClick={() => setGlobalFilter('')}
           >
-            Clear Filter: {countryFilter}
+            Clear Filter: {globalFilter}
           </button>
         </div>
       )}
       
-      <div style={{ width: '100%', height: '400px', background: '#060606', borderRadius: '0 0 12px 12px' }}>
+      <div style={{ width: '100%', height: '400px', background: '#060606', borderRadius: '0 0 12px 12px', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <ComposableMap projectionConfig={{ scale: 140 }}>
           <Geographies geography={geoUrl}>
             {({ geographies }) =>
@@ -94,6 +94,7 @@ export default function UserMap({ users, countryFilter, setCountryFilter }) {
                   fill="#1a1a1a"
                   stroke="rgba(212, 175, 55, 0.3)"
                   strokeWidth={0.5}
+                  className="cursor-pointer"
                   style={{
                     default: { outline: "none" },
                     hover: { fill: "#2a2a2a", outline: "none" },
@@ -106,11 +107,11 @@ export default function UserMap({ users, countryFilter, setCountryFilter }) {
 
           <g ref={markerGroupRef}>
             {markers.map(({ name, coordinates, size }) => {
-              const isActive = countryFilter === name;
+              const isActive = globalFilter?.toLowerCase() === name.toLowerCase();
               const markerColor = isActive ? "#DC143C" : "#D4AF37";
 
               return (
-                <Marker key={name} coordinates={coordinates} onClick={() => setCountryFilter(isActive ? '' : name)} style={{ cursor: 'pointer' }}>
+                <Marker key={name} coordinates={coordinates} onClick={() => setGlobalFilter(isActive ? '' : name)} style={{ cursor: 'pointer' }}>
                   {/* Animating outer pulse ring */}
                   <circle 
                     className="pulse-circle"

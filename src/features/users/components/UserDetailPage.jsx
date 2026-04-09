@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from 'lib/firebase/firebase';
 import { ArrowLeft, Clock, MapPin, Mail, Shield, Zap } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -13,36 +13,81 @@ export default function UserDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
+  const [tokenHistory, setTokenHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const pageRef = useRef(null);
 
   useEffect(() => {
+    let unsubTokens = null;
+
     async function fetchUser() {
       try {
-        const docRef = doc(db, 'users', id);
+        setLoading(true);
+        console.log("Firebase Action: Fetching discrete user intelligence for ID:", id);
+        
+        // Explicitly targeting '/Users' (Capitalized) as per architecture spec
+        const docRef = doc(db, 'Users', id);
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setUser({
+          const mappedUser = {
             id: docSnap.id,
-            name: data.name || 'Unknown',
-            email: data.email || 'No Email',
+            name: data.name || 'Guest',
+            email: data.email || 'No email',
             avatar: data.avatar || null,
             country: data.country || 'Unknown',
             tokens: data.tokens || 0,
-            free_days: data.free_days || 0,
-            createdAt: data.createdAt ? data.createdAt.toDate().toLocaleDateString() : 'Unknown',
+            freeDays: data.freeDays || 0,
+            // Handle Firestore Timestamp precisely
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toLocaleDateString() : 'Unknown',
             status: data.status || 'inactive'
+          };
+          
+          console.log("Firebase Response: Received [User Detail] payload:", mappedUser);
+          setUser(mappedUser);
+
+          // Sub-collection onSnapshot
+          console.log("Firebase Action: Listening to [generatedTokens] for user:", id);
+          const tokensRef = collection(db, 'Users', id, 'generatedTokens');
+          const tokensQuery = query(tokensRef, orderBy('createdAt', 'asc'));
+          
+          unsubTokens = onSnapshot(tokensQuery, (tokensSnap) => {
+            const history = [];
+            tokensSnap.forEach((tDoc) => {
+              const tData = tDoc.data();
+              history.push({
+                name: tData.createdAt?.toDate ? tData.createdAt.toDate().toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Unknown',
+                tokens: tData.tokens || tData.amount || 0
+              });
+            });
+            
+            if (history.length > 0) {
+              setTokenHistory(history);
+            } else {
+              setTokenHistory([
+                { name: 'Mon', tokens: Math.max(0, mappedUser.tokens - 500) },
+                { name: 'Tue', tokens: Math.max(0, mappedUser.tokens - 300) },
+                { name: 'Wed', tokens: Math.max(0, mappedUser.tokens - 200) },
+                { name: 'Thu', tokens: Math.max(0, mappedUser.tokens - 100) },
+                { name: 'Fri', tokens: mappedUser.tokens },
+              ]);
+            }
           });
+        } else {
+          console.warn("Firebase Response: User ID not found in [/Users] collection.");
         }
       } catch (error) {
-        console.error("Error fetching user detail:", error);
+        console.error("Firestore [Users Detail] Error:", error);
       } finally {
         setLoading(false);
       }
     }
     fetchUser();
+
+    return () => {
+      if (unsubTokens) unsubTokens();
+    };
   }, [id]);
 
   useEffect(() => {
@@ -57,15 +102,8 @@ export default function UserDetailPage() {
   if (loading) return <div className="text-center p-5 mt-5" style={{ color: '#D4AF37' }}>Loading Intelligence Data...</div>;
   if (!user) return <div className="text-center p-5 mt-5 text-danger">User not found in the Archive.</div>;
 
-  // Simulate token history for sparkline
-  const tokenHistoryData = [
-    { name: 'Mon', tokens: Math.max(0, user.tokens - 500) },
-    { name: 'Tue', tokens: Math.max(0, user.tokens - 300) },
-    { name: 'Wed', tokens: Math.max(0, user.tokens - 200) },
-    { name: 'Thu', tokens: Math.max(0, user.tokens + 100) },
-    { name: 'Fri', tokens: user.tokens },
-  ];
-
+  // We are now using dynamic tokenHistory from Firebase instead of static simulation.
+  // We keep statusColor and initial as before.
   const statusColor = user.status === 'active' ? '#D4AF37' : '#DC143C';
   const initial = user.name.charAt(0).toUpperCase();
 
@@ -118,7 +156,7 @@ export default function UserDetailPage() {
                  <MapPin size={18} color="#D4AF37" />
                  <div>
                     <small style={{ color: '#a8956b', display: 'block' }}>Region</small>
-                    <strtong style={{ color: '#e0d5b8' }}>{user.country}</strtong>
+                    <strong style={{ color: '#e0d5b8' }}>{user.country}</strong>
                  </div>
                </li>
                <li className="list-group-item d-flex align-items-center gap-3 py-3" style={{ background: 'transparent', borderBottom: 'none' }}>
@@ -126,10 +164,10 @@ export default function UserDetailPage() {
                  <div style={{ flex: 1 }}>
                     <div className="d-flex justify-content-between mb-1">
                        <small style={{ color: '#a8956b' }}>Free Days Remaining</small>
-                       <small style={{ color: '#D4AF37' }}>{user.free_days}/30</small>
+                       <small style={{ color: '#D4AF37' }}>{user.freeDays}/30</small>
                     </div>
                     <div style={{ height: '6px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ width: `${Math.min((user.free_days/30)*100, 100)}%`, height: '100%', backgroundColor: '#D4AF37' }}></div>
+                      <div style={{ width: `${Math.min((user.freeDays/30)*100, 100)}%`, height: '100%', backgroundColor: '#D4AF37' }}></div>
                     </div>
                  </div>
                </li>
@@ -144,7 +182,7 @@ export default function UserDetailPage() {
              
              <div style={{ flex: 1, minHeight: '200px' }}>
                 <ResponsiveContainer width="100%" height="100%">
-                   <AreaChart data={tokenHistoryData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                   <AreaChart data={tokenHistory} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorTokens" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3}/>

@@ -72,7 +72,7 @@ export default function UserActivityGraph({ users }) {
 
   return (
     <MainCard title="Activity Pulse" bodyClassName="p-3" ref={wrapperRef}>
-      <div style={{ height: '350px', width: '100%' }}>
+      <div style={{ width: '100%', height: '400px', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <XAxis dataKey="time" stroke="#5a5a5a" tick={{ fill: '#a8956b', fontSize: 12 }} />

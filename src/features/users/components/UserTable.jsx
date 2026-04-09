@@ -1,19 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
-import { MoreVertical, Eye, Search } from 'lucide-react';
+import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table';
+import { MoreVertical, Eye, Search, RotateCw } from 'lucide-react';
 import { gsap } from 'gsap';
 import Dropdown from 'react-bootstrap/Dropdown';
 
-export default function UserTable({ users, loading }) {
-  const [globalFilter, setGlobalFilter] = useState('');
+export default function UserTable({ users, loading, globalFilter, setGlobalFilter, onRefresh }) {
   const [sorting, setSorting] = useState([]);
   const tableRef = useRef(null);
   const navigate = useNavigate();
@@ -66,7 +58,7 @@ export default function UserTable({ users, loading }) {
         }
       },
       {
-        accessorKey: 'free_days',
+        accessorKey: 'freeDays',
         header: 'Free Days',
         cell: info => {
           const days = info.getValue();
@@ -109,7 +101,7 @@ export default function UserTable({ users, loading }) {
                 <MoreVertical size={18} />
               </Dropdown.Toggle>
               <Dropdown.Menu style={{ background: '#1a1a1a', border: '1px solid rgba(212,175,55,0.2)' }}>
-                <Dropdown.Item onClick={() => navigate(`/users/${userId}`)} style={{ color: '#e0d5b8', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Dropdown.Item onClick={() => navigate(`/users/${userId}`)} style={{ color: '#e0d5b8', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                   <Eye size={16} /> View Detail
                 </Dropdown.Item>
               </Dropdown.Menu>
@@ -140,26 +132,39 @@ export default function UserTable({ users, loading }) {
   useEffect(() => {
     if (tableRef.current && !loading && users.length > 0) {
       const rows = tableRef.current.querySelectorAll('tbody tr');
+      gsap.killTweensOf(rows); // avoid overlap
       gsap.fromTo(rows, 
-        { x: -20, opacity: 0 }, 
-        { x: 0, opacity: 1, stagger: 0.05, duration: 0.4, ease: "power2.out" }
+        { x: -15, opacity: 0 }, 
+        { x: 0, opacity: 1, stagger: 0.04, duration: 0.5, ease: "power2.out", delay: 0.1 }
       );
     }
-  }, [loading, users, globalFilter]); // re-run animation when data or filter changes
+  }, [loading, users.length]); // filter changes also trigger this via users change
 
   return (
     <div className="card" style={{ overflow: 'hidden' }}>
       <div className="card-header d-flex justify-content-between align-items-center" style={{ borderBottom: '1px solid rgba(212,175,55,0.1)' }}>
         <h5 className="mb-0 text-primary">The Archive</h5>
-        <div className="d-flex align-items-center" style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.2)', borderRadius: '20px', padding: '4px 12px' }}>
-          <Search size={16} color="#a8956b" />
-          <input
-            value={globalFilter ?? ''}
-            onChange={e => setGlobalFilter(e.target.value)}
-            className="p-1 font-lg border-0 shadow-none"
-            placeholder="Search users..."
-            style={{ background: 'transparent', color: '#e0d5b8', outline: 'none', marginLeft: '8px', width: '200px' }}
-          />
+        <div className="d-flex align-items-center gap-3">
+          <button 
+            className="btn btn-link p-0 text-primary" 
+            onClick={onRefresh}
+            title="Refresh Intelligence"
+            style={{ transition: 'transform 0.3s ease' }}
+            onMouseOver={(e) => e.currentTarget.style.transform = 'rotate(180deg)'}
+            onMouseOut={(e) => e.currentTarget.style.transform = 'rotate(0deg)'}
+          >
+            <RotateCw size={18} />
+          </button>
+          <div className="d-flex align-items-center" style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.2)', borderRadius: '20px', padding: '4px 12px' }}>
+            <Search size={16} color="#a8956b" />
+            <input
+              value={globalFilter ?? ''}
+              onChange={e => setGlobalFilter(e.target.value)}
+              className="p-1 font-lg border-0 shadow-none"
+              placeholder="Search users..."
+              style={{ background: 'transparent', color: '#e0d5b8', outline: 'none', marginLeft: '8px', width: '200px' }}
+            />
+          </div>
         </div>
       </div>
       
@@ -192,7 +197,12 @@ export default function UserTable({ users, loading }) {
                    <tr><td colSpan={7} className="text-center p-4">No users found.</td></tr>
                 ) : (
                   table.getRowModel().rows.map(row => (
-                    <tr key={row.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <tr 
+                      key={row.id} 
+                      className="cursor-pointer"
+                      onClick={() => navigate(`/users/${row.original.id}`)}
+                      style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                    >
                       {row.getVisibleCells().map(cell => (
                         <td key={cell.id} style={{ verticalAlign: 'middle', borderBottom: 'none', color: '#e0d5b8' }}>
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}

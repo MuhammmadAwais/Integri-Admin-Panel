@@ -1,21 +1,26 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from 'lib/firebase/firebase';
 
+/**
+ * useUsers Hook
+ * Built by Senior Firebase Architect for Integri App.
+ * Manages real-time user stream with global filtering.
+ */
 export default function useUsers() {
   const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [countryFilter, setCountryFilter] = useState('');
+  
+  // centralized filter state
+  const [globalFilter, setGlobalFilter] = useState('');
 
-  const subscribe = useCallback(() => {
+  const subscribeToUsers = useCallback(() => {
     setLoading(true);
-    setError(null);
-
-    // Assuming the collection name is 'users' based on standard conventions,
-    // as per the user's implicit approval to proceed.
-    const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+    console.log("Firebase Action: Initiating real-time subscription to [/Users] collection...");
+    
+    // Explicitly targeting '/Users' (Capitalized) and removing orderBy to avoid missing documents lacking index fields
+    const q = query(collection(db, 'Users'));
 
     const unsubscribe = onSnapshot(
       q,
@@ -24,23 +29,27 @@ export default function useUsers() {
           const data = doc.data();
           return {
             id: doc.id,
-            name: data.name || 'Unknown',
-            email: data.email || 'No Email',
-            avatar: data.avatar || null, // null will trigger initials fallback
+            name: data.name || 'Guest',
+            email: data.email || 'No email',
+            avatar: data.avatar || null,
             country: data.country || 'Unknown',
             tokens: data.tokens || 0,
-            free_days: data.free_days || 0,
-            createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
-            status: data.status || 'inactive' // assuming a status field for active/inactive
+            freeDays: data.freeDays || 0,
+            // Handle Firestore Timestamp precisely
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+            status: data.status || 'inactive'
           };
         });
+
+        console.log("Firebase Response: Received [Users] payload. Count:", fetchedUsers.length);
+        console.table(fetchedUsers.slice(0, 5)); // log first 5 for clarity
 
         setUsers(fetchedUsers);
         setLoading(false);
       },
-      (error) => {
-        console.error("Error fetching users:", error);
-        setError(error.message);
+      (err) => {
+        console.error("Firestore [Users] Subscription Error:", err);
+        setError(err.message);
         setLoading(false);
       }
     );
@@ -48,26 +57,37 @@ export default function useUsers() {
     return unsubscribe;
   }, []);
 
-  useEffect(() => {
-    const unsubscribe = subscribe();
-    return () => unsubscribe && unsubscribe();
-  }, [subscribe]);
+  const refreshUsers = () => {
+    console.log("Manual Action: Refreshing user intelligence data...");
+    subscribeToUsers();
+  };
 
   useEffect(() => {
-    if (countryFilter) {
-      setFilteredUsers(users.filter((user) => user.country === countryFilter));
-    } else {
-      setFilteredUsers(users);
-    }
-  }, [users, countryFilter]);
+    const unsub = subscribeToUsers();
+    return () => unsub && unsub();
+  }, [subscribeToUsers]);
+
+  // Derived state for filtering
+  const filteredUsers = useMemo(() => {
+    if (!globalFilter) return users;
+
+    const lowerFilter = globalFilter.toLowerCase();
+    return users.filter((user) => {
+      return (
+        user.name.toLowerCase().includes(lowerFilter) ||
+        user.country.toLowerCase() === lowerFilter ||
+        user.email.toLowerCase().includes(lowerFilter)
+      );
+    });
+  }, [users, globalFilter]);
 
   return {
     users,
     filteredUsers,
     loading,
     error,
-    countryFilter,
-    setCountryFilter,
-    refresh: subscribe // To manually re-trigger if needed, though onSnapshot is realtime
+    globalFilter,
+    setGlobalFilter,
+    refreshUsers
   };
 }

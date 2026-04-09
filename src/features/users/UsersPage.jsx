@@ -10,7 +10,7 @@ import UserTable from './components/UserTable';
 // ==============================|| FEATURE: USERS — INTELLIGENCE COMMAND ||============================== //
 
 export default function UsersPage() {
-  const { users, filteredUsers, loading, countryFilter, setCountryFilter } = useUsers();
+  const { users, filteredUsers, loading, globalFilter, setGlobalFilter } = useUsers();
 
   return (
     <Row>
@@ -18,8 +18,8 @@ export default function UsersPage() {
       <Col md={12} xl={7} className="mb-4">
         <UserMap 
           users={users} 
-          countryFilter={countryFilter} 
-          setCountryFilter={setCountryFilter} 
+          globalFilter={globalFilter} 
+          setGlobalFilter={setGlobalFilter} 
         />
       </Col>
       <Col md={12} xl={5} className="mb-4">
@@ -28,7 +28,12 @@ export default function UsersPage() {
 
       {/* Tier 3: The Archive (Shadow Table) */}
       <Col md={12}>
-        <UserTable users={filteredUsers} loading={loading} />
+        <UserTable 
+          users={filteredUsers} 
+          loading={loading} 
+          globalFilter={globalFilter} 
+          setGlobalFilter={setGlobalFilter}
+        />
       </Col>
     </Row>
   );
