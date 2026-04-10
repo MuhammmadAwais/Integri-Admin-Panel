@@ -45,7 +45,7 @@ export default function useUsers() {
           id: doc.id,
           name: data.name || 'Guest',
           email: data.email || 'No email',
-          avatar: data.avatar || null, // Strictly mapping to null for UI initial fallback
+          avatar: data.avatar || data.profileImage || null, // Synchronizing multi-source asset fields
           country: data.country || 'Unknown',
           tokens: data.tokens || 0,
           freeDays: data.freeDays || 0,
@@ -95,7 +95,7 @@ export default function useUsers() {
     }
   }, [lastVisible, fetchUsers]);
 
-  const loadMore = () => {
+  const fetchNextBatch = () => {
     if (hasMore && !loading) {
       fetchUsers(true);
     }
@@ -113,7 +113,7 @@ export default function useUsers() {
     globalFilter,
     setGlobalFilter,
     refreshUsers,
-    loadMore,
+    fetchNextBatch,
     hasMore
   };
 }

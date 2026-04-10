@@ -6,6 +6,22 @@ import { gsap } from 'gsap';
 import Dropdown from 'react-bootstrap/Dropdown';
 import useDebounce from 'hooks/useDebounce';
 
+const HighlightedText = ({ text, query }) => {
+  if (!query || !text) return <>{text}</>;
+  const parts = text.split(new RegExp(`(${query})`, 'gi'));
+  return (
+    <>
+      {parts.map((part, i) => 
+        part.toLowerCase() === query.toLowerCase() ? (
+          <span key={i} className="bg-red-600 text-white px-1 rounded">{part}</span>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+};
+
 const UserTable = React.memo(({ users, loading, globalFilter, setGlobalFilter, onRefresh, loadMore, hasMore }) => {
   const [sorting, setSorting] = useState([]);
   const [localSearch, setLocalSearch] = useState(globalFilter ?? '');
@@ -55,8 +71,12 @@ const UserTable = React.memo(({ users, loading, globalFilter, setGlobalFilter, o
           const email = info.row.original.email;
           return (
             <div>
-              <div style={{ color: '#D4AF37', fontWeight: 600 }}>{name}</div>
-              <div style={{ color: '#a8956b', fontSize: '0.8rem' }}>{email}</div>
+              <div style={{ color: '#D4AF37', fontWeight: 600 }}>
+                <HighlightedText text={name} query={globalFilter} />
+              </div>
+              <div style={{ color: '#a8956b', fontSize: '0.8rem' }}>
+                <HighlightedText text={email} query={globalFilter} />
+              </div>
             </div>
           );
         },
@@ -70,7 +90,7 @@ const UserTable = React.memo(({ users, loading, globalFilter, setGlobalFilter, o
           // so we'll just style it as a badge.
           return (
             <span style={{ padding: '4px 8px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.8rem' }}>
-               {country}
+               <HighlightedText text={country} query={globalFilter} />
             </span>
           );
         }
@@ -161,6 +181,25 @@ const UserTable = React.memo(({ users, loading, globalFilter, setGlobalFilter, o
       );
     }
   }, [loading, users.length]); // filter changes also trigger this via users change
+
+  const canNextLocal = table.getCanNextPage();
+  const fetchBtnRef = useRef(null);
+  useEffect(() => {
+    // Only pulse if we've reached the end of local data but more exists in the cloud
+    if (fetchBtnRef.current && hasMore && !loading && !canNextLocal) {
+      gsap.to(fetchBtnRef.current, {
+        boxShadow: '0 0 15px rgba(212,175,55,0.6)',
+        borderColor: 'rgba(212,175,55,0.8)',
+        duration: 1.5,
+        repeat: -1,
+        yoyo: true,
+        ease: "power1.inOut"
+      });
+    } else if (fetchBtnRef.current) {
+      gsap.killTweensOf(fetchBtnRef.current);
+      gsap.set(fetchBtnRef.current, { boxShadow: 'none', borderColor: 'rgba(212,175,55,0.3)' });
+    }
+  }, [hasMore, loading, canNextLocal]);
 
   return (
     <div className="card" style={{ overflow: 'hidden' }}>
@@ -295,6 +334,7 @@ const UserTable = React.memo(({ users, loading, globalFilter, setGlobalFilter, o
               Prev
             </button>
             <button 
+              ref={fetchBtnRef}
               className="btn btn-sm" 
               style={{ border: '1px solid rgba(212,175,55,0.3)', color: '#D4AF37', background: 'transparent' }} 
               onClick={() => {
@@ -306,7 +346,7 @@ const UserTable = React.memo(({ users, loading, globalFilter, setGlobalFilter, o
               }} 
               disabled={(!table.getCanNextPage() && !hasMore) || loading}
             >
-              {loading ? 'Decrypting...' : (table.getCanNextPage() ? 'Next' : (hasMore ? 'Load Next Chunk' : 'End of Stream'))}
+              {loading ? 'Decrypting...' : (table.getCanNextPage() ? 'Next' : (hasMore ? 'Fetch Next Batch (100)' : 'End of Stream'))}
             </button>
          </div>
       </div>

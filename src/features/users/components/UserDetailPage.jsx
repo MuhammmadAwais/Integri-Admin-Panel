@@ -1,14 +1,188 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from 'lib/firebase/firebase';
 import { UserMemoryService } from 'api/backendApi';
-import { ArrowLeft, Clock, MapPin, Mail, Shield, Zap, BrainCircuit } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, Mail, Shield, Zap, BrainCircuit, Search as SearchIcon, Copy, Check } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { gsap } from 'gsap';
 import MainCard from 'components/MainCard';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
+
+const MemoryCard = ({ label, value }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    const textToCopy = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
+    navigator.clipboard.writeText(textToCopy);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const prettifyDate = (str) => {
+    try {
+      const d = new Date(str);
+      if (isNaN(d)) return str;
+      return d.toLocaleString(undefined, { 
+        month: 'short', day: 'numeric', year: 'numeric', 
+        hour: '2-digit', minute: '2-digit' 
+      });
+    } catch (e) { return str; }
+  };
+
+  const renderMemoryValue = (val, key) => {
+    if (val === null || val === undefined) return <span style={{ color: '#a8956b', fontStyle: 'italic' }}>N/A</span>;
+
+    // 1. Semantic Handler: Notable Facts (Narrative List)
+    if (key === 'notable_facts' && Array.isArray(val)) {
+      return (
+        <div className="mt-2">
+          {val.map((fact, i) => (
+            <div key={i} className="mb-3 p-3" style={{ background: 'rgba(212,175,55,0.05)', borderRadius: '8px', borderLeft: '2px solid #D4AF37' }}>
+              <div style={{ color: '#D4AF37', fontWeight: 600, fontSize: '0.9rem', marginBottom: '4px' }}>{fact.fact}</div>
+              <div className="d-flex justify-content-between align-items-center mt-2">
+                 <span style={{ fontSize: '0.7rem', color: '#a8956b' }}>{prettifyDate(fact.added_at)}</span>
+                 <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(212,175,55,0.1)', color: '#D4AF37', border: '0.5px solid rgba(212,175,55,0.3)' }}>
+                   {Math.round(parseFloat(fact.confidence || 0) * 100)}% Confidence
+                 </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // 2. Semantic Handler: Session/Context/Preferences (Object Key-Value Grid)
+    if (typeof val === 'object' && !Array.isArray(val)) {
+      const entries = Object.entries(val);
+      if (entries.length === 0) return <span style={{ color: '#a8956b', fontStyle: 'italic' }}>Empty dataset.</span>;
+      
+      return (
+        <div className="mt-1">
+          {entries.map(([sk, sv]) => (
+            <div key={sk} className="mb-2">
+              <span style={{ color: '#a8956b', fontSize: '0.75rem', textTransform: 'uppercase', marginRight: '8px', fontFamily: 'monospace' }}>{sk.replace(/_/g, ' ')}:</span>
+              <div style={{ paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', marginTop: '4px' }}>
+                {renderMemoryValue(sv, sk)}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // 3. Semantic Handler: Arrays (Tag Matrix)
+    if (Array.isArray(val)) {
+      if (val.length === 0) return <span style={{ color: '#a8956b', fontStyle: 'italic' }}>No associations.</span>;
+      return (
+        <div className="d-flex flex-wrap gap-2 mt-2">
+          {val.map((item, i) => (
+            <span key={i} style={{ 
+              padding: '4px 10px', 
+              borderRadius: '6px', 
+              background: 'rgba(255,255,255,0.03)', 
+              border: '0.5px solid rgba(212,175,55,0.3)', 
+              color: '#fff', 
+              fontSize: '0.75rem',
+              fontFamily: "'Roboto Mono', monospace"
+            }}>
+              {String(item)}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
+    // 4. ISO Date Prettification
+    const isoRegEx = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+    if (typeof val === 'string' && isoRegEx.test(val)) {
+      return (
+        <span style={{ fontFamily: "'Roboto Mono', monospace", color: '#D4AF37' }}>
+          {prettifyDate(val)}
+        </span>
+      );
+    }
+
+    // 5. Default Forensic Value
+    return (
+      <span style={{ fontFamily: "'Roboto Mono', monospace", color: '#fff' }}>
+        {String(val)}
+      </span>
+    );
+  };
+
+  return (
+    <div className="col-md-6 mb-3">
+      <div style={{ 
+        background: 'rgba(255,255,255,0.03)', 
+        backdropFilter: 'blur(10px)', 
+        border: '0.5px solid rgba(212,175,55,0.4)', 
+        borderRadius: '12px', 
+        padding: '16px 20px',
+        position: 'relative',
+        height: '100%',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+      }}>
+        <div className="d-flex justify-content-between align-items-start mb-3">
+          <div style={{ color: '#D4AF37', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            {label.replace(/_/g, ' ')}
+          </div>
+          <button 
+            onClick={handleCopy}
+            className="btn btn-link p-0 text-primary" 
+            style={{ opacity: 0.6, transition: 'opacity 0.2s' }}
+            onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+            onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
+            title="Copy Raw Intel"
+          >
+            {copied ? <Check size={16} color="#D4AF37" /> : <Copy size={16} />}
+          </button>
+        </div>
+        <div style={{ fontSize: '0.95rem' }}>
+          {renderMemoryValue(value, label.toLowerCase())}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const MemoryGrid = ({ data }) => {
+  const [search, setSearch] = useState('');
+  
+  const memoryMap = useMemo(() => {
+    const raw = data?.memory_data || data || {};
+    return Object.entries(raw).filter(([key, val]) => 
+      key.toLowerCase().includes(search.toLowerCase()) || 
+      JSON.stringify(val).toLowerCase().includes(search.toLowerCase())
+    );
+  }, [data, search]);
+
+  return (
+    <div className="p-4" style={{ background: '#050505' }}>
+      <div className="d-flex align-items-center mb-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212,175,55,0.2)', borderRadius: '8px', padding: '8px 16px' }}>
+        <SearchIcon size={16} color="#a8956b" />
+        <input 
+          placeholder="Filter semantic keys..."
+          className="border-0 shadow-none bg-transparent w-100 ms-2"
+          style={{ color: '#e0d5b8', outline: 'none', fontSize: '0.9rem' }}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      <div className="row">
+        {memoryMap.length > 0 ? memoryMap.map(([key, val]) => (
+          <MemoryCard key={key} label={key} value={val} />
+        )) : (
+          <div className="col-12 text-center py-4" style={{ color: '#a8956b', fontStyle: 'italic' }}>
+            No intelligence matches found.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export default function UserDetailPage() {
   const { id } = useParams();
@@ -224,11 +398,7 @@ export default function UserDetailPage() {
             </div>
           } bodyClassName="p-0">
              {memoryData ? (
-               <div style={{ padding: '20px', background: '#0a0a0a', borderBottom: '1px solid rgba(212,175,55,0.1)' }}>
-                  <pre style={{ margin: 0, color: '#e0d5b8', fontFamily: 'monospace', fontSize: '0.85rem' }}>
-                    {JSON.stringify(memoryData.memory_data || memoryData, null, 2)}
-                  </pre>
-               </div>
+               <MemoryGrid data={memoryData} />
              ) : (
                <div className="p-4 text-center" style={{ color: '#a8956b', fontStyle: 'italic' }}>
                  No semantic memory footprint recorded.

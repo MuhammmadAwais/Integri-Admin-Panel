@@ -10,7 +10,16 @@ import UserTable from './components/UserTable';
 // ==============================|| FEATURE: USERS — INTELLIGENCE COMMAND ||============================== //
 
 export default function UsersPage() {
-  const { users, filteredUsers, loading, globalFilter, setGlobalFilter } = useUsers();
+  const { 
+    users, 
+    filteredUsers, 
+    loading, 
+    globalFilter, 
+    setGlobalFilter, 
+    hasMore, 
+    fetchNextBatch, 
+    refreshUsers 
+  } = useUsers();
 
   return (
     <Row>
@@ -33,6 +42,9 @@ export default function UsersPage() {
           loading={loading} 
           globalFilter={globalFilter} 
           setGlobalFilter={setGlobalFilter}
+          onRefresh={refreshUsers}
+          loadMore={fetchNextBatch}
+          hasMore={hasMore}
         />
       </Col>
     </Row>
