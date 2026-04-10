@@ -16,6 +16,11 @@ export default function UsersPage() {
     loading, 
     globalFilter, 
     setGlobalFilter, 
+    countryFilter,
+    setCountryFilter,
+    statusFilter,
+    setStatusFilter,
+    clearFilters,
     hasMore, 
     fetchNextBatch, 
     refreshUsers 
@@ -42,6 +47,11 @@ export default function UsersPage() {
           loading={loading} 
           globalFilter={globalFilter} 
           setGlobalFilter={setGlobalFilter}
+          countryFilter={countryFilter}
+          setCountryFilter={setCountryFilter}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          clearFilters={clearFilters}
           onRefresh={refreshUsers}
           loadMore={fetchNextBatch}
           hasMore={hasMore}

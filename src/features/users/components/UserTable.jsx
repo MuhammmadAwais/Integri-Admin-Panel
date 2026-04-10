@@ -22,12 +22,27 @@ const HighlightedText = ({ text, query }) => {
   );
 };
 
-const UserTable = React.memo(({ users, loading, globalFilter, setGlobalFilter, onRefresh, loadMore, hasMore }) => {
+const UserTable = React.memo(({ 
+  users, 
+  loading, 
+  globalFilter, 
+  setGlobalFilter, 
+  countryFilter, 
+  setCountryFilter, 
+  statusFilter, 
+  setStatusFilter, 
+  clearFilters, 
+  onRefresh, 
+  loadMore, 
+  hasMore 
+}) => {
   const [sorting, setSorting] = useState([]);
   const [localSearch, setLocalSearch] = useState(globalFilter ?? '');
   const debouncedSearch = useDebounce(localSearch, 400);
   
-  const parentRef = useRef(null);
+  // Forensic Countries - Static mapping for initial isolates
+  const FORENSIC_COUNTRIES = ['Pakistan', 'United Kingdom', 'United States', 'Canada', 'Germany', 'France', 'Australia', 'United Arab Emirates'];
+  const FORENSIC_STATUSES = ['active', 'inactive'];
   const tableRef = useRef(null);
   const navigate = useNavigate();
 
@@ -116,7 +131,11 @@ const UserTable = React.memo(({ users, loading, globalFilter, setGlobalFilter, o
       {
         accessorKey: 'tokens',
         header: 'Tokens',
-        cell: info => <span style={{ color: '#D4AF37', textShadow: '0 0 8px rgba(212,175,55,0.4)', fontWeight: 'bold' }}>₮ {info.getValue().toLocaleString()}</span>
+        cell: info => (
+          <span style={{ color: '#D4AF37', textShadow: '0 0 8px rgba(212,175,55,0.4)', fontWeight: 'bold' }}>
+            ₮ <HighlightedText text={info.getValue().toLocaleString()} query={globalFilter} />
+          </span>
+        )
       },
       {
         accessorKey: 'createdAt',
@@ -148,7 +167,7 @@ const UserTable = React.memo(({ users, loading, globalFilter, setGlobalFilter, o
         },
       }
     ],
-    [navigate]
+    [navigate, globalFilter]
   );
 
   const table = useReactTable({
@@ -206,6 +225,32 @@ const UserTable = React.memo(({ users, loading, globalFilter, setGlobalFilter, o
       <div className="card-header d-flex justify-content-between align-items-center" style={{ borderBottom: '1px solid rgba(212,175,55,0.1)' }}>
         <h5 className="mb-0 text-primary">The Archive</h5>
         <div className="d-flex align-items-center gap-3">
+          {/* Status Filter */}
+          <Dropdown onSelect={(val) => setStatusFilter(val)}>
+            <Dropdown.Toggle size="sm" style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.2)', color: statusFilter ? '#D4AF37' : '#a8956b', borderRadius: '20px', padding: '4px 12px' }}>
+              {statusFilter ? statusFilter.toUpperCase() : 'STATUS'}
+            </Dropdown.Toggle>
+            <Dropdown.Menu style={{ background: '#1a1a1a', border: '1px solid rgba(212,175,55,0.2)' }}>
+              <Dropdown.Item eventKey="" style={{ color: '#a8956b' }}>All Statuses</Dropdown.Item>
+              {FORENSIC_STATUSES.map(s => (
+                <Dropdown.Item key={s} eventKey={s} style={{ color: '#e0d5b8' }}>{s.toUpperCase()}</Dropdown.Item>
+              ))}
+            </Dropdown.Menu>
+          </Dropdown>
+
+          {/* Country Filter */}
+          <Dropdown onSelect={(val) => setCountryFilter(val)}>
+            <Dropdown.Toggle size="sm" style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.2)', color: countryFilter ? '#D4AF37' : '#a8956b', borderRadius: '20px', padding: '4px 12px' }}>
+              {countryFilter ? countryFilter : 'COUNTRY'}
+            </Dropdown.Toggle>
+            <Dropdown.Menu className="obsidian-scroll" style={{ background: '#1a1a1a', border: '1px solid rgba(212,175,55,0.2)', maxHeight: '300px', overflowY: 'auto' }}>
+              <Dropdown.Item eventKey="" style={{ color: '#a8956b' }}>All Countries</Dropdown.Item>
+              {FORENSIC_COUNTRIES.map(c => (
+                <Dropdown.Item key={c} eventKey={c} style={{ color: '#e0d5b8' }}>{c}</Dropdown.Item>
+              ))}
+            </Dropdown.Menu>
+          </Dropdown>
+
           <button 
             className="btn btn-link p-0 text-primary" 
             onClick={onRefresh}
@@ -216,14 +261,26 @@ const UserTable = React.memo(({ users, loading, globalFilter, setGlobalFilter, o
           >
             <RotateCw size={18} />
           </button>
+
+          {(globalFilter || countryFilter || statusFilter) && (
+            <button 
+              className="btn btn-link p-0 text-danger" 
+              onClick={clearFilters}
+              title="Clear Forensic Filters"
+            >
+              <Search size={16} style={{ transform: 'rotate(45deg)', marginRight: '4px' }} />
+              <small>RESET</small>
+            </button>
+          )}
+
           <div className="d-flex align-items-center" style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.2)', borderRadius: '20px', padding: '4px 12px' }}>
             <Search size={16} color="#a8956b" />
             <input
               value={localSearch}
               onChange={e => setLocalSearch(e.target.value)}
               className="p-1 font-lg border-0 shadow-none"
-              placeholder="Search users..."
-              style={{ background: 'transparent', color: '#e0d5b8', outline: 'none', marginLeft: '8px', width: '200px' }}
+              placeholder="Search Name, Email, Country..."
+              style={{ background: 'transparent', color: '#e0d5b8', outline: 'none', marginLeft: '8px', width: '250px' }}
             />
           </div>
         </div>

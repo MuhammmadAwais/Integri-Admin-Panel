@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { collection, query, limit, startAfter, getDocs, where, orderBy } from 'firebase/firestore';
 import { db } from 'lib/firebase/firebase';
 
@@ -13,6 +13,8 @@ export default function useUsers() {
   const [error, setError] = useState(null);
   
   const [globalFilter, setGlobalFilter] = useState('');
+  const [countryFilter, setCountryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [lastVisible, setLastVisible] = useState(null);
   const [hasMore, setHasMore] = useState(true);
 
@@ -24,10 +26,20 @@ export default function useUsers() {
       
       if (globalFilter.trim()) {
         const search = globalFilter.trim();
-        // Server-side search logic. (Requires composite index)
-        constraints.push(where('name', '>=', search));
-        constraints.push(where('name', '<=', search + '\uf8ff'));
-        constraints.push(orderBy('name', 'asc')); // Firestore requires orderBy on the filtered field
+        // Smart Redirect: If search looks like email, query email field. Otherwise name.
+        const searchField = search.includes('@') ? 'email' : 'name';
+        
+        constraints.push(where(searchField, '>=', search));
+        constraints.push(where(searchField, '<=', search + '\uf8ff'));
+        constraints.push(orderBy(searchField, 'asc'));
+      }
+
+      if (countryFilter) {
+        constraints.push(where('country', '==', countryFilter));
+      }
+
+      if (statusFilter) {
+        constraints.push(where('status', '==', statusFilter));
       }
 
       if (isLoadMore && lastVisible) {
@@ -78,18 +90,28 @@ export default function useUsers() {
     }
   }, [globalFilter, lastVisible]);
 
+  // Client-Side Semantic Filter: Enhances forensics by searching loaded batch across ALL fields instantly.
+  const filteredUsers = useMemo(() => {
+    if (!globalFilter.trim()) return users;
+    const q = globalFilter.toLowerCase().trim();
+    return users.filter(u => 
+      u.name.toLowerCase().includes(q) || 
+      u.email.toLowerCase().includes(q) || 
+      u.country.toLowerCase().includes(q) ||
+      u.tokens.toString().includes(q) ||
+      u.id.toLowerCase().includes(q)
+    );
+  }, [users, globalFilter]);
+
   useEffect(() => {
-    // Treat as mount / filter change effect. Reset state for new searches.
+    // Reset state for new searches or filter changes
     setLastVisible(null);
     setHasMore(true);
     setUsers([]);
-    // We intentionally ignore lastVisible in deps to avoid loop. 
-    // Effect runs when globalFilter changes.
-  }, [globalFilter]);
+  }, [globalFilter, countryFilter, statusFilter]);
 
-  // Actually invoke fetch when the page resets or changes
+  // Initial load and reset trigger
   useEffect(() => {
-    // Only load from scratch when lastVisible is null (meaning array empty / reset)
     if (lastVisible === null) {
       fetchUsers(false);
     }
@@ -105,14 +127,26 @@ export default function useUsers() {
     setLastVisible(null); // will trigger the effect
   };
 
+  const clearFilters = () => {
+    setGlobalFilter('');
+    setCountryFilter('');
+    setStatusFilter('');
+    setLastVisible(null);
+  };
+
   return {
     users,
-    filteredUsers: users, // For backward compatibility with the prop drills
+    filteredUsers,
     loading,
     error,
     globalFilter,
     setGlobalFilter,
+    countryFilter,
+    setCountryFilter,
+    statusFilter,
+    setStatusFilter,
     refreshUsers,
+    clearFilters,
     fetchNextBatch,
     hasMore
   };
