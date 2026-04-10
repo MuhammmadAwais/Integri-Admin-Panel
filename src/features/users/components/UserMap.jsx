@@ -21,18 +21,26 @@ const countryCoordinates = {
   "Australia": [133.7751, -25.2744],
   "Canada": [-106.3468, 56.1304],
   "Japan": [138.2529, 36.2048],
-  "China": [104.1954, 35.8617]
+  "China": [104.1954, 35.8617],
+  "Pakistan": [69.3451, 30.3753],
+  "PK": [69.3451, 30.3753]
 };
 
 const UserMap = React.memo(({ users, globalFilter, setGlobalFilter }) => {
   const hoverMarkerRef = useRef(null);
   const [hoveredCountry, setHoveredCountry] = useState(null);
 
-  // Aggregate users by country
   const countryCounts = useMemo(() => {
     const counts = {};
+    const norm = {
+      'PK': 'Pakistan',
+      'USA': 'United States',
+      'UK': 'United Kingdom'
+    };
     users.forEach(user => {
-      const country = user.country;
+      let country = user.country;
+      if (country && norm[country]) country = norm[country];
+      
       if (country && country !== 'Unknown') {
         counts[country] = (counts[country] || 0) + 1;
       }
@@ -88,7 +96,7 @@ const UserMap = React.memo(({ users, globalFilter, setGlobalFilter }) => {
         </div>
       )}
       
-      <div style={{ width: '100%', height: '400px', background: '#060606', borderRadius: '0 0 12px 12px', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <div className="d-flex justify-content-center align-items-center" style={{ width: '100%', height: '400px', background: '#060606', borderRadius: '0 0 12px 12px', position: 'relative' }}>
         <ComposableMap projectionConfig={{ scale: 140 }}>
           <Geographies geography={geoUrl}>
             {({ geographies }) =>
@@ -110,9 +118,9 @@ const UserMap = React.memo(({ users, globalFilter, setGlobalFilter }) => {
                   }}
                   onMouseLeave={() => setHoveredCountry(null)}
                   style={{
-                    default: { outline: "none" },
-                    hover: { fill: "#2a2a2a", outline: "none" },
-                    pressed: { outline: "none" }
+                    default: { outline: "none", cursor: 'pointer' },
+                    hover: { fill: "#2a2a2a", outline: "none", cursor: 'pointer' },
+                    pressed: { outline: "none", cursor: 'pointer' }
                   }}
                 />
               ))

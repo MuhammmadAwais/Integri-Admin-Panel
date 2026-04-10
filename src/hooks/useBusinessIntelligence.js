@@ -3,12 +3,12 @@ import { analytics } from 'lib/firebase/firebase';
 import { logEvent } from 'firebase/analytics';
 
 /**
- * useAnalytics Hook
+ * useBusinessIntelligence Hook
  * Acts as the bridge between Google Analytics (Firebase) and the Integri Admin Dashboard.
  * In a real production scope, this might aggregate direct BigQuery streams or complex GA4 Data API calls.
  * For this architecture, we orchestrate mocked dynamic KPI outputs seeded with base Analytics event tracking.
  */
-export default function useAnalytics() {
+export default function useBusinessIntelligence() {
   const [stats, setStats] = useState({
     monthlyRevenue: 24995,
     activeUsers: 4821,

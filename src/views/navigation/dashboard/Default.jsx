@@ -3,7 +3,7 @@ import { gsap } from 'gsap';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import { TrendingUp, Users, Coins, Activity, Award, MapPin } from 'lucide-react';
-import useAnalytics from 'hooks/useAnalytics';
+import useBusinessIntelligence from 'hooks/useBusinessIntelligence';
 
 // feature-based imports
 import KpiCard from 'features/dashboard/components/KpiCard';
@@ -24,7 +24,7 @@ const statData = [
 // ================================|| DASHBOARD - DEFAULT ||============================== //
 
 export default function DefaultPage() {
-  const { stats, loading: analyticsLoading } = useAnalytics();
+  const { stats, loading: analyticsLoading } = useBusinessIntelligence();
 
   /**
    * Dynamic KPI generation bridging the analytics pipeline.

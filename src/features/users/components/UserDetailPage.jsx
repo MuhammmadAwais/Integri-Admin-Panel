@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from 'lib/firebase/firebase';
-import { ArrowLeft, Clock, MapPin, Mail, Shield, Zap } from 'lucide-react';
+import { UserMemoryService } from 'api/backendApi';
+import { ArrowLeft, Clock, MapPin, Mail, Shield, Zap, BrainCircuit } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { gsap } from 'gsap';
 import MainCard from 'components/MainCard';
@@ -13,6 +14,7 @@ export default function UserDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
+  const [memoryData, setMemoryData] = useState(null);
   const [tokenHistory, setTokenHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const pageRef = useRef(null);
@@ -47,6 +49,14 @@ export default function UserDetailPage() {
           
           console.log("Firebase Response: Received [User Detail] payload:", mappedUser);
           setUser(mappedUser);
+
+          // Fetch API memory context
+          try {
+            const memory = await UserMemoryService.getUserMemory(id);
+            setMemoryData(memory);
+          } catch (e) {
+            console.warn("User Intelligence API connection not established or user has no memory.");
+          }
 
           // Sub-collection onSnapshot
           console.log("Firebase Action: Listening to [generatedTokens] for user:", id);
@@ -181,7 +191,7 @@ export default function UserDetailPage() {
           <MainCard title="Token Trajectory" className="h-100" bodyClassName="d-flex flex-column">
              <h3 style={{ color: '#D4AF37', margin: '0 0 20px 0' }}>₮ {user.tokens.toLocaleString()} <span style={{fontSize: '1rem', color: '#a8956b', fontWeight: 400}}>Current Balance</span></h3>
              
-             <div style={{ flex: 1, minHeight: '200px' }}>
+             <div style={{ height: "400px", width: "100%", position: "relative" }}>
                 <ResponsiveContainer width="100%" height="100%">
                    <AreaChart data={tokenHistory} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                       <defs>
@@ -200,6 +210,30 @@ export default function UserDetailPage() {
                    </AreaChart>
                 </ResponsiveContainer>
              </div>
+          </MainCard>
+        </Col>
+      </Row>
+
+      {/* User Core Memory */}
+      <Row className="mt-4">
+        <Col md={12}>
+          <MainCard title={
+            <div className="d-flex align-items-center gap-2">
+              <BrainCircuit size={18} color="#D4AF37" />
+              <span style={{ color: '#D4AF37' }}>User Intelligence Memory</span>
+            </div>
+          } bodyClassName="p-0">
+             {memoryData ? (
+               <div style={{ padding: '20px', background: '#0a0a0a', borderBottom: '1px solid rgba(212,175,55,0.1)' }}>
+                  <pre style={{ margin: 0, color: '#e0d5b8', fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                    {JSON.stringify(memoryData.memory_data || memoryData, null, 2)}
+                  </pre>
+               </div>
+             ) : (
+               <div className="p-4 text-center" style={{ color: '#a8956b', fontStyle: 'italic' }}>
+                 No semantic memory footprint recorded.
+               </div>
+             )}
           </MainCard>
         </Col>
       </Row>

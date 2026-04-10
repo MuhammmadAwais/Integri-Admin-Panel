@@ -1,93 +1,119 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { useState, useCallback, useEffect } from 'react';
+import { collection, query, limit, startAfter, getDocs, where, orderBy } from 'firebase/firestore';
 import { db } from 'lib/firebase/firebase';
 
 /**
- * useUsers Hook
- * Built by Senior Firebase Architect for Integri App.
- * Manages real-time user stream with global filtering.
+ * useUsers Hook - High Performance Version
+ * Built by Senior Firebase Architect.
+ * Implements cursor-based pagination and server-side search.
  */
 export default function useUsers() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // centralized filter state
   const [globalFilter, setGlobalFilter] = useState('');
+  const [lastVisible, setLastVisible] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
 
-  const subscribeToUsers = useCallback(() => {
-    setLoading(true);
-    console.log("Firebase Action: Initiating real-time subscription to [/Users] collection...");
-    
-    // Explicitly targeting '/Users' (Capitalized) and removing orderBy to avoid missing documents lacking index fields
-    const q = query(collection(db, 'Users'));
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const fetchedUsers = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            name: data.name || 'Guest',
-            email: data.email || 'No email',
-            avatar: data.avatar || null,
-            country: data.country || 'Unknown',
-            tokens: data.tokens || 0,
-            freeDays: data.freeDays || 0,
-            // Handle Firestore Timestamp precisely
-            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
-            status: data.status || 'inactive'
-          };
-        });
-
-        console.log("Firebase Response: Received [Users] payload. Count:", fetchedUsers.length);
-        console.table(fetchedUsers.slice(0, 5)); // log first 5 for clarity
-
-        setUsers(fetchedUsers);
-        setLoading(false);
-      },
-      (err) => {
-        console.error("Firestore [Users] Subscription Error:", err);
-        setError(err.message);
-        setLoading(false);
+  const fetchUsers = useCallback(async (isLoadMore = false) => {
+    try {
+      setLoading(true);
+      setError(null);
+      let constraints = [];
+      
+      if (globalFilter.trim()) {
+        const search = globalFilter.trim();
+        // Server-side search logic. (Requires composite index)
+        constraints.push(where('name', '>=', search));
+        constraints.push(where('name', '<=', search + '\uf8ff'));
+        constraints.push(orderBy('name', 'asc')); // Firestore requires orderBy on the filtered field
       }
-    );
 
-    return unsubscribe;
-  }, []);
+      if (isLoadMore && lastVisible) {
+        constraints.push(startAfter(lastVisible));
+      }
 
-  const refreshUsers = () => {
-    console.log("Manual Action: Refreshing user intelligence data...");
-    subscribeToUsers();
-  };
+      constraints.push(limit(100));
+
+      const q = query(collection(db, 'Users'), ...constraints);
+      const snapshot = await getDocs(q);
+      
+      const fetchedUsers = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name || 'Guest',
+          email: data.email || 'No email',
+          avatar: data.avatar || null, // Strictly mapping to null for UI initial fallback
+          country: data.country || 'Unknown',
+          tokens: data.tokens || 0,
+          freeDays: data.freeDays || 0,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+          status: data.status || 'inactive'
+        };
+      });
+
+      if (isLoadMore) {
+         setUsers(prev => [...prev, ...fetchedUsers]);
+      } else {
+         setUsers(fetchedUsers);
+      }
+      
+      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      setHasMore(snapshot.docs.length === 100);
+      
+      console.log(`Firebase Action: Fetched ${fetchedUsers.length} users via Server Query.`);
+    } catch (err) {
+      // 2. Boss Constraint: Firestore Search Indexing catcher
+      if (err.message && err.message.includes('FAILED_PRECONDITION')) {
+         console.error("❌ [API] Firebase Index required for this search query.");
+         console.error(err.message); // This will output the clickable link
+      } else {
+         console.error("Firestore [Users] Fetch Error:", err);
+      }
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [globalFilter, lastVisible]);
 
   useEffect(() => {
-    const unsub = subscribeToUsers();
-    return () => unsub && unsub();
-  }, [subscribeToUsers]);
+    // Treat as mount / filter change effect. Reset state for new searches.
+    setLastVisible(null);
+    setHasMore(true);
+    setUsers([]);
+    // We intentionally ignore lastVisible in deps to avoid loop. 
+    // Effect runs when globalFilter changes.
+  }, [globalFilter]);
 
-  // Derived state for filtering
-  const filteredUsers = useMemo(() => {
-    if (!globalFilter) return users;
+  // Actually invoke fetch when the page resets or changes
+  useEffect(() => {
+    // Only load from scratch when lastVisible is null (meaning array empty / reset)
+    if (lastVisible === null) {
+      fetchUsers(false);
+    }
+  }, [lastVisible, fetchUsers]);
 
-    const lowerFilter = globalFilter.toLowerCase();
-    return users.filter((user) => {
-      return (
-        user.name.toLowerCase().includes(lowerFilter) ||
-        user.country.toLowerCase() === lowerFilter ||
-        user.email.toLowerCase().includes(lowerFilter)
-      );
-    });
-  }, [users, globalFilter]);
+  const loadMore = () => {
+    if (hasMore && !loading) {
+      fetchUsers(true);
+    }
+  };
+
+  const refreshUsers = () => {
+    setLastVisible(null); // will trigger the effect
+  };
 
   return {
     users,
-    filteredUsers,
+    filteredUsers: users, // For backward compatibility with the prop drills
     loading,
     error,
     globalFilter,
     setGlobalFilter,
-    refreshUsers
+    refreshUsers,
+    loadMore,
+    hasMore
   };
 }

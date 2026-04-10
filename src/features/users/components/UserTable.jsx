@@ -1,16 +1,17 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table';
+import { flexRender, getCoreRowModel, getFilteredRowModel, getSortedRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { MoreVertical, Eye, Search, RotateCw } from 'lucide-react';
 import { gsap } from 'gsap';
 import Dropdown from 'react-bootstrap/Dropdown';
 import useDebounce from 'hooks/useDebounce';
 
-const UserTable = React.memo(({ users, loading, globalFilter, setGlobalFilter, onRefresh }) => {
+const UserTable = React.memo(({ users, loading, globalFilter, setGlobalFilter, onRefresh, loadMore, hasMore }) => {
   const [sorting, setSorting] = useState([]);
   const [localSearch, setLocalSearch] = useState(globalFilter ?? '');
-  const debouncedSearch = useDebounce(localSearch, 300);
+  const debouncedSearch = useDebounce(localSearch, 400);
   
+  const parentRef = useRef(null);
   const tableRef = useRef(null);
   const navigate = useNavigate();
 
@@ -37,7 +38,7 @@ const UserTable = React.memo(({ users, loading, globalFilter, setGlobalFilter, o
           const name = info.row.original.name || '?';
           const initial = name.charAt(0).toUpperCase();
           return avatarUrl ? (
-            <img src={avatarUrl} alt="avatar" style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid #D4AF37' }} />
+            <img src={avatarUrl} alt="avatar" style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid #D4AF37', objectFit: 'cover' }} />
           ) : (
             <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: 'rgba(212,175,55,0.1)', border: '1px solid #D4AF37', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D4AF37', fontWeight: 'bold' }}>
               {initial}
@@ -140,9 +141,13 @@ const UserTable = React.memo(({ users, loading, globalFilter, setGlobalFilter, o
     onGlobalFilterChange: setGlobalFilter,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: 15,
+      },
+    },
   });
 
   // GSAP animation for table rows
@@ -186,62 +191,123 @@ const UserTable = React.memo(({ users, loading, globalFilter, setGlobalFilter, o
       </div>
       
       <div className="card-body p-0">
-        {loading ? (
-          <div className="p-4 text-center" style={{ color: '#a8956b' }}>Loading intelligence...</div>
-        ) : (
-          <div className="table-responsive">
-            <table className="table table-hover mb-0" ref={tableRef}>
-              <thead style={{ background: 'rgba(212,175,55,0.05)' }}>
-                {table.getHeaderGroups().map(headerGroup => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map(header => (
-                      <th key={header.id} onClick={header.column.getToggleSortingHandler()} style={{ cursor: header.column.getCanSort() ? 'pointer' : 'default', color: '#D4AF37', borderBottom: 'none' }}>
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                        {{
-                          asc: ' 🔼',
-                          desc: ' 🔽',
-                        }[header.column.getIsSorted()] ?? null}
-                      </th>
+        <style>{`
+          @keyframes glowPulse {
+            0% { opacity: 0.3; }
+            50% { opacity: 0.7; }
+            100% { opacity: 0.3; }
+          }
+          .skeleton-box {
+            background: rgba(212,175,55,0.1);
+            border: 1px solid rgba(212,175,55,0.2);
+            border-radius: 4px;
+            height: 24px;
+            width: 100%;
+            animation: glowPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          }
+          /* Custom scrollbar for Imperial Obsidian */
+          .obsidian-scroll::-webkit-scrollbar {
+            width: 8px;
+          }
+          .obsidian-scroll::-webkit-scrollbar-track {
+            background: rgba(5,5,5,0.5);
+          }
+          .obsidian-scroll::-webkit-scrollbar-thumb {
+            background: rgba(212,175,55,0.3);
+            border-radius: 4px;
+          }
+          .obsidian-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(212,175,55,0.5);
+          }
+        `}</style>
+        <div 
+          className="table-responsive obsidian-scroll" 
+          style={{ position: 'relative' }}
+        >
+          <table className="table table-hover mb-0" ref={tableRef} style={{ width: '100%' }}>
+            <thead style={{ background: 'rgba(212,175,55,0.05)', position: 'sticky', top: 0, zIndex: 2, backdropFilter: 'blur(8px)' }}>
+              {table.getHeaderGroups().map(headerGroup => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map(header => (
+                    <th key={header.id} onClick={header.column.getToggleSortingHandler()} style={{ cursor: header.column.getCanSort() ? 'pointer' : 'default', color: '#D4AF37', borderBottom: 'none' }}>
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                      {{
+                        asc: ' 🔼',
+                        desc: ' 🔽',
+                      }[header.column.getIsSorted()] ?? null}
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {loading ? (
+                [...Array(15)].map((_, virtualRowIndex) => (
+                  <tr 
+                    key={`skeleton-${virtualRowIndex}`} 
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                  >
+                    {[...Array(7)].map((_, i) => (
+                      <td key={i} style={{ verticalAlign: 'middle', borderBottom: 'none' }}>
+                        <div className="skeleton-box" style={{ width: i === 0 ? '36px' : i === 6 ? '16px' : '80%', height: i === 0 ? '36px' : '24px', borderRadius: i === 0 ? '50%' : '4px' }}></div>
+                      </td>
                     ))}
                   </tr>
-                ))}
-              </thead>
-              <tbody>
-                {table.getRowModel().rows.length === 0 ? (
-                   <tr><td colSpan={7} className="text-center p-4">No users found.</td></tr>
-                ) : (
-                  table.getRowModel().rows.map(row => (
-                    <tr 
-                      key={row.id} 
-                      className="cursor-pointer"
-                      onClick={() => navigate(`/users/${row.original.id}`)}
-                      style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
-                    >
-                      {row.getVisibleCells().map(cell => (
-                        <td key={cell.id} style={{ verticalAlign: 'middle', borderBottom: 'none', color: '#e0d5b8' }}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                ))
+              ) : table.getRowModel().rows.length === 0 ? (
+                 <tr><td colSpan={7} className="text-center p-4">No users found in this sector.</td></tr>
+              ) : (
+                table.getRowModel().rows.map(row => (
+                  <tr 
+                    key={row.id} 
+                    className="cursor-pointer"
+                    onClick={() => navigate(`/users/${row.original.id}`)}
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                  >
+                    {row.getVisibleCells().map(cell => (
+                      <td key={cell.id} style={{ verticalAlign: 'middle', borderBottom: 'none', color: '#e0d5b8' }}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
       
       {/* Pagination Controls */}
-      <div className="card-footer d-flex align-items-center justify-content-between">
+      <div className="card-footer d-flex align-items-center justify-content-between" style={{ background: 'rgba(5,5,5,0.6)', borderTop: '0.5px solid rgba(212,175,55,0.2)' }}>
          <span style={{ color: '#a8956b', fontSize: '0.85rem' }}>
-            Page {table.getState().pagination.pageIndex + 1} of {Math.max(1, table.getPageCount())}
+            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
          </span>
          <div className="d-flex gap-2">
-            <button className="btn btn-sm" style={{ border: '1px solid rgba(212,175,55,0.3)', color: '#D4AF37', background: 'transparent' }} onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>Prev</button>
-            <button className="btn btn-sm" style={{ border: '1px solid rgba(212,175,55,0.3)', color: '#D4AF37', background: 'transparent' }} onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>Next</button>
+            <button 
+              className="btn btn-sm" 
+              style={{ border: '1px solid rgba(212,175,55,0.3)', color: '#D4AF37', background: 'transparent' }} 
+              onClick={() => table.previousPage()} 
+              disabled={!table.getCanPreviousPage() || loading}
+            >
+              Prev
+            </button>
+            <button 
+              className="btn btn-sm" 
+              style={{ border: '1px solid rgba(212,175,55,0.3)', color: '#D4AF37', background: 'transparent' }} 
+              onClick={() => {
+                if (table.getCanNextPage()) {
+                  table.nextPage();
+                } else if (hasMore) {
+                  loadMore();
+                }
+              }} 
+              disabled={(!table.getCanNextPage() && !hasMore) || loading}
+            >
+              {loading ? 'Decrypting...' : (table.getCanNextPage() ? 'Next' : (hasMore ? 'Load Next Chunk' : 'End of Stream'))}
+            </button>
          </div>
       </div>
     </div>
