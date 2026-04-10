@@ -45,7 +45,7 @@ export default function useUsers() {
           id: doc.id,
           name: data.name || 'Guest',
           email: data.email || 'No email',
-          avatar: data.avatar || data.profileImage || null, // Synchronizing multi-source asset fields
+          avatar: data.avatar || data.profileImage || data.profile_image || data.photoURL || null, // Final forensic asset synchronization
           country: data.country || 'Unknown',
           tokens: data.tokens || 0,
           freeDays: data.freeDays || 0,

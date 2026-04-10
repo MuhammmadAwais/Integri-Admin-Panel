@@ -211,7 +211,7 @@ export default function UserDetailPage() {
             id: docSnap.id,
             name: data.name || 'Guest',
             email: data.email || 'No email',
-            avatar: data.avatar || null,
+            avatar: data.avatar || data.profileImage || data.profile_image || data.photoURL || null,
             country: data.country || 'Unknown',
             selectedLanguage: data.selectedLanguage || 'System (EN-US)',
             tokens: data.tokens || 0,
