@@ -4,11 +4,28 @@ import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel
 import { MoreVertical, Eye, Search, RotateCw } from 'lucide-react';
 import { gsap } from 'gsap';
 import Dropdown from 'react-bootstrap/Dropdown';
+import useDebounce from 'hooks/useDebounce';
 
-export default function UserTable({ users, loading, globalFilter, setGlobalFilter, onRefresh }) {
+const UserTable = React.memo(({ users, loading, globalFilter, setGlobalFilter, onRefresh }) => {
   const [sorting, setSorting] = useState([]);
+  const [localSearch, setLocalSearch] = useState(globalFilter ?? '');
+  const debouncedSearch = useDebounce(localSearch, 300);
+  
   const tableRef = useRef(null);
   const navigate = useNavigate();
+
+  // Sync debounced search to global filter parent state
+  useEffect(() => {
+    // Only update if they differ to prevent infinite loops from upstream propagation
+    if (debouncedSearch !== globalFilter) {
+      setGlobalFilter(debouncedSearch);
+    }
+  }, [debouncedSearch, globalFilter, setGlobalFilter]);
+
+  // Sync upstream changes back to local (e.g., clearing filter from another component)
+  useEffect(() => {
+    setLocalSearch(globalFilter ?? '');
+  }, [globalFilter]);
 
   const columns = useMemo(
     () => [
@@ -158,8 +175,8 @@ export default function UserTable({ users, loading, globalFilter, setGlobalFilte
           <div className="d-flex align-items-center" style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.2)', borderRadius: '20px', padding: '4px 12px' }}>
             <Search size={16} color="#a8956b" />
             <input
-              value={globalFilter ?? ''}
-              onChange={e => setGlobalFilter(e.target.value)}
+              value={localSearch}
+              onChange={e => setLocalSearch(e.target.value)}
               className="p-1 font-lg border-0 shadow-none"
               placeholder="Search users..."
               style={{ background: 'transparent', color: '#e0d5b8', outline: 'none', marginLeft: '8px', width: '200px' }}
@@ -229,4 +246,6 @@ export default function UserTable({ users, loading, globalFilter, setGlobalFilte
       </div>
     </div>
   );
-}
+});
+
+export default UserTable;

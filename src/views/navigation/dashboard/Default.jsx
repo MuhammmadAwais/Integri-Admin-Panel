@@ -3,6 +3,7 @@ import { gsap } from 'gsap';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import { TrendingUp, Users, Coins, Activity, Award, MapPin } from 'lucide-react';
+import useAnalytics from 'hooks/useAnalytics';
 
 // feature-based imports
 import KpiCard from 'features/dashboard/components/KpiCard';
@@ -11,33 +12,6 @@ import KpiCard from 'features/dashboard/components/KpiCard';
 import { UsersMap, EarningChart, RatingCard, RecentUsersCard } from 'sections/dashboard/default';
 
 // ==============================|| INTEGRI APP — DASHBOARD PAGE ||============================== //
-
-/**
- * KPI card definitions — single source of truth.
- * Changing a number here auto-triggers the GSAP countUp in KpiCard.
- */
-const kpiData = [
-  {
-    title:  'Daily Revenue',
-    value:  24995,
-    prefix: '$',
-    icon:   TrendingUp,
-    trend:  '+8.2%'
-  },
-  {
-    title:  'Active Users',
-    value:  4821,
-    icon:   Users,
-    trend:  '+12.5%'
-  },
-  {
-    title:  'Token Volume',
-    value:  893200,
-    prefix: '₮',
-    icon:   Coins,
-    trend:  '+3.7%'
-  }
-];
 
 /**
  * Stat indicator data — lightweight replacements for static numbers below the chart.
@@ -50,6 +24,33 @@ const statData = [
 // ================================|| DASHBOARD - DEFAULT ||============================== //
 
 export default function DefaultPage() {
+  const { stats, loading: analyticsLoading } = useAnalytics();
+
+  /**
+   * Dynamic KPI generation bridging the analytics pipeline.
+   */
+  const dynamicKpiData = [
+    {
+      title:  'Monthly Revenue',
+      value:  stats.monthlyRevenue,
+      prefix: '$',
+      icon:   TrendingUp,
+      trend:  `+${((stats.monthlyRevenue - 24500) / 24500 * 100).toFixed(1)}%` // mocked trend
+    },
+    {
+      title:  'Active Users (AAU)',
+      value:  stats.activeUsers,
+      icon:   Users,
+      trend:  '+12.5%'
+    },
+    {
+      title:  'Conversion Rate',
+      value:  stats.conversionRate,
+      suffix: '%',
+      icon:   Coins,
+      trend:  '+3.7%'
+    }
+  ];
 
   // ── GSAP cross-card stagger orchestration ──
   // After all cards mount, target every [data-gsap-card] and stagger the
@@ -76,9 +77,11 @@ export default function DefaultPage() {
   return (
     <Row>
       {/* ── ROW 1: KPI Cards ── */}
-      {kpiData.map((kpi, index) => (
+      {dynamicKpiData.map((kpi, index) => (
         <Col key={index} md={6} xl={4}>
-          <KpiCard {...kpi} />
+          <div style={{ background: 'rgba(5,5,5,0.65)', backdropFilter: 'blur(10px)', border: '0.5px solid rgba(212,175,55,0.4)', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
+             <KpiCard {...kpi} />
+          </div>
         </Col>
       ))}
 
@@ -91,7 +94,7 @@ export default function DefaultPage() {
           <EarningChart />
 
           {/* Stat indicators — compact gold-themed */}
-          <div className="card" data-gsap-card>
+          <div className="card" data-gsap-card style={{ background: 'rgba(5,5,5,0.65)', backdropFilter: 'blur(10px)', border: '0.5px solid rgba(212,175,55,0.4)' }}>
             <div className="card-body">
               {statData.map(({ icon: Icon, value, label }) => (
                 <div key={label} className="d-flex align-items-center gap-3 mb-3">
@@ -129,7 +132,7 @@ export default function DefaultPage() {
         { platform: 'Google',   icon: Activity, color: '#a8956b', count: '10,500', pct: '+5.9%' }
       ].map(({ platform, icon: Icon, color, count, pct }, i) => (
         <Col key={platform} md={i === 0 ? 12 : 6} xl={4}>
-          <div className="card" data-gsap-card>
+          <div className="card" data-gsap-card style={{ background: 'rgba(5,5,5,0.65)', backdropFilter: 'blur(10px)', border: '0.5px solid rgba(212,175,55,0.4)' }}>
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center">
                 <div className="d-flex align-items-center gap-2">

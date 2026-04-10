@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps';
 import { gsap } from 'gsap';
 import MainCard from 'components/MainCard';
@@ -24,8 +24,9 @@ const countryCoordinates = {
   "China": [104.1954, 35.8617]
 };
 
-export default function UserMap({ users, globalFilter, setGlobalFilter }) {
-  const markerGroupRef = useRef(null);
+const UserMap = React.memo(({ users, globalFilter, setGlobalFilter }) => {
+  const hoverMarkerRef = useRef(null);
+  const [hoveredCountry, setHoveredCountry] = useState(null);
 
   // Aggregate users by country
   const countryCounts = useMemo(() => {
@@ -52,22 +53,26 @@ export default function UserMap({ users, globalFilter, setGlobalFilter }) {
       }));
   }, [countryCounts]);
 
-  // GSAP pulse animation for markers
+  // GSAP animation for the hover marker pop-in
   useEffect(() => {
-    if (markerGroupRef.current) {
-      const circles = markerGroupRef.current.querySelectorAll('.pulse-circle');
-      if (circles.length > 0) {
-        gsap.to(circles, {
-          scale: 1.5,
+    if (hoveredCountry && hoverMarkerRef.current) {
+      gsap.fromTo(hoverMarkerRef.current,
+        { scale: 0, opacity: 0, y: 10 },
+        { scale: 1, opacity: 1, y: 0, duration: 0.4, ease: "back.out(1.7)" }
+      );
+      
+      const pulseRing = hoverMarkerRef.current.querySelector('.pulse-ring');
+      if (pulseRing) {
+        gsap.to(pulseRing, {
+          scale: 2.2,
           opacity: 0,
-          duration: 1.5,
+          duration: 1.2,
           repeat: -1,
-          stagger: 0.2,
-          ease: "power1.out"
+          ease: "power2.out"
         });
       }
     }
-  }, [markers]);
+  }, [hoveredCountry]);
 
   return (
     <MainCard title="Geo-Pulse" bodyClassName="p-0 position-relative">
@@ -95,6 +100,15 @@ export default function UserMap({ users, globalFilter, setGlobalFilter }) {
                   stroke="rgba(212, 175, 55, 0.3)"
                   strokeWidth={0.5}
                   className="cursor-pointer"
+                  onMouseEnter={() => {
+                    const cname = geo.properties.name;
+                    // Check our mapped markers bounds for valid data points
+                    const target = markers.find(m => m.name === cname);
+                    if (target) {
+                      setHoveredCountry(target);
+                    }
+                  }}
+                  onMouseLeave={() => setHoveredCountry(null)}
                   style={{
                     default: { outline: "none" },
                     hover: { fill: "#2a2a2a", outline: "none" },
@@ -105,39 +119,41 @@ export default function UserMap({ users, globalFilter, setGlobalFilter }) {
             }
           </Geographies>
 
-          <g ref={markerGroupRef}>
-            {markers.map(({ name, coordinates, size }) => {
-              const isActive = globalFilter?.toLowerCase() === name.toLowerCase();
-              const markerColor = isActive ? "#DC143C" : "#D4AF37";
-
-              return (
-                <Marker key={name} coordinates={coordinates} onClick={() => setGlobalFilter(isActive ? '' : name)} style={{ cursor: 'pointer' }}>
-                  {/* Animating outer pulse ring */}
-                  <circle 
-                    className="pulse-circle"
-                    r={size} 
-                    fill="none" 
-                    stroke={markerColor} 
-                    strokeWidth={2}
-                  />
-                  {/* Inner solid circle */}
-                  <circle 
-                    r={size * 0.6} 
-                    fill={markerColor} 
-                  />
-                  <text
-                    textAnchor="middle"
-                    y={-size - 5}
-                    style={{ fontFamily: "system-ui", fill: "#e0d5b8", fontSize: "10px", pointerEvents: "none" }}
-                  >
-                    {name}
-                  </text>
-                </Marker>
-              );
-            })}
-          </g>
+          {hoveredCountry && (
+            <Marker key="hover-marker" coordinates={hoveredCountry.coordinates}>
+              <g ref={hoverMarkerRef} style={{ pointerEvents: 'none' }}>
+                <defs>
+                  <filter id="shadow3d" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#DC143C" floodOpacity="0.6"/>
+                    <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur" />
+                    <feOffset dy="1" dx="0" result="offsetblur" />
+                    <feComponentTransfer><feFuncA type="linear" slope="0.5" /></feComponentTransfer>
+                    <feMerge>
+                      <feMergeNode />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+                <circle className="pulse-ring" r="14" fill="none" stroke="#DC143C" strokeWidth="2" />
+                <circle r="14" fill="#0a0a0a" stroke="#DC143C" strokeWidth="2" filter="url(#shadow3d)" />
+                <text 
+                  textAnchor="middle" 
+                  y="4" 
+                  style={{ fontFamily: 'system-ui', fontSize: '11px', fontWeight: 'bold', fill: '#DC143C' }}
+                >
+                  {hoveredCountry.count}
+                </text>
+                <rect x="-35" y="-30" width="70" height="14" rx="4" fill="rgba(5,5,5,0.85)" stroke="rgba(212,175,55,0.4)" strokeWidth="0.5" />
+                <text textAnchor="middle" y="-20" style={{ fontFamily: 'system-ui', fontSize: '9px', fill: '#D4AF37', fontWeight: 600 }}>
+                  {hoveredCountry.name}
+                </text>
+              </g>
+            </Marker>
+          )}
         </ComposableMap>
       </div>
     </MainCard>
   );
-}
+});
+
+export default UserMap;

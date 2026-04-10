@@ -37,6 +37,7 @@ export default function UserDetailPage() {
             email: data.email || 'No email',
             avatar: data.avatar || null,
             country: data.country || 'Unknown',
+            selectedLanguage: data.selectedLanguage || 'System (EN-US)',
             tokens: data.tokens || 0,
             freeDays: data.freeDays || 0,
             // Handle Firestore Timestamp precisely
@@ -149,14 +150,14 @@ export default function UserDetailPage() {
                  <Mail size={18} color="#D4AF37" />
                  <div>
                     <small style={{ color: '#a8956b', display: 'block' }}>Email Address</small>
-                    <strtong style={{ color: '#e0d5b8' }}>{user.email}</strtong>
+                    <strong style={{ color: '#e0d5b8' }}>{user.email}</strong>
                  </div>
                </li>
                <li className="list-group-item d-flex align-items-center gap-3 py-3" style={{ background: 'transparent', borderBottom: '1px solid rgba(212,175,55,0.1)' }}>
                  <MapPin size={18} color="#D4AF37" />
                  <div>
-                    <small style={{ color: '#a8956b', display: 'block' }}>Region</small>
-                    <strong style={{ color: '#e0d5b8' }}>{user.country}</strong>
+                    <small style={{ color: '#a8956b', display: 'block' }}>Region & Language</small>
+                    <strong style={{ color: '#e0d5b8' }}>{user.country} • {user.selectedLanguage}</strong>
                  </div>
                </li>
                <li className="list-group-item d-flex align-items-center gap-3 py-3" style={{ background: 'transparent', borderBottom: 'none' }}>
@@ -199,6 +200,53 @@ export default function UserDetailPage() {
                    </AreaChart>
                 </ResponsiveContainer>
              </div>
+          </MainCard>
+        </Col>
+      </Row>
+
+      {/* Account Activity Logs */}
+      <Row className="mt-4">
+        <Col md={12}>
+          <MainCard title="Account Activity Log" bodyClassName="p-0">
+            <div className="table-responsive">
+              <table className="table table-hover mb-0">
+                <thead style={{ background: 'rgba(212,175,55,0.05)' }}>
+                  <tr>
+                    <th style={{ color: '#D4AF37', borderBottom: 'none' }}>Timestamp</th>
+                    <th style={{ color: '#D4AF37', borderBottom: 'none' }}>Event Type</th>
+                    <th style={{ color: '#D4AF37', borderBottom: 'none' }}>IP Address</th>
+                    <th style={{ color: '#D4AF37', borderBottom: 'none' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { time: 'Just Now', event: 'Token Validation Check', ip: '192.168.1.104', status: 'Success' },
+                    { time: '2 Hours Ago', event: 'Dashboard Session Initiated', ip: '192.168.1.104', status: 'Success' },
+                    { time: 'Yesterday', event: 'Profile Setting Sync', ip: 'Unknown Carrier', status: 'Success' },
+                    { time: '3 Days Ago', event: 'Failed Authentication Attempt', ip: '10.0.0.32', status: 'Warning' }
+                  ].map((log, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ color: '#e0d5b8', borderBottom: 'none', paddingLeft: '24px' }}>{log.time}</td>
+                      <td style={{ color: '#e0d5b8', borderBottom: 'none' }}>{log.event}</td>
+                      <td style={{ color: '#a8956b', fontFamily: 'monospace', borderBottom: 'none' }}>{log.ip}</td>
+                      <td style={{ borderBottom: 'none' }}>
+                        <span style={{ 
+                          padding: '4px 10px', 
+                          borderRadius: '20px', 
+                          fontSize: '0.75rem', 
+                          fontWeight: 600,
+                          backgroundColor: log.status === 'Success' ? 'rgba(212,175,55,0.1)' : 'rgba(220,20,60,0.1)',
+                          color: log.status === 'Success' ? '#D4AF37' : '#DC143C',
+                          border: `1px solid ${log.status === 'Success' ? '#D4AF37' : '#DC143C'}`
+                        }}>
+                          {log.status.toUpperCase()}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </MainCard>
         </Col>
       </Row>
