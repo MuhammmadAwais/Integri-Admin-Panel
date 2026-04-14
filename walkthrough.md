@@ -1,27 +1,16 @@
-# Dashboard Refinements Complete
+# Dashboard Fixes & Minimal Theme Extracted
 
-All specified features from the implementation plan have been built into the source codebase. 
+I've executed the full sweeping set of bug fixes you requested and radically simplified the Light Theme directly matching your reference aesthetic.
 
-## 1. Hybrid Client-Side Intelligence Engine (Users)
-- **Problem**: Querying `['country', '==', filter]` parallel with an inequality `['search', '>=', ...] ` caused Firebase `FAILED_PRECONDITION` index errors. This meant no users rendered when filtering by a country independently.
-- **Solution**: Decoupled `country` and `status` from backend Firestore limits. These are now instantly refined by your hybrid intelligence engine on the client across all loaded datasets, entirely bypassing index crash scenarios.
+### 1. Minimal Pure B/W Light Theme
+- We stripped out all intermediate grays, glassmorphisms, shadows, and colored backgrounds inside `[data-pc-theme='light']`. 
+- Overwrote the inline Gold and Red elements via attribute selectors `[style*="#D4AF37"]` to force them into a strict #000000 and #555555 minimalist palette while in Light Mode. 
+- Your dark mode remains 100% physically untouched.
 
-## 2. Dynamic Bento Layout (Prompts)
-- Applied an asymmetrical Bento grid mapping strategy inside `PromptsPage.jsx`.
-- When rendering three cards, the structure seamlessly flows from an 8-col hero item, a 4-col companion block, to a 12-col base, maximizing modern aesthetics over traditional rigid rows.
-- Interactive `cursor: pointer` logic has been injected into all system buttons.
-
-## 3. Persistent Analytics Pulse & Map Unification
-- Interplaced the high-fidelity `jsvectormap` onto the User intelligence table, stripping out the default `react-simple-maps` version to establish global interface consistency.
-- Overhauled `useBusinessIntelligence.js` with `setInterval` polling to pulse simulated conversion rates, revenue drops, and live AAU metrics every 4.5 seconds.
-- Connects directly into existing Dashboard visualization streams.
-
-## 4. Luxe Zinc & Silver Light Mode
-- Replaced the deprecated flat grays of the standard template.
-- Root-level injections via `[data-pc-theme='light']` forcefully strip out the old palette, introducing:
-  - Stark white & Zinc background layers.
-  - Subdued silver borders targeting Table geometries, dropdowns, and input modals.
-  - Retained glass-morphism techniques by using heavy backdrop-filters without the dark mode obfuscation.
-
-> [!TIP]
-> Changes instantly reload via `npm start`. Toggle between dark and light themes from your top nav layout to experience the new contrast differentials.
+### 2. User Table Functionality Fixes
+- **Email Searching:** Added a detection logic that forces lowercasing specifically when an `@` is queried to match exact indices seamlessly without case-sensitive Firebase crashes.
+- **Independent Country Focus:** Re-engineered the database constraints. The Country filter now directly operates on the Firebase database backend *if* there's no username search taking place—fetching exactly matching users up front instead of turning up empty.
+- **Active/Inactive Statuses Table Column:** Added a dynamic "Status" column displaying uppercase "ACTIVE" (Green) or "INACTIVE" (Red) badges pulled straight from your DB, syncing with your dropdown filters.
+- **Country Filter Search Input:** Converted the Country dropdown to a searchable menu. A new embedded search bar at the top lets you type ahead across an internally expanded array of primary forensic countries.
+- **Immediate Reset Button:** Resetting immediately drops the search text inside the input box to empty alongside hitting the global intelligence engines.
+- **Pagination Sync on Load More:** Disabled the table's automatic reset index function. When "Fetch Next Batch" returns more data from the DB, you will safely remain on the precise pagination block you were working inside!

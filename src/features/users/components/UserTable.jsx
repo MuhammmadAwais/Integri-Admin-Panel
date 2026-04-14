@@ -38,13 +38,18 @@ const UserTable = React.memo(({
 }) => {
   const [sorting, setSorting] = useState([]);
   const [localSearch, setLocalSearch] = useState(globalFilter ?? '');
+  const [countrySearchInput, setCountrySearchInput] = useState('');
   const debouncedSearch = useDebounce(localSearch, 400);
   
-  // Forensic Countries - Static mapping for initial isolates
-  const FORENSIC_COUNTRIES = ['Pakistan', 'United Kingdom', 'United States', 'Canada', 'Germany', 'France', 'Australia', 'United Arab Emirates'];
+  const BASE_COUNTRIES = ['Pakistan', 'United Kingdom', 'United States', 'Canada', 'Germany', 'France', 'Australia', 'United Arab Emirates', 'Japan', 'China', 'Brazil', 'India'];
   const FORENSIC_STATUSES = ['active', 'inactive'];
   const tableRef = useRef(null);
   const navigate = useNavigate();
+
+  const handleResetFilters = () => {
+    setLocalSearch('');
+    clearFilters();
+  };
 
   // Sync debounced search to global filter parent state
   useEffect(() => {
@@ -148,6 +153,27 @@ const UserTable = React.memo(({
         }
       },
       {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: info => {
+          const status = info.getValue() || 'inactive';
+          return (
+            <span style={{ 
+              padding: '4px 10px', 
+              borderRadius: '20px', 
+              fontSize: '0.7rem', 
+              textTransform: 'uppercase', 
+              fontWeight: 600,
+              backgroundColor: status === 'active' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(220, 20, 60, 0.15)',
+              color: status === 'active' ? '#22c55e' : '#dc143c',
+              border: `1px solid ${status === 'active' ? 'rgba(34,197,94,0.3)' : 'rgba(220,20,60,0.3)'}`
+            }}>
+              {status}
+            </span>
+          );
+        }
+      },
+      {
         id: 'actions',
         header: '',
         cell: info => {
@@ -182,12 +208,18 @@ const UserTable = React.memo(({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    autoResetPageIndex: false,
     initialState: {
       pagination: {
         pageSize: 15,
       },
     },
   });
+
+  // Reset pagination purely when filters are actively changed
+  useEffect(() => {
+    table.setPageIndex(0);
+  }, [globalFilter, countryFilter, statusFilter, table]);
 
   // GSAP animation for table rows
   useEffect(() => {
@@ -243,11 +275,25 @@ const UserTable = React.memo(({
             <Dropdown.Toggle size="sm" style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.2)', color: countryFilter ? '#D4AF37' : '#a8956b', borderRadius: '20px', padding: '4px 12px' }}>
               {countryFilter ? countryFilter : 'COUNTRY'}
             </Dropdown.Toggle>
-            <Dropdown.Menu className="obsidian-scroll" style={{ background: '#1a1a1a', border: '1px solid rgba(212,175,55,0.2)', maxHeight: '300px', overflowY: 'auto' }}>
+            <Dropdown.Menu className="obsidian-scroll" style={{ background: '#1a1a1a', border: '1px solid rgba(212,175,55,0.2)', maxHeight: '300px', overflowY: 'auto', minWidth: '220px' }}>
+              <div className="p-2 mb-1" style={{ borderBottom: '1px solid rgba(212,175,55,0.2)' }}>
+                <input 
+                  type="text" 
+                  value={countrySearchInput} 
+                  onChange={(e) => setCountrySearchInput(e.target.value)} 
+                  placeholder="Search Any Country..." 
+                  className="form-control form-control-sm"
+                  style={{ background: '#0a0a0a', color: '#e0d5b8', border: '1px solid rgba(212,175,55,0.3)' }}
+                />
+              </div>
               <Dropdown.Item eventKey="" style={{ color: '#a8956b' }}>All Countries</Dropdown.Item>
-              {FORENSIC_COUNTRIES.map(c => (
+              {BASE_COUNTRIES.filter(c => c.toLowerCase().includes(countrySearchInput.toLowerCase())).map(c => (
                 <Dropdown.Item key={c} eventKey={c} style={{ color: '#e0d5b8' }}>{c}</Dropdown.Item>
               ))}
+              {/* Also strictly add any user inputted country dynamically if not in base list but matched to active fetch */}
+              {countrySearchInput && !BASE_COUNTRIES.some(c => c.toLowerCase() === countrySearchInput.toLowerCase()) && (
+                <Dropdown.Item eventKey={countrySearchInput} style={{ color: '#D4AF37' }}>Use "{countrySearchInput}"</Dropdown.Item>
+              )}
             </Dropdown.Menu>
           </Dropdown>
 
@@ -265,7 +311,7 @@ const UserTable = React.memo(({
           {(globalFilter || countryFilter || statusFilter) && (
             <button 
               className="btn btn-link p-0 text-danger" 
-              onClick={clearFilters}
+              onClick={handleResetFilters}
               title="Clear Forensic Filters"
             >
               <Search size={16} style={{ transform: 'rotate(45deg)', marginRight: '4px' }} />

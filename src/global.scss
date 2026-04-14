@@ -51,96 +51,110 @@
 }
 
 /* ==================================================== */
-/*  LUXE ZINC & SILVER LIGHT THEME OVERRIDES            */
+/*  LUXE MINIMAL PURE B/W LIGHT THEME                   */
 /* ==================================================== */
 [data-pc-theme='light'] {
   body, .pc-container, .pcoded-main-container, .main-body {
-    background-color: #fcfcfc !important; /* Stark crisp white/zinc base */
-    color: #2b2d30 !important;
-  }
-
-  .card {
     background-color: #ffffff !important;
-    border: 1px solid #e1e3e5 !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.03) !important;
+    color: #000000 !important;
   }
 
-  /* Ensure Prompt Cards + GSAP Cards have glass effect in light mode */
-  [data-gsap-card], .prompt-card {
-    background: rgba(255, 255, 255, 0.75) !important;
-    backdrop-filter: blur(16px) !important;
-    border: 1px solid rgba(225, 227, 229, 0.8) !important;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.04) !important;
+  .card, [data-gsap-card], .prompt-card {
+    background: #ffffff !important;
+    border: 1px solid #eaeaea !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    border-radius: 4px !important;
   }
 
   /* Refined card headers */
   .card-header {
-    border-bottom: 1px solid #f0f2f4 !important;
-    background-color: transparent !important;
+    border-bottom: 1px solid #eaeaea !important;
+    background-color: #ffffff !important;
   }
   
-  .card-header h5 {
-    color: #2b2d30 !important;
-    font-weight: 600;
+  .card-header h5, h1, h2, h3, h4, h5, h6, .text-primary {
+    color: #000000 !important;
+    font-weight: 600 !important;
   }
 
-  .text-primary { color: #3b3d40 !important; }
-  .text-muted, small { color: #8c959f !important; }
+  .text-muted, small { color: #555555 !important; }
 
   /* Buttons */
   button.btn {
-    border-color: #d1d5db !important;
-    color: #2b2d30 !important;
+    border: 1px solid #eaeaea !important;
+    color: #000000 !important;
+    background-color: #ffffff !important;
   }
   button.btn:hover {
-    background-color: #f0f2f4 !important;
+    background-color: #f7f7f7 !important;
   }
 
-  /* Specific fix for elements hardcoded with #D4AF37 Gold that need to turn to Silver/Zinc in light mode */
-  /* If any inline styles exist, the !important rules here will selectively overpower them if classes are matched */
+  /* Table rules */
   .table {
-    color: #2b2d30 !important;
+    color: #000000 !important;
   }
   
   .table thead {
-    background-color: #f7f9fb !important;
+    background-color: #ffffff !important;
   }
 
   .table th {
-    color: #4c535a !important;
-    border-bottom: 1px solid #e1e3e5 !important;
+    color: #000000 !important;
+    border-bottom: 1px solid #eaeaea !important;
   }
   
   .table td {
-    color: #3b3d40 !important;
-    border-bottom: 1px solid #f0f2f4 !important;
+    color: #000000 !important;
+    border-bottom: 1px solid #fafafa !important;
   }
   
+  /* Dropdowns */
   .dropdown-menu {
     background: #ffffff !important;
-    border: 1px solid #e1e3e5 !important;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.08) !important;
+    border: 1px solid #eaeaea !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04) !important;
   }
 
   .dropdown-item {
-    color: #2b2d30 !important;
+    color: #000000 !important;
   }
 
   .dropdown-item:hover {
-    background: #f0f2f4 !important;
+    background: #f7f7f7 !important;
   }
 
+  /* Inputs */
   textarea.form-control, input.form-control {
     background-color: #ffffff !important;
-    color: #2b2d30 !important;
-    border: 1px solid #d1d5db !important;
+    color: #000000 !important;
+    border: 1px solid #eaeaea !important;
+  }
+
+  /* Target and override inline styling forcefully for perfect minimal b/w contrast */
+  [style*="#D4AF37"], [style*="#d4af37"] {
+    color: #000000 !important;
+    border-color: #eaeaea !important;
+  }
+
+  [style*="#a8956b"], [style*="#A8956B"] {
+    color: #555555 !important;
+  }
+
+  [style*="rgba(212,175,55"], [style*="rgba(212, 175, 55"] {
+    background: #ffffff !important;
+    border-color: #eaeaea !important;
+  }
+
+  [style*="#e0d5b8"] {
+    color: #000000 !important;
   }
   
   /* Adjust custom scrollbar for light mode */
   .obsidian-scroll::-webkit-scrollbar-track {
-    background: rgba(240,242,244,0.5) !important;
+    background: #ffffff !important;
   }
   .obsidian-scroll::-webkit-scrollbar-thumb {
-    background: rgba(200,204,208,0.5) !important;
+    background: #eaeaea !important;
   }
 }

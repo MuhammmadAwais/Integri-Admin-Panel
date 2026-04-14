@@ -22,37 +22,58 @@ export default function useUsers() {
     try {
       setLoading(true);
       setError(null);
-      let constraints = [];
+      let fetchedDocs = [];
       
       if (globalFilter.trim()) {
         const search = globalFilter.trim();
-        // Smart Redirect: If search looks like email, query email field. Otherwise name.
-        const searchField = search.includes('@') ? 'email' : 'name';
+        const searchLower = search.toLowerCase();
         
-        constraints.push(where(searchField, '>=', search));
-        constraints.push(where(searchField, '<=', search + '\uf8ff'));
-        constraints.push(orderBy(searchField, 'asc'));
+        // Execute parallel queries to unconditionally support BOTH name and email prefix matching
+        // without relying on restrictive Firebase single-field inequality rules.
+        const qName = query(collection(db, 'Users'), where('name', '>=', search), where('name', '<=', search + '\uf8ff'), limit(100));
+        const qEmailLower = query(collection(db, 'Users'), where('email', '>=', searchLower), where('email', '<=', searchLower + '\uf8ff'), limit(100));
+        const qEmailExact = query(collection(db, 'Users'), where('email', '>=', search), where('email', '<=', search + '\uf8ff'), limit(100));
+        
+        const [snapName, snapEmailLower, snapEmailExact] = await Promise.all([getDocs(qName), getDocs(qEmailLower), getDocs(qEmailExact)]);
+        
+        // Merge results using Map to safely eliminate duplicate documents
+        const docMap = new Map();
+        snapName.docs.forEach(d => docMap.set(d.id, d));
+        snapEmailLower.docs.forEach(d => docMap.set(d.id, d));
+        snapEmailExact.docs.forEach(d => docMap.set(d.id, d));
+        
+        fetchedDocs = Array.from(docMap.values());
+        
+        // Use a dummy string cursor to ensure state transition for lastVisible 
+        // down the line, instead of null which breaks the reactivity hook.
+        setLastVisible('dual-search-cursor');
+        setHasMore(false);
+      } else {
+        let constraints = [];
+        // Safely query country & status directly without Firebase FAILED_PRECONDITION indexing errors
+        if (countryFilter) constraints.push(where('country', '==', countryFilter));
+        if (statusFilter) constraints.push(where('status', '==', statusFilter));
+        
+        if (isLoadMore && lastVisible && lastVisible !== 'dual-search-cursor') {
+          constraints.push(startAfter(lastVisible));
+        }
+        constraints.push(limit(100));
+        
+        const q = query(collection(db, 'Users'), ...constraints);
+        const snapshot = await getDocs(q);
+        fetchedDocs = snapshot.docs;
+        
+        setLastVisible(snapshot.docs[snapshot.docs.length - 1] || null);
+        setHasMore(snapshot.docs.length === 100);
       }
-
-      // HYBRID FIX: Removed country and status from server constraints to avoid compound index 'FAILED_PRECONDITION' exceptions.
-      // These will be resolved instantly on the client via the intelligence engine.
-
-      if (isLoadMore && lastVisible) {
-        constraints.push(startAfter(lastVisible));
-      }
-
-      constraints.push(limit(100));
-
-      const q = query(collection(db, 'Users'), ...constraints);
-      const snapshot = await getDocs(q);
       
-      const fetchedUsers = snapshot.docs.map((doc) => {
+      const fetchedUsers = fetchedDocs.map((doc) => {
         const data = doc.data();
         return {
           id: doc.id,
           name: data.name || 'Guest',
           email: data.email || 'No email',
-          avatar: data.avatar || data.profileImage || data.profile_image || data.photoURL || null, // Final forensic asset synchronization
+          avatar: data.avatar || data.profileImage || data.profile_image || data.photoURL || null,
           country: data.country || 'Unknown',
           tokens: data.tokens || 0,
           freeDays: data.freeDays || 0,
@@ -61,16 +82,13 @@ export default function useUsers() {
         };
       });
 
-      if (isLoadMore) {
+      if (isLoadMore && !globalFilter.trim()) {
          setUsers(prev => [...prev, ...fetchedUsers]);
       } else {
          setUsers(fetchedUsers);
       }
       
-      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
-      setHasMore(snapshot.docs.length === 100);
-      
-      console.log(`Firebase Action: Fetched ${fetchedUsers.length} users via Server Query.`);
+      console.log(`Firebase Action: Fetched ${fetchedUsers.length} users via Smart Engine.`);
     } catch (err) {
       // 2. Boss Constraint: Firestore Search Indexing catcher
       if (err.message && err.message.includes('FAILED_PRECONDITION')) {
@@ -83,7 +101,7 @@ export default function useUsers() {
     } finally {
       setLoading(false);
     }
-  }, [globalFilter, lastVisible]);
+  }, [globalFilter, countryFilter, statusFilter, lastVisible]);
 
   // Client-Side Semantic Filter: Enhances forensics by searching loaded batch across ALL fields instantly.
   const filteredUsers = useMemo(() => {
@@ -111,19 +129,24 @@ export default function useUsers() {
     return result;
   }, [users, globalFilter, countryFilter, statusFilter]);
 
+  // When filters shift, cleanly trigger a fresh wipe protocol
   useEffect(() => {
-    // Reset state for new semantic searches
     setLastVisible(null);
     setHasMore(true);
     setUsers([]);
-  }, [globalFilter]);
+    // Immediately fetch users after wiping, so we don't rely on `lastVisible` state transitioning from null to null breaking the pipeline.
+    // Safe fetch explicitly bypassing pagination here.
+    fetchUsers(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [globalFilter, countryFilter, statusFilter]);
 
-  // Initial load and reset trigger
+  // Initial load only safely checking users array length
   useEffect(() => {
-    if (lastVisible === null) {
+    if (users.length === 0 && lastVisible === null && !globalFilter && !countryFilter && !statusFilter) {
       fetchUsers(false);
     }
-  }, [lastVisible, fetchUsers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchNextBatch = () => {
     if (hasMore && !loading) {
