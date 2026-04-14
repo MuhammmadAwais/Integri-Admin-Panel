@@ -27,20 +27,30 @@ export default function useBusinessIntelligence() {
       console.warn("Analytics not fully configured for logging:", e.message);
     }
 
-    // Simulate network delay / fetching aggregate metrics
-    const timer = setTimeout(() => {
-      // Slight randomization to simulate real-time dynamic dashboard updates
+    const generateStats = () => {
       const variance = Math.floor(Math.random() * 50) - 25; 
-      
-      setStats({
+      return {
         monthlyRevenue: 24995 + variance * 100, // Roughly 24k
         activeUsers: 4821 + variance * 5,       // Roughly 4.8k
         conversionRate: 3.7 + (variance / 100)  // Roughly 3.7%
-      });
+      };
+    };
+
+    // Simulate network delay / fetching aggregate metrics
+    const timer = setTimeout(() => {
+      setStats(generateStats());
       setLoading(false);
     }, 800);
 
-    return () => clearTimeout(timer);
+    // Real-time pulse interval to stream simulated Analytics/Firebase updates
+    const interval = setInterval(() => {
+      setStats(generateStats());
+    }, 4500); // Pulse every 4.5s
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
   }, []);
 
   return { stats, loading };

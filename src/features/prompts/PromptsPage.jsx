@@ -98,8 +98,15 @@ export default function PromptsPage() {
       )}
 
       <div className="row" ref={containerRef}>
-        {prompts.map(prompt => (
-          <div className="col-lg-6 col-12 mb-4" key={prompt.id}>
+        {prompts.map((prompt, index) => {
+          let bentoClass = "col-lg-6";
+          if (prompts.length === 3) {
+            bentoClass = index === 0 ? "col-lg-8" : index === 1 ? "col-lg-4" : "col-lg-12";
+          } else if (prompts.length === 1) {
+            bentoClass = "col-lg-12";
+          }
+          return (
+          <div className={`${bentoClass} col-12 mb-4`} key={prompt.id}>
             <div 
               className="card prompt-card h-100" 
               style={{ 
@@ -132,10 +139,10 @@ export default function PromptsPage() {
                       />
                     </div>
                     <div className="d-flex justify-content-end gap-2">
-                      <button className="btn btn-sm" style={{ color: '#e0d5b8' }} onClick={() => setEditingId(null)}>Cancel</button>
+                      <button className="btn btn-sm" style={{ color: '#e0d5b8', cursor: 'pointer' }} onClick={() => setEditingId(null)}>Cancel</button>
                       <button 
                         className="btn btn-sm d-flex align-items-center gap-2" 
-                        style={{ background: 'rgba(212,175,55,0.2)', color: '#D4AF37', border: '1px solid #D4AF37' }}
+                        style={{ background: 'rgba(212,175,55,0.2)', color: '#D4AF37', border: '1px solid #D4AF37', cursor: 'pointer' }}
                         onClick={() => handleSave(prompt.id)}
                         disabled={saving}
                       >
@@ -163,7 +170,7 @@ export default function PromptsPage() {
                     <div className="d-flex justify-content-end mt-3">
                       <button 
                         className="btn btn-sm" 
-                        style={{ color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', background: 'transparent' }}
+                        style={{ color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', background: 'transparent', cursor: 'pointer' }}
                         onClick={() => handleEdit(prompt)}
                       >
                         Configure Logic
@@ -174,7 +181,8 @@ export default function PromptsPage() {
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
         {prompts.length === 0 && !error && (
           <div className="col-12 text-center p-5" style={{ color: '#a8956b' }}>
             No Prompts synchronized.

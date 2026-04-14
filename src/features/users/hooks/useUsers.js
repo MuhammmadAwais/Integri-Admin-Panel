@@ -34,13 +34,8 @@ export default function useUsers() {
         constraints.push(orderBy(searchField, 'asc'));
       }
 
-      if (countryFilter) {
-        constraints.push(where('country', '==', countryFilter));
-      }
-
-      if (statusFilter) {
-        constraints.push(where('status', '==', statusFilter));
-      }
+      // HYBRID FIX: Removed country and status from server constraints to avoid compound index 'FAILED_PRECONDITION' exceptions.
+      // These will be resolved instantly on the client via the intelligence engine.
 
       if (isLoadMore && lastVisible) {
         constraints.push(startAfter(lastVisible));
@@ -92,23 +87,36 @@ export default function useUsers() {
 
   // Client-Side Semantic Filter: Enhances forensics by searching loaded batch across ALL fields instantly.
   const filteredUsers = useMemo(() => {
-    if (!globalFilter.trim()) return users;
-    const q = globalFilter.toLowerCase().trim();
-    return users.filter(u => 
-      u.name.toLowerCase().includes(q) || 
-      u.email.toLowerCase().includes(q) || 
-      u.country.toLowerCase().includes(q) ||
-      u.tokens.toString().includes(q) ||
-      u.id.toLowerCase().includes(q)
-    );
-  }, [users, globalFilter]);
+    let result = users;
+
+    if (globalFilter.trim()) {
+      const q = globalFilter.toLowerCase().trim();
+      result = result.filter(u => 
+        u.name.toLowerCase().includes(q) || 
+        u.email.toLowerCase().includes(q) || 
+        u.country.toLowerCase().includes(q) ||
+        u.tokens.toString().includes(q) ||
+        u.id.toLowerCase().includes(q)
+      );
+    }
+
+    if (countryFilter) {
+      result = result.filter(u => u.country === countryFilter || (u.country === 'Unknown' && countryFilter === 'Unknown'));
+    }
+
+    if (statusFilter) {
+      result = result.filter(u => u.status === statusFilter);
+    }
+
+    return result;
+  }, [users, globalFilter, countryFilter, statusFilter]);
 
   useEffect(() => {
-    // Reset state for new searches or filter changes
+    // Reset state for new semantic searches
     setLastVisible(null);
     setHasMore(true);
     setUsers([]);
-  }, [globalFilter, countryFilter, statusFilter]);
+  }, [globalFilter]);
 
   // Initial load and reset trigger
   useEffect(() => {

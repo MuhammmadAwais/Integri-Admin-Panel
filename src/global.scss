@@ -48,5 +48,99 @@
   .apexcharts-menu-item:hover {
     color: var(--bs-black);
   }
+}
+
+/* ==================================================== */
+/*  LUXE ZINC & SILVER LIGHT THEME OVERRIDES            */
+/* ==================================================== */
+[data-pc-theme='light'] {
+  body, .pc-container, .pcoded-main-container, .main-body {
+    background-color: #fcfcfc !important; /* Stark crisp white/zinc base */
+    color: #2b2d30 !important;
+  }
+
+  .card {
+    background-color: #ffffff !important;
+    border: 1px solid #e1e3e5 !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03) !important;
+  }
+
+  /* Ensure Prompt Cards + GSAP Cards have glass effect in light mode */
+  [data-gsap-card], .prompt-card {
+    background: rgba(255, 255, 255, 0.75) !important;
+    backdrop-filter: blur(16px) !important;
+    border: 1px solid rgba(225, 227, 229, 0.8) !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.04) !important;
+  }
+
+  /* Refined card headers */
+  .card-header {
+    border-bottom: 1px solid #f0f2f4 !important;
+    background-color: transparent !important;
+  }
   
+  .card-header h5 {
+    color: #2b2d30 !important;
+    font-weight: 600;
+  }
+
+  .text-primary { color: #3b3d40 !important; }
+  .text-muted, small { color: #8c959f !important; }
+
+  /* Buttons */
+  button.btn {
+    border-color: #d1d5db !important;
+    color: #2b2d30 !important;
+  }
+  button.btn:hover {
+    background-color: #f0f2f4 !important;
+  }
+
+  /* Specific fix for elements hardcoded with #D4AF37 Gold that need to turn to Silver/Zinc in light mode */
+  /* If any inline styles exist, the !important rules here will selectively overpower them if classes are matched */
+  .table {
+    color: #2b2d30 !important;
+  }
+  
+  .table thead {
+    background-color: #f7f9fb !important;
+  }
+
+  .table th {
+    color: #4c535a !important;
+    border-bottom: 1px solid #e1e3e5 !important;
+  }
+  
+  .table td {
+    color: #3b3d40 !important;
+    border-bottom: 1px solid #f0f2f4 !important;
+  }
+  
+  .dropdown-menu {
+    background: #ffffff !important;
+    border: 1px solid #e1e3e5 !important;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.08) !important;
+  }
+
+  .dropdown-item {
+    color: #2b2d30 !important;
+  }
+
+  .dropdown-item:hover {
+    background: #f0f2f4 !important;
+  }
+
+  textarea.form-control, input.form-control {
+    background-color: #ffffff !important;
+    color: #2b2d30 !important;
+    border: 1px solid #d1d5db !important;
+  }
+  
+  /* Adjust custom scrollbar for light mode */
+  .obsidian-scroll::-webkit-scrollbar-track {
+    background: rgba(240,242,244,0.5) !important;
+  }
+  .obsidian-scroll::-webkit-scrollbar-thumb {
+    background: rgba(200,204,208,0.5) !important;
+  }
 }

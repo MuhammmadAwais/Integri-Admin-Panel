@@ -3,7 +3,7 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 
 import useUsers from './hooks/useUsers';
-import UserMap from './components/UserMap';
+import UsersMap from 'sections/dashboard/UsersMap';
 import UserActivityGraph from './components/UserActivityGraph';
 import UserTable from './components/UserTable';
 
@@ -30,11 +30,8 @@ export default function UsersPage() {
     <Row>
       {/* Tier 1 & 2: Geo-Pulse Map and Activity Graph */}
       <Col md={12} xl={7} className="mb-4">
-        <UserMap 
-          users={users} 
-          globalFilter={globalFilter} 
-          setGlobalFilter={setGlobalFilter} 
-        />
+        {/* Reusing the dashboard's world map ui for consistency */}
+        <UsersMap height={400} />
       </Col>
       <Col md={12} xl={5} className="mb-4">
         <UserActivityGraph users={users} loading={loading} />
