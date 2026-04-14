@@ -50,6 +50,28 @@ export default function UsersMap({ height }) {
       showTooltip: true,
       zoomOnScroll: !isMobile,
       zoomButtons: true,
+      regionStyle: {
+        initial: {
+          fill: 'var(--map-country-fill)',
+          stroke: 'var(--map-country-stroke)',
+          strokeWidth: 0.5
+        },
+        hover: {
+          fill: 'var(--map-country-hover)'
+        }
+      },
+      markerStyle: {
+        initial: {
+          fill: 'var(--map-marker-fill)',
+          stroke: 'var(--map-marker-stroke)',
+          strokeWidth: 2,
+          r: 5
+        },
+        hover: {
+          fill: 'var(--map-marker-stroke)',
+          strokeWidth: 2
+        }
+      },
       zoom: {
         min: 1,
         max: isMobile ? 3 : 10

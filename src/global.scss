@@ -48,6 +48,29 @@
   .apexcharts-menu-item:hover {
     color: var(--bs-black);
   }
+
+  /* Map Variables - Fixed for Visibility */
+  --map-bg: #060606;
+  --map-country-fill: rgba(255, 255, 255, 0.4);
+  --map-country-stroke: #ffffff;
+  --map-country-hover: #ffffff;
+  --map-marker-fill: #ffffff;
+  --map-marker-stroke: #D4AF37;
+
+  /* Table Theme Variables */
+  --table-filter-bg: rgba(0, 0, 0, 0.5);
+  --table-footer-bg: rgba(5, 5, 5, 0.6);
+  --table-input-bg: #0a0a0a;
+
+  /* KPI Card Variables */
+  --kpi-bg: rgba(5,5,5,0.65);
+  --kpi-border: rgba(212,175,55,0.4);
+  --kpi-icon-bg: rgba(212, 175, 55, 0.1);
+  --kpi-icon-color: #D4AF37;
+  --kpi-value-color: #D4AF37;
+  --kpi-title-color: #a8956b;
+  --kpi-divider: linear-gradient(90deg, rgba(212, 175, 55, 0.6) 0%, transparent 100%);
+  --kpi-glow: rgba(212, 175, 55, 0.25);
 }
 
 /* ==================================================== */
@@ -61,7 +84,7 @@
 
   .card, [data-gsap-card], .prompt-card {
     background: #ffffff !important;
-    border: 1px solid #eaeaea !important;
+    border: 1px solid #000000 !important;
     box-shadow: none !important;
     backdrop-filter: none !important;
     border-radius: 4px !important;
@@ -69,25 +92,38 @@
 
   /* Refined card headers */
   .card-header {
-    border-bottom: 1px solid #eaeaea !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
     background-color: #ffffff !important;
   }
   
-  .card-header h5, h1, h2, h3, h4, h5, h6, .text-primary {
+  .card-header h5, h1, h2, h3, h4, h5, h6, .text-primary, .pc-link .pc-mtext {
     color: #000000 !important;
     font-weight: 600 !important;
   }
 
-  .text-muted, small { color: #555555 !important; }
+  /* Forcefully re-map ALL gray/muted text to black or dark zinc */
+  .text-muted, small, .breadcrumb-item, .breadcrumb-item a, 
+  [style*="#555"], [style*="#555555"], [style*="#888"], [style*="#666"], [style*="#67758a"],
+  .recent-users p, .recent-users td div, .card small, small.text-muted,
+  .rating-card h6, .rating-card span, .pc-sidebar .pc-caption label,
+  .Recent-Users p.m-0, .Recent-Users td div {
+    color: #000000 !important;
+    opacity: 0.9 !important;
+  }
+  
+  .table-card p.m-0, .Recent-Users h6 + p, .Recent-Users td {
+    color: #000000 !important;
+    opacity: 0.9 !important;
+  }
 
   /* Buttons */
   button.btn {
-    border: 1px solid #eaeaea !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
     color: #000000 !important;
     background-color: #ffffff !important;
   }
   button.btn:hover {
-    background-color: #f7f7f7 !important;
+    background-color: rgba(0, 0, 0, 0.05) !important;
   }
 
   /* Table rules */
@@ -99,20 +135,18 @@
     background-color: #ffffff !important;
   }
 
-  .table th {
-    color: #000000 !important;
-    border-bottom: 1px solid #eaeaea !important;
+  .table td, .table th {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
   }
   
-  .table td {
-    color: #000000 !important;
-    border-bottom: 1px solid #fafafa !important;
+  .table tr {
+    border-color: rgba(0, 0, 0, 0.05) !important;
   }
   
   /* Dropdowns */
   .dropdown-menu {
     background: #ffffff !important;
-    border: 1px solid #eaeaea !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.04) !important;
   }
 
@@ -121,40 +155,159 @@
   }
 
   .dropdown-item:hover {
-    background: #f7f7f7 !important;
+    background: rgba(0, 0, 0, 0.03) !important;
   }
 
   /* Inputs */
   textarea.form-control, input.form-control {
     background-color: #ffffff !important;
     color: #000000 !important;
-    border: 1px solid #eaeaea !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
   }
 
-  /* Target and override inline styling forcefully for perfect minimal b/w contrast */
-  [style*="#D4AF37"], [style*="#d4af37"] {
-    color: #000000 !important;
-    border-color: #eaeaea !important;
+  /* Target and override ANY remaining gray/muted styling forcefully */
+  [style*="background-color: #f4f7fa"], [style*="background: #f4f7fa"], [style*="background-color: #eee"], [style*="background-color: #f0f0f0"], [style*="background-color: #f8f9fa"] {
+    background-color: #ffffff !important;
   }
 
-  [style*="#a8956b"], [style*="#A8956B"] {
-    color: #555555 !important;
-  }
-
-  [style*="rgba(212,175,55"], [style*="rgba(212, 175, 55"] {
+  /* Sidebar Specifics */
+  .pc-sidebar {
     background: #ffffff !important;
-    border-color: #eaeaea !important;
+    border-right: 1px solid rgba(0, 0, 0, 0.1) !important;
   }
 
-  [style*="#e0d5b8"] {
+  .pc-sidebar .pc-link, .pc-sidebar .pc-link svg, .pc-sidebar .pc-link span {
     color: #000000 !important;
+  }
+
+  /* Active Nav Item - Remove Beige/Cream */
+  .pc-sidebar .pc-item.active > .pc-link {
+    background-color: #18181b !important;
+    color: #ffffff !important;
+  }
+
+  .pc-sidebar .pc-item.active > .pc-link .pc-m-icon svg {
+    color: #ffffff !important;
+  }
+
+  .pc-sidebar .pc-link:hover {
+    background: rgba(0, 0, 0, 0.05) !important;
+  }
+
+  .pc-sidebar .pc-caption {
+    color: #000000 !important;
+    opacity: 0.9 !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Breadcrumbs & Navigation Cleanup */
+  .breadcrumb-item, .pc-breadcrumb, .breadcrumb-item a {
+    color: #000000 !important;
+    opacity: 0.7 !important;
+  }
+
+  .breadcrumb-item.active {
+    opacity: 1 !important;
+    font-weight: 700 !important;
+  }
+
+  /* Forcefully override any remaining gray containers */
+  body, .pc-container, .navbar-content, .pc-header, .pcoded-main-container {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+  }
+
+  .pc-header, .navbar-content {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* Bootstrap Class Remapping for Pure B/W/Zinc */
+  .bg-light, .bg-light-zinc {
+    background-color: #ffffff !important;
   }
   
-  /* Adjust custom scrollbar for light mode */
-  .obsidian-scroll::-webkit-scrollbar-track {
+  .bg-light-primary {
+    background-color: #fafafa !important;
+    color: #000000 !important;
+  }
+
+  .text-brand-zinc {
+    color: #18181b !important;
+  }
+
+  /* Progress Bars - Preserve Brand Colors but remove gray background */
+  .progress {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+    background: rgba(0, 0, 0, 0.05) !important;
+  }
+  
+  .progress-bar.bg-brand-color-1 {
+    background: linear-gradient(-135deg, #D4AF37 0%, #a8956b 100%) !important;
+  }
+
+  /* Target specific dashboard card backgrounds - only if gray */
+  .card.bg-light, .card.bg-gray-100 {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+  }
+
+  /* Icons - Preserve Gold/Red but remove gray icons */
+  .ph, .ph-fill, i[class^="ph-"], .ti, [class^="ti-"] {
+    color: inherit;
+  }
+
+  .pc-item.active .pc-m-icon i {
+    color: inherit;
+  }
+
+  /* Preserve brand colors in specific style blocks */
+  [style*="#D4AF37"], [style*="#d4af37"], [style*="#DC143C"], [style*="#dc143c"] {
+    /* No override to keep gold/red */
+  }
+
+  /* Search and inputs refinements */
+  .pc-header .form-control {
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
     background: #ffffff !important;
   }
-  .obsidian-scroll::-webkit-scrollbar-thumb {
-    background: #eaeaea !important;
+
+  /* ApexCharts and other gray indicators */
+  .apexcharts-menu-item:hover {
+    background: rgba(0,0,0,0.05) !important;
   }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar-track {
+    background: #ffffff !important;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #18181b !important;
+  }
+  
+  /* Map Variables */
+  --map-bg: #ffffff;
+  --map-country-fill: #fdfdfd;
+  --map-country-stroke: rgba(0, 0, 0, 0.2);
+  --map-country-hover: #18181b;
+  --map-marker-fill: #000000;
+  --map-marker-stroke: #18181b;
+
+  /* KPI Card Variables - Preserve Gold */
+  --kpi-bg: #ffffff;
+  --kpi-border: #000000;
+  --kpi-icon-bg: rgba(212, 175, 55, 0.1);
+  --kpi-icon-color: #D4AF37;
+  --kpi-value-color: #D4AF37;
+  --kpi-title-color: #000000;
+  --kpi-divider: linear-gradient(90deg, rgba(212, 175, 55, 0.6) 0%, transparent 100%);
+  --kpi-glow: rgba(212, 175, 55, 0.1);
+
+
+  /* Table Theme Variables */
+  --table-filter-bg: var(--bs-card-bg);
+  --table-footer-bg: var(--bs-card-bg);
+  --table-input-bg: var(--bs-card-bg);
 }

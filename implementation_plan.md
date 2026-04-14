@@ -1,4 +1,4 @@
-# Integri Admin Dashboard Fixes & Overhaul
+-+# Integri Admin Dashboard Fixes & Overhaul
 
 ## Goal Description
 Resolve critical issues and elevate the UI/UX based on the latest feedback. This includes fixing the Users table filtering bug, modernizing the Prompts page with a Bento-style layout, reusing the dashboard's world map on the Users page, connecting Google Analytics/Firebase realtime data hooks, and completely revamping the light theme to a premium Zinc & Silver aesthetic.

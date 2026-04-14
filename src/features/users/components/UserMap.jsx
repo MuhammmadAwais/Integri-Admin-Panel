@@ -96,7 +96,7 @@ const UserMap = React.memo(({ users, globalFilter, setGlobalFilter }) => {
         </div>
       )}
       
-      <div className="d-flex justify-content-center align-items-center" style={{ width: '100%', height: '400px', background: '#060606', borderRadius: '0 0 12px 12px', position: 'relative' }}>
+      <div className="d-flex justify-content-center align-items-center" style={{ width: '100%', height: '400px', background: 'var(--map-bg)', borderRadius: '0 0 12px 12px', position: 'relative' }}>
         <ComposableMap projectionConfig={{ scale: 140 }}>
           <Geographies geography={geoUrl}>
             {({ geographies }) =>
@@ -104,8 +104,8 @@ const UserMap = React.memo(({ users, globalFilter, setGlobalFilter }) => {
                 <Geography
                   key={geo.rsmKey}
                   geography={geo}
-                  fill="#1a1a1a"
-                  stroke="rgba(212, 175, 55, 0.3)"
+                  fill="var(--map-country-fill)"
+                  stroke="var(--map-country-stroke)"
                   strokeWidth={0.5}
                   className="cursor-pointer"
                   onMouseEnter={() => {
@@ -119,7 +119,7 @@ const UserMap = React.memo(({ users, globalFilter, setGlobalFilter }) => {
                   onMouseLeave={() => setHoveredCountry(null)}
                   style={{
                     default: { outline: "none", cursor: 'pointer' },
-                    hover: { fill: "#2a2a2a", outline: "none", cursor: 'pointer' },
+                    hover: { fill: "var(--map-country-hover)", outline: "none", cursor: 'pointer' },
                     pressed: { outline: "none", cursor: 'pointer' }
                   }}
                 />
@@ -132,7 +132,7 @@ const UserMap = React.memo(({ users, globalFilter, setGlobalFilter }) => {
               <g ref={hoverMarkerRef} style={{ pointerEvents: 'none' }}>
                 <defs>
                   <filter id="shadow3d" x="-20%" y="-20%" width="140%" height="140%">
-                    <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#DC143C" floodOpacity="0.6"/>
+                    <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="var(--map-marker-stroke)" floodOpacity="0.6"/>
                     <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur" />
                     <feOffset dy="1" dx="0" result="offsetblur" />
                     <feComponentTransfer><feFuncA type="linear" slope="0.5" /></feComponentTransfer>
@@ -142,17 +142,17 @@ const UserMap = React.memo(({ users, globalFilter, setGlobalFilter }) => {
                     </feMerge>
                   </filter>
                 </defs>
-                <circle className="pulse-ring" r="14" fill="none" stroke="#DC143C" strokeWidth="2" />
-                <circle r="14" fill="#0a0a0a" stroke="#DC143C" strokeWidth="2" filter="url(#shadow3d)" />
+                <circle className="pulse-ring" r="14" fill="none" stroke="var(--map-marker-stroke)" strokeWidth="2" />
+                <circle r="14" fill="var(--map-marker-fill)" stroke="var(--map-marker-stroke)" strokeWidth="2" filter="url(#shadow3d)" />
                 <text 
                   textAnchor="middle" 
                   y="4" 
-                  style={{ fontFamily: 'system-ui', fontSize: '11px', fontWeight: 'bold', fill: '#DC143C' }}
+                  style={{ fontFamily: 'system-ui', fontSize: '11px', fontWeight: 'bold', fill: 'var(--map-marker-stroke)' }}
                 >
                   {hoveredCountry.count}
                 </text>
-                <rect x="-35" y="-30" width="70" height="14" rx="4" fill="rgba(5,5,5,0.85)" stroke="rgba(212,175,55,0.4)" strokeWidth="0.5" />
-                <text textAnchor="middle" y="-20" style={{ fontFamily: 'system-ui', fontSize: '9px', fill: '#D4AF37', fontWeight: 600 }}>
+                <rect x="-35" y="-30" width="70" height="14" rx="4" fill="var(--map-bg)" style={{ opacity: 0.85 }} stroke="var(--map-country-stroke)" strokeWidth="0.5" />
+                <text textAnchor="middle" y="-20" style={{ fontFamily: 'system-ui', fontSize: '9px', fill: 'var(--map-marker-stroke)', fontWeight: 600 }}>
                   {hoveredCountry.name}
                 </text>
               </g>

@@ -4,13 +4,15 @@
   position: relative;
   overflow: hidden;
   cursor: default;
+  background: var(--kpi-bg) !important;
+  border: 1px solid var(--kpi-border) !important;
 
-  // Gold glow on hover — amplifies the card's base effect
+  // Glow on hover
   &:hover {
-    box-shadow: 0 0 32px rgba(212, 175, 55, 0.25), 0 8px 32px rgba(0, 0, 0, 0.8) !important;
+    box-shadow: 0 0 32px var(--kpi-glow), 0 8px 32px rgba(0, 0, 0, 0.2) !important;
   }
 
-  // Subtle radial gold shimmer in the top-right corner
+  // Subtle radial shimmer
   &::before {
     content: '';
     position: absolute;
@@ -18,7 +20,7 @@
     right: -40px;
     width: 120px;
     height: 120px;
-    background: radial-gradient(circle, rgba(212, 175, 55, 0.12) 0%, transparent 70%);
+    background: radial-gradient(circle, var(--kpi-glow) 0%, transparent 70%);
     pointer-events: none;
     border-radius: 50%;
     transition: opacity 0.3s ease;
@@ -36,15 +38,16 @@
     width: 48px;
     height: 48px;
     border-radius: 12px;
-    background: rgba(212, 175, 55, 0.1);
-    border: 1px solid rgba(212, 175, 55, 0.2);
-    color: #D4AF37;
+    background: var(--kpi-icon-bg);
+    border: 1px solid var(--kpi-border);
+    color: var(--kpi-icon-color);
     flex-shrink: 0;
     transition: background 0.3s, box-shadow 0.3s;
 
     &:hover {
-      background: rgba(212, 175, 55, 0.18);
-      box-shadow: 0 0 12px rgba(212, 175, 55, 0.2);
+      background: var(--kpi-icon-bg);
+      filter: brightness(0.9);
+      box-shadow: 0 0 12px var(--kpi-glow);
     }
   }
 
@@ -52,7 +55,7 @@
   .kpi-value {
     font-size: 2rem;
     font-weight: 700;
-    color: #D4AF37;
+    color: var(--kpi-value-color);
     letter-spacing: -0.5px;
     line-height: 1;
     font-variant-numeric: tabular-nums;
@@ -61,7 +64,8 @@
   .kpi-prefix {
     font-size: 1.1rem;
     font-weight: 600;
-    color: rgba(212, 175, 55, 0.7);
+    color: var(--kpi-value-color);
+    opacity: 0.7;
     margin-right: 2px;
     vertical-align: super;
   }
@@ -71,7 +75,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #a8956b;
+    color: var(--kpi-title-color);
     margin-top: 4px;
   }
 
@@ -96,16 +100,16 @@
     }
 
     &.kpi-trend--neutral {
-      color: #a8956b;
-      background: rgba(168, 149, 107, 0.1);
+      color: var(--kpi-title-color);
+      background: var(--kpi-icon-bg);
     }
   }
 
-  // Bottom divider line in gold
+  // Bottom divider line
   .kpi-divider {
     height: 2px;
     border-radius: 1px;
-    background: linear-gradient(90deg, rgba(212, 175, 55, 0.6) 0%, transparent 100%);
+    background: var(--kpi-divider);
     margin-top: 12px;
   }
 }

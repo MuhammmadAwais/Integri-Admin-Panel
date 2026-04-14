@@ -259,7 +259,7 @@ const UserTable = React.memo(({
         <div className="d-flex align-items-center gap-3">
           {/* Status Filter */}
           <Dropdown onSelect={(val) => setStatusFilter(val)}>
-            <Dropdown.Toggle size="sm" style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.2)', color: statusFilter ? '#D4AF37' : '#a8956b', borderRadius: '20px', padding: '4px 12px' }}>
+            <Dropdown.Toggle size="sm" style={{ background: 'var(--table-filter-bg)', border: '1px solid rgba(212,175,55,0.2)', color: statusFilter ? '#D4AF37' : '#a8956b', borderRadius: '20px', padding: '4px 12px' }}>
               {statusFilter ? statusFilter.toUpperCase() : 'STATUS'}
             </Dropdown.Toggle>
             <Dropdown.Menu style={{ background: '#1a1a1a', border: '1px solid rgba(212,175,55,0.2)' }}>
@@ -272,7 +272,7 @@ const UserTable = React.memo(({
 
           {/* Country Filter */}
           <Dropdown onSelect={(val) => setCountryFilter(val)}>
-            <Dropdown.Toggle size="sm" style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.2)', color: countryFilter ? '#D4AF37' : '#a8956b', borderRadius: '20px', padding: '4px 12px' }}>
+            <Dropdown.Toggle size="sm" style={{ background: 'var(--table-filter-bg)', border: '1px solid rgba(212,175,55,0.2)', color: countryFilter ? '#D4AF37' : '#a8956b', borderRadius: '20px', padding: '4px 12px' }}>
               {countryFilter ? countryFilter : 'COUNTRY'}
             </Dropdown.Toggle>
             <Dropdown.Menu className="obsidian-scroll" style={{ background: '#1a1a1a', border: '1px solid rgba(212,175,55,0.2)', maxHeight: '300px', overflowY: 'auto', minWidth: '220px' }}>
@@ -283,7 +283,7 @@ const UserTable = React.memo(({
                   onChange={(e) => setCountrySearchInput(e.target.value)} 
                   placeholder="Search Any Country..." 
                   className="form-control form-control-sm"
-                  style={{ background: '#0a0a0a', color: '#e0d5b8', border: '1px solid rgba(212,175,55,0.3)' }}
+                  style={{ background: 'var(--table-input-bg)', color: '#e0d5b8', border: '1px solid rgba(212,175,55,0.3)' }}
                 />
               </div>
               <Dropdown.Item eventKey="" style={{ color: '#a8956b' }}>All Countries</Dropdown.Item>
@@ -319,7 +319,7 @@ const UserTable = React.memo(({
             </button>
           )}
 
-          <div className="d-flex align-items-center" style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.2)', borderRadius: '20px', padding: '4px 12px' }}>
+          <div className="d-flex align-items-center" style={{ background: 'var(--table-filter-bg)', border: '1px solid rgba(212,175,55,0.2)', borderRadius: '20px', padding: '4px 12px' }}>
             <Search size={16} color="#a8956b" />
             <input
               value={localSearch}
@@ -423,7 +423,7 @@ const UserTable = React.memo(({
       </div>
       
       {/* Pagination Controls */}
-      <div className="card-footer d-flex align-items-center justify-content-between" style={{ background: 'rgba(5,5,5,0.6)', borderTop: '0.5px solid rgba(212,175,55,0.2)' }}>
+      <div className="card-footer d-flex align-items-center justify-content-between" style={{ background: 'var(--table-footer-bg)', borderTop: '0.5px solid rgba(212,175,55,0.2)' }}>
          <span style={{ color: '#a8956b', fontSize: '0.85rem' }}>
             Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
          </span>
