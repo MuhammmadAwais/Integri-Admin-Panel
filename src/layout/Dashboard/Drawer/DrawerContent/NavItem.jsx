@@ -15,7 +15,7 @@ import { handlerDrawerOpen } from 'api/menu';
 function NavIcon({ icon }) {
   if (!icon) return null;
 
-  const isReactComponent = typeof icon === 'function';
+  const isReactComponent = typeof icon === 'function' || typeof icon === 'object';
 
   return (
     <span className="pc-micon">
@@ -23,7 +23,7 @@ function NavIcon({ icon }) {
         // Lucide React icon — render as component
         (() => {
           const Icon = icon;
-          return <Icon size={18} strokeWidth={1.75} />;
+          return <Icon size={18} strokeWidth={2} className="integri-nav-icon" />;
         })()
       ) : (
         // Legacy CSS icon

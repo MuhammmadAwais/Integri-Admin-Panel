@@ -17,17 +17,21 @@ const Logo = ({ width = 120, height = 'auto', className = '' }) => {
         In Dark Mode (isDark: true), use the "Light" logo (Gold/White).
         In Light Mode (isDark: false), use the "Dark" logo (Obsidian).
       */}
-      <img
-        src={isDark ? logoPrimary : logoInk}
-        alt="Integri AI Logo"
-        style={{ width: 32, height: 32, objectFit: 'contain' }}
-      />
+      <div className="d-flex align-items-center" style={{ height: 32 }}>
+        <img
+          src={isDark ? logoPrimary : logoInk}
+          alt="Integri AI Logo"
+          style={{ width: 28, height: 28, objectFit: 'contain', display: 'block' }}
+        />
+      </div>
       <span style={{ 
         fontWeight: 800, 
-        fontSize: '1.5rem', 
-        letterSpacing: '-0.5px',
-        color: 'inherit',
-        fontFamily: "'Inter', sans-serif"
+        fontSize: '1.4rem', 
+        letterSpacing: '-1px',
+        color: isDark ? '#ffffff' : '#000000',
+        fontFamily: "'Inter', sans-serif",
+        lineHeight: 1,
+        display: 'inline-block'
       }}>
         Integri
       </span>

@@ -1,15 +1,15 @@
 @use 'sass:color';
 
 .bg-light[colspan] {
-  @include media-breakpoint-up(sm) {
+  @media (min-width: 576px) {
     padding-left: 40px;
   }
 
-  @include media-breakpoint-up(md) {
+  @media (min-width: 768px) {
     padding-left: 48px;
   }
 
-  @include media-breakpoint-up(lg) {
+  @media (min-width: 992px) {
     padding-left: 96px;
   }
 }
@@ -99,6 +99,23 @@
   .pc-header {
     border-bottom: 1px solid #27272a !important;
   }
+
+  /* Force Icon Visibility Dark Mode */
+  .pc-sidebar .pc-micon {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    vertical-align: middle;
+    opacity: 1 !important;
+    visibility: visible !important;
+    
+    svg {
+      display: block !important;
+      color: inherit;
+    }
+  }
+
   .card, .p-3, .table-card {
     background: #000000 !important;
     border: 1px solid #27272a !important;
@@ -109,10 +126,49 @@
   --kpi-bg: #000000;
   --kpi-border: #27272a;
 
+  /* Sidebar Branding Header Separator and Alignment */
+  .m-header {
+    border-bottom: 2px solid #27272a !important; /* Thicker for clarity */
+    padding: 0 1.5rem !important;
+    height: 70px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+  }
+
+  .integri-logo-container {
+    justify-content: flex-start !important;
+    height: auto !important;
+    width: 100% !important;
+    padding-left: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Force Icon Visibility Dark Mode */
+  .pc-sidebar .pc-micon {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 24px !important;
+    height: 24px !important;
+    margin-right: 15px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: inherit !important;
+    
+    svg {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      color: currentColor !important;
+      stroke: currentColor !important;
+    }
+  }
+
   /* Sidebar Profile Bottom Section */
   .pc-sidebar-profile {
-    border-top: 1px solid #27272a;
-    padding: 1rem 0 0.5rem 0;
+    border-top: 2px solid #27272a !important;
+    padding: 1.25rem 0 0.75rem 0;
     background: #000000;
   }
 
@@ -129,9 +185,33 @@
   }
 
   .user-avatar {
-    width: 38px;
-    height: 38px;
-    border: 2px solid #D4AF37;
+    width: 32px;
+    height: 32px;
+    border: 1.5px solid #D4AF37;
+  }
+
+  /* High Contrast Dropdown for Sidebar Profile */
+  .pc-sidebar-profile .dropdown-menu {
+    background: #000000 !important;
+    border: 1px solid #27272a !important;
+    padding: 0.5rem;
+    min-width: 180px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5) !important;
+  }
+
+  .pc-sidebar-profile .dropdown-item {
+    color: #ffffff !important;
+    padding: 0.6rem 1rem;
+    border-radius: 4px;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    &:hover {
+      background: rgba(212, 175, 55, 0.15) !important;
+      color: #D4AF37 !important;
+    }
+    svg { stroke: currentColor; }
   }
 
   .user-info {
@@ -159,18 +239,25 @@
   }
 
   .user-action-btn {
-    background: none;
-    border: none;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
     color: #a8956b;
     padding: 4px;
     opacity: 0.6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     &:hover { opacity: 1; color: #ffffff; }
+    &::after { display: none !important; } /* Remove bootstrap arrow */
   }
 
   .sidebar-logout-btn {
-    background: #DC143C;
-    border: none;
-    color: #ffffff;
+    background: #DC143C !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    color: #ffffff !important;
     padding: 0.6rem;
     border-radius: 4px;
     font-size: 0.85rem;
@@ -181,8 +268,9 @@
     transition: all 0.2s ease;
     
     &:hover {
-      background: color.adjust(#DC143C, $lightness: -10%);
+      background: #b01030 !important;
       transform: translateY(-1px);
+      border: none !important;
     }
     
     &:active {
@@ -236,6 +324,24 @@
   }
   .pc-header, .navbar-content {
     border-bottom: 1px solid #e4e4e7 !important;
+  }
+
+  /* Sidebar Branding Header Separator and Alignment Light */
+  .m-header {
+    border-bottom: 2px solid #e4e4e7 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding: 0 1.5rem !important;
+    height: 70px !important;
+  }
+
+  .integri-logo-container {
+    justify-content: flex-start !important;
+    height: auto !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
   /* Map Variables - Fixed for Visibility in Light Mode */
@@ -363,6 +469,21 @@
 
   .pc-sidebar .pc-link, .pc-sidebar .pc-link svg, .pc-sidebar .pc-link span {
     color: #000000 !important;
+  }
+
+  /* Force Icon Visibility */
+  .pc-sidebar .pc-micon {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    vertical-align: middle;
+    opacity: 1 !important;
+    visibility: visible !important;
+    
+    svg {
+      display: block !important;
+    }
   }
 
   /* Active Nav Item - Remove Beige/Cream */
@@ -499,12 +620,72 @@
     border: 2px solid #D4AF37;
   }
 
+  /* Light Mode Logout Button Polish */
   .sidebar-logout-btn {
-    background: #DC143C;
-    color: #ffffff;
+    background: #DC143C !important;
+    color: #ffffff !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    font-weight: 600;
     &:hover {
-      background: #b01030;
+      background: #b01030 !important;
+      border: none !important;
     }
+  }
+
+  /* Ultra-Aggressive Sidebar Icon Visibility Fix - High Specificity */
+  .pc-sidebar .pc-micon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 24px !important;
+    height: 24px !important;
+    margin-right: 15px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: inherit !important;
+    
+    svg, i {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      width: 18px !important;
+      height: 18px !important;
+      color: currentColor !important;
+      stroke: currentColor !important;
+      stroke-width: 2px !important;
+    }
+  }
+
+  /* Refined Active State for Light Mode */
+  .pc-sidebar .pc-item.active > .pc-link {
+    background-color: rgba(0, 0, 0, 0.04) !important;
+    color: #b48a04 !important;
+    border-left: 3px solid #D4AF37 !important;
+    border-right: none !important;
+    font-weight: 700 !important;
+  }
+
+  /* High Contrast Dropdown Light */
+  .pc-sidebar-profile .dropdown-menu {
+    background: #ffffff !important;
+    border: 1px solid #e4e4e7 !important;
+    padding: 0.5rem;
+    min-width: 190px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.12) !important;
+    z-index: 10000 !important;
+  }
+
+  .pc-sidebar-profile .dropdown-item {
+    color: #000000 !important;
+    font-weight: 600 !important;
+    padding: 0.75rem 1rem !important;
+    &:hover {
+      background: rgba(0, 0, 0, 0.05) !important;
+      color: #D4AF37 !important;
+    }
+    svg { stroke: currentColor !important; }
   }
 
   /* Layout Width Adjustments */

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 // styles
 import './index.scss';
 import './assets/css/integri-theme.css';
+import './global.scss';
 
 // project-imports
 import App from './App';

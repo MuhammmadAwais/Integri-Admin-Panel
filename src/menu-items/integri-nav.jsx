@@ -1,5 +1,5 @@
 // lucide-react icons — Integri App Navigation
-import { LayoutDashboard, Newspaper, Users, Coins, ShieldCheck, LogOut, Cpu } from 'lucide-react';
+import { LayoutDashboard, Newspaper, Users, Coins, ShieldCheck, LogOut, Cpu, Settings } from 'lucide-react';
 
 // ==============================|| INTEGRI APP — NAVIGATION MENU ||============================== //
 
@@ -54,6 +54,13 @@ const integriNav = {
       type: 'item',
       icon: ShieldCheck,
       url: '/sub-admins'
+    },
+    {
+      id: 'settings',
+      title: 'Settings',
+      type: 'item',
+      icon: Settings,
+      url: '/profile' // Using /profile as settings as established earlier
     }
   ]
 };
