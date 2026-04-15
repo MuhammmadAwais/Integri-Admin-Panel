@@ -17,8 +17,10 @@ export default function MainLayout() {
   useEffect(() => {
     if (isDark) {
       document.body.classList.add('dark-theme');
+      document.body.setAttribute('data-pc-theme', 'dark');
     } else {
       document.body.classList.remove('dark-theme');
+      document.body.setAttribute('data-pc-theme', 'light');
     }
   }, [isDark]);
 

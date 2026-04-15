@@ -76,14 +76,51 @@
   }
 
   /* KPI Card Variables */
-  --kpi-bg: rgba(5,5,5,0.65);
-  --kpi-border: #000000;
+  --kpi-bg: #050505;
+  --kpi-border: #ffffff;
   --kpi-icon-bg: rgba(212, 175, 55, 0.1);
   --kpi-icon-color: #D4AF37;
   --kpi-value-color: #D4AF37;
   --kpi-title-color: #a8956b;
   --kpi-divider: linear-gradient(90deg, rgba(212, 175, 55, 0.6) 0%, transparent 100%);
   --kpi-glow: rgba(212, 175, 55, 0.25);
+
+  /* Layout Overrides */
+  body, .pc-container, .pcoded-main-container, .main-body {
+    background-color: #09090B !important;
+  }
+  .pc-sidebar, .pc-header {
+    background: #000000 !important;
+    box-shadow: none !important;
+  }
+  .pc-sidebar {
+    border-right: 1px solid #27272a !important;
+  }
+  .pc-header {
+    border-bottom: 1px solid #27272a !important;
+  }
+  .card, .p-3, .table-card {
+    background: #000000 !important;
+    border: 1px solid #27272a !important;
+    box-shadow: none !important;
+  }
+  
+  /* Update KPI wrapper borders dynamically */
+  --kpi-bg: #000000;
+  --kpi-border: #27272a;
+
+  /* Table rules dark mode */
+  .table {
+    background: transparent !important;
+  }
+  .table td, .table th {
+    border-color: #27272a !important;
+    background: transparent !important;
+  }
+  .table thead th {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-bottom: 2px solid #27272a !important;
+  }
 }
 
 /* ==================================================== */
@@ -91,13 +128,24 @@
 /* ==================================================== */
 [data-pc-theme='light'] {
   body, .pc-container, .pcoded-main-container, .main-body {
-    background-color: #ffffff !important;
+    background-color: #F9FAFB !important;
     color: #000000 !important;
+  }
+
+  .pc-sidebar, .pc-header {
+    background: #ffffff !important;
+    box-shadow: none !important;
+  }
+  .pc-sidebar {
+    border-right: 1px solid #e4e4e7 !important;
+  }
+  .pc-header, .navbar-content {
+    border-bottom: 1px solid #e4e4e7 !important;
   }
 
   .card, [data-gsap-card], .prompt-card {
     background: #ffffff !important;
-    border: 1px solid #000000 !important;
+    border: 1px solid #e4e4e7 !important;
     box-shadow: none !important;
     backdrop-filter: none !important;
     border-radius: 4px !important;
@@ -105,7 +153,7 @@
 
   /* Refined card headers */
   .card-header {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+    border-bottom: 1px solid #e4e4e7 !important;
     background-color: #ffffff !important;
   }
   
@@ -131,7 +179,7 @@
 
   /* Buttons */
   button.btn {
-    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid #e4e4e7 !important;
     color: #000000 !important;
     background-color: #ffffff !important;
   }
@@ -142,24 +190,27 @@
   /* Table rules */
   .table {
     color: #000000 !important;
+    background: transparent !important;
   }
   
-  .table thead {
-    background-color: #ffffff !important;
+  .table thead th {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.2) !important;
   }
 
   .table td, .table th {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+    border-bottom: 1px solid #e4e4e7 !important;
+    background: transparent !important;
   }
   
   .table tr {
-    border-color: rgba(0, 0, 0, 0.05) !important;
+    border-color: #e4e4e7 !important;
   }
   
   /* Dropdowns */
   .dropdown-menu {
     background: #ffffff !important;
-    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid #e4e4e7 !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.04) !important;
   }
 
