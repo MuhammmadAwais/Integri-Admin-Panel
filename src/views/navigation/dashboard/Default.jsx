@@ -79,7 +79,7 @@ export default function DefaultPage() {
       {/* ── ROW 1: KPI Cards ── */}
       {dynamicKpiData.map((kpi, index) => (
         <Col key={index} md={6} xl={4}>
-          <div style={{ background: 'var(--kpi-bg)', border: '1px solid var(--kpi-border)', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
+          <div style={{ background: 'var(--kpi-bg)', border: '2px solid var(--kpi-border)', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
              <KpiCard {...kpi} />
           </div>
         </Col>
@@ -94,7 +94,7 @@ export default function DefaultPage() {
           <EarningChart />
 
           {/* Stat indicators — theme-aware */}
-          <div className="card" data-gsap-card style={{ background: 'var(--kpi-bg)', border: '1px solid var(--kpi-border)' }}>
+          <div className="card" data-gsap-card style={{ background: 'var(--kpi-bg)', border: '2px solid var(--kpi-border)' }}>
             <div className="card-body">
               {statData.map(({ icon: Icon, value, label }) => (
                 <div key={label} className="d-flex align-items-center gap-3 mb-3">
@@ -132,7 +132,7 @@ export default function DefaultPage() {
         { platform: 'Google',   icon: Activity, color: 'var(--kpi-title-color)', count: '10,500', pct: '+5.9%' }
       ].map(({ platform, icon: Icon, color, count, pct }, i) => (
         <Col key={platform} md={i === 0 ? 12 : 6} xl={4}>
-          <div className="card" data-gsap-card style={{ background: 'var(--kpi-bg)', border: '1px solid var(--kpi-border)' }}>
+          <div className="card" data-gsap-card style={{ background: 'var(--kpi-bg)', border: '2px solid var(--kpi-border)' }}>
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center">
                 <div className="d-flex align-items-center gap-2">

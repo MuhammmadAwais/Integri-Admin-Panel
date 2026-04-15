@@ -51,9 +51,9 @@
 
   /* Map Variables - Fixed for Visibility */
   --map-bg: #060606;
-  --map-country-fill: rgba(255, 255, 255, 0.4);
+  --map-country-fill: #ffffff;
   --map-country-stroke: #ffffff;
-  --map-country-hover: #ffffff;
+  --map-country-hover: #e0e0e0;
   --map-marker-fill: #ffffff;
   --map-marker-stroke: #D4AF37;
 
@@ -62,9 +62,22 @@
   --table-footer-bg: rgba(5, 5, 5, 0.6);
   --table-input-bg: #0a0a0a;
 
+  /* Form Control Focus for Dark Mode */
+  .form-control:focus {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+    border-color: #D4AF37 !important;
+    box-shadow: 0 0 0 0.25rem rgba(212, 175, 55, 0.25) !important;
+  }
+
+  /* Login Form fix for dark mode */
+  .auth-main h4, .auth-main h6, .auth-main span {
+    color: #ffffff !important;
+  }
+
   /* KPI Card Variables */
   --kpi-bg: rgba(5,5,5,0.65);
-  --kpi-border: rgba(212,175,55,0.4);
+  --kpi-border: #000000;
   --kpi-icon-bg: rgba(212, 175, 55, 0.1);
   --kpi-icon-color: #D4AF37;
   --kpi-value-color: #D4AF37;

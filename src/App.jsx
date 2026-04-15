@@ -4,6 +4,7 @@ import { RouterProvider } from 'react-router-dom';
 // project-imports
 import router from 'routes';
 import { getBackendToken } from 'api/backendApi';
+import { AuthProvider } from 'contexts/AuthContext';
 
 // ==============================|| APP - THEME, ROUTER, LOCAL ||============================== //
 
@@ -24,7 +25,11 @@ function App() {
     bootstrap();
   }, []);
 
-  return <RouterProvider router={router} />;
+  return (
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  );
 }
 
 export default App;

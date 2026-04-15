@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 // react-bootstrap
 import Button from 'react-bootstrap/Button';
@@ -8,26 +8,28 @@ import Form from 'react-bootstrap/Form';
 import Image from 'react-bootstrap/Image';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Stack from 'react-bootstrap/Stack';
+import Alert from 'react-bootstrap/Alert';
 
 // third-party
 import { useForm } from 'react-hook-form';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 // project-imports
 import MainCard from 'components/MainCard';
 import { emailSchema, passwordSchema } from 'utils/validationSchema';
-
-// assets
-import DarkLogo from 'assets/images/logo-dark.svg';
+import { auth } from 'lib/firebase/firebase';
 
 // ==============================|| AUTH LOGIN FORM ||============================== //
 
-export default function AuthLoginForm({ className, link }) {
+export default function AuthLoginForm({ className }) {
   const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const {
     register,
     handleSubmit,
-    reset,
     formState: { errors }
   } = useForm();
 
@@ -35,29 +37,52 @@ export default function AuthLoginForm({ className, link }) {
     setShowPassword((prevState) => !prevState);
   };
 
-  const onSubmit = () => {
-    reset();
+  const onSubmit = async (data) => {
+    setLoginError(null);
+    setIsLoading(true);
+    try {
+      if (data.email.toLowerCase() !== 'integriadmin@admin.com') {
+        throw new Error('Unauthorized Access: You do not have permission to access this terminal.');
+      }
+      await signInWithEmailAndPassword(auth, data.email, data.password);
+      // Wait a moment for auth context to pick up the state
+      navigate('/');
+    } catch (err) {
+      if (err.code === 'auth/invalid-credential' || err.message.includes('auth/invalid-credential') || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setLoginError('Invalid email address or password. Please try again.');
+      } else {
+        setLoginError(err.message || 'Login failed. Please check your credentials.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <MainCard className="mb-0">
-      <div className="text-center">
-        <a>
-          <Image src={DarkLogo} alt="img" />
-        </a>
+      <div className="text-center mb-4">
+        <h2 style={{ fontWeight: 700, color: 'var(--bs-heading-color)' }}>Integri AI</h2>
       </div>
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <h4 className={`text-center f-w-500 mt-4 mb-3 ${className}`}>Login</h4>
+        <h4 className={`text-center f-w-500 mt-4 mb-3 ${className || ''}`}>Login</h4>
+        
+        {loginError && (
+          <Alert variant="danger" className="text-center py-2" style={{ fontSize: '0.85rem' }}>
+            {loginError}
+          </Alert>
+        )}
+
         <Form.Group className="mb-3" controlId="formEmail">
           <Form.Control
             type="email"
             placeholder="Email Address"
             {...register('email', emailSchema)}
             isInvalid={!!errors.email}
-            className={className && 'bg-transparent border-white text-white border-opacity-25 '}
+            style={{ backgroundColor: 'var(--bs-body-bg)', color: 'var(--bs-body-color)' }}
           />
           <Form.Control.Feedback type="invalid">{errors.email?.message}</Form.Control.Feedback>
         </Form.Group>
+        
         <Form.Group className="mb-3" controlId="formPassword">
           <InputGroup>
             <Form.Control
@@ -65,9 +90,9 @@ export default function AuthLoginForm({ className, link }) {
               placeholder="Password"
               {...register('password', passwordSchema)}
               isInvalid={!!errors.password}
-              className={className && 'bg-transparent border-white text-white border-opacity-25 '}
+              style={{ backgroundColor: 'var(--bs-body-bg)', color: 'var(--bs-body-color)' }}
             />
-            <Button onClick={togglePasswordVisibility}>
+            <Button onClick={togglePasswordVisibility} variant="outline-secondary">
               {showPassword ? <i className="ti ti-eye" /> : <i className="ti ti-eye-off" />}
             </Button>
             <Form.Control.Feedback type="invalid">{errors.password?.message}</Form.Control.Feedback>
@@ -80,27 +105,19 @@ export default function AuthLoginForm({ className, link }) {
               type="checkbox"
               label="Remember me?"
               defaultChecked
-              className={`input-primary ${className ? className : 'text-muted'} `}
+              className={`input-primary ${className ? className : 'text-muted'}`}
             />
           </Form.Group>
-          <Link to="#!" className={`text-secondary f-w-400 mb-0  ${className}`}>
-            Forgot Password?
-          </Link>
         </Stack>
-        <div className="text-center mt-4">
-          <Button type="submit" className="shadow px-sm-4">
-            Login
+        
+        <div className="text-center mt-4 mb-3">
+          <Button type="submit" className="shadow px-sm-4 w-100" disabled={isLoading}>
+            {isLoading ? 'Authenticating...' : 'Secure Login'}
           </Button>
         </div>
-        <Stack direction="horizontal" className="justify-content-between align-items-end mt-4">
-          <h6 className={`f-w-500 mb-0 ${className}`}>Don't have an Account?</h6>
-          <Link to={link} className="link-primary">
-            Create Account
-          </Link>
-        </Stack>
       </Form>
     </MainCard>
   );
 }
 
-AuthLoginForm.propTypes = { className: PropTypes.string, link: PropTypes.string };
+AuthLoginForm.propTypes = { className: PropTypes.string };

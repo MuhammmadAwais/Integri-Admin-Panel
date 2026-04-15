@@ -14,6 +14,8 @@ import MainCard from 'components/MainCard';
 import SimpleBarScroll from 'components/third-party/SimpleBar';
 import ThemeToggle from 'components/ThemeToggle';
 import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
+import { useAuth } from 'contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 // assets
 import Img1 from 'assets/images/user/avatar-1.png';
@@ -71,6 +73,17 @@ const notifications = [
 export default function Header() {
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster?.isDashboardDrawerOpened;
+  const { currentUser, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login', { replace: true });
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   return (
     <header className="pc-header">
@@ -184,28 +197,20 @@ export default function Header() {
                       <Image src={Img2} alt="user-avatar" className="user-avatar wid-35" roundedCircle />
                     </div>
                     <Stack gap={1}>
-                      <h6 className="text-white mb-0">Carson Darrin 🖖</h6>
-                      <span className="text-white text-opacity-75">carson.darrin@company.io</span>
+                      <h6 className="text-white mb-0">Integri Admin 🖖</h6>
+                      <span className="text-white text-opacity-75">{currentUser?.email || 'Admin'}</span>
                     </Stack>
                   </Stack>
                 </Dropdown.Header>
 
                 <div className="dropdown-body">
                   <div className="profile-notification-scroll position-relative" style={{ maxHeight: 'calc(100vh - 225px)' }}>
-                    <Dropdown.Item as={Link} to="#" className="justify-content-start">
+                    <Dropdown.Item as={Link} to="/profile" className="justify-content-start">
                       <i className="ph ph-gear me-2" />
-                      Settings
-                    </Dropdown.Item>
-                    <Dropdown.Item as={Link} to="#" className="justify-content-start">
-                      <i className="ph ph-share-network me-2" />
-                      Share
-                    </Dropdown.Item>
-                    <Dropdown.Item as={Link} to="#" className="justify-content-start">
-                      <i className="ph ph-lock-key me-2" />
-                      Change Password
+                      Settings & Profile
                     </Dropdown.Item>
                     <div className="d-grid my-2">
-                      <Button>
+                      <Button onClick={handleLogout}>
                         <i className="ph ph-sign-out align-middle me-2" />
                         Logout
                       </Button>

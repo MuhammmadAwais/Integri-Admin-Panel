@@ -4,13 +4,11 @@ export const emailSchema = {
 };
 
 export const passwordSchema = {
-  required: 'Password is required',
-  minLength: { value: 8, message: 'Password must be at least 8 characters' }
+  required: 'Password is required'
 };
 
 export const confirmPasswordSchema = {
-  required: 'Confirm Password is required',
-  minLength: { value: 8, message: 'Password must be at least 8 characters' }
+  required: 'Confirm Password is required'
 };
 
 export const firstNameSchema = {

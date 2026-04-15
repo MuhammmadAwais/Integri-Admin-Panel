@@ -5,6 +5,8 @@ import { lazy } from 'react';
 import Loadable from 'components/Loadable';
 import DashboardLayout from 'layout/Dashboard';
 
+import ProtectedRoute from 'components/ProtectedRoute';
+
 // ── Core Dashboard ──
 const DefaultPage = Loadable(lazy(() => import('views/navigation/dashboard/Default')));
 
@@ -15,6 +17,7 @@ const TokensPage    = Loadable(lazy(() => import('features/tokens/TokensPage')))
 const SubAdminsPage = Loadable(lazy(() => import('features/sub-admins/SubAdminsPage')));
 const UserDetailPage = Loadable(lazy(() => import('features/users/components/UserDetailPage')));
 const PromptsPage   = Loadable(lazy(() => import('features/prompts/PromptsPage')));
+const ProfilePage   = Loadable(lazy(() => import('features/profile/ProfilePage')));
 
 // ==============================|| INTEGRI APP — NAVIGATION ROUTES ||============================== //
 
@@ -23,7 +26,7 @@ const NavigationRoutes = {
   children: [
     {
       path: '/',
-      element: <DashboardLayout />,
+      element: <ProtectedRoute><DashboardLayout /></ProtectedRoute>,
       children: [
         { path: '/',           element: <DefaultPage /> },
         { path: '/news',       element: <NewsPage /> },
@@ -31,7 +34,8 @@ const NavigationRoutes = {
         { path: '/tokens',     element: <TokensPage /> },
         { path: '/sub-admins', element: <SubAdminsPage /> },
         { path: '/prompts',    element: <PromptsPage /> },
-        { path: '/users/:id',  element: <UserDetailPage /> }
+        { path: '/users/:id',  element: <UserDetailPage /> },
+        { path: '/profile',    element: <ProfilePage /> }
       ]
     }
   ]
