@@ -70,30 +70,53 @@ const earningChartOptions = {
 // =============================|| DEFAULT - EARNING CHART ||============================== //
 
 export default function EarningChart() {
-  const [series] = useState([{ name: 'Market Days ', data: [10, 60, 45, 72, 45, 86], color: '#fff' }]);
+  const [series] = useState([{ name: 'Market Days ', data: [10, 60, 45, 72, 45, 86] }]);
 
   const [options, setOptions] = useState(earningChartOptions);
 
   useEffect(() => {
+    // Dynamically get the chart line and text colors from CSS variables
+    const rootStyle = getComputedStyle(document.documentElement);
+    const lineColor = rootStyle.getPropertyValue('--chart-line').trim() || '#ffffff';
+    const textColor = rootStyle.getPropertyValue('--chart-text').trim() || '#ffffff';
+
     setOptions({
       ...earningChartOptions,
-      chart: { ...earningChartOptions.chart },
-      xaxis: { ...earningChartOptions.xaxis, labels: { style: { colors: '#fff' } } }
+      colors: [lineColor],
+      xaxis: { 
+        ...earningChartOptions.xaxis, 
+        labels: { 
+          style: { 
+            colors: textColor,
+            fontFamily: 'inherit'
+          } 
+        } 
+      },
+      markers: {
+        ...earningChartOptions.markers,
+        colors: [lineColor],
+        strokeColors: lineColor
+      },
+      stroke: {
+        ...earningChartOptions.stroke,
+        colors: [lineColor]
+      }
     });
   }, []);
 
   return (
     <MainCard
-      title={<p className="mb-0 text-white">Earnings</p>}
+      title={<p className="mb-0" style={{ color: 'var(--chart-text)' }}>Earnings</p>}
       headerClassName="border-0"
-      className="bg-primary overflow-hidden"
+      className="overflow-hidden"
       bodyClassName="py-0"
+      style={{ background: 'var(--kpi-bg)', border: '2px solid var(--kpi-border)' }}
     >
       <div className="earning-text">
-        <h3 className="mb-2 text-white f-w-300">
+        <h3 className="mb-2 f-w-300" style={{ color: 'var(--chart-text)' }}>
           $4295.36 <i className="ph ph-arrow-up" />
         </h3>
-        <span className="text-uppercase text-white d-block">Total Earnings</span>
+        <span className="text-uppercase d-block" style={{ color: 'var(--chart-text)', opacity: 0.8 }}>Total Earnings</span>
       </div>
       <ReactApexChart options={options} series={series} type="line" height={210} />
     </MainCard>

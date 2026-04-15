@@ -121,6 +121,10 @@
     background: rgba(255, 255, 255, 0.05) !important;
     border-bottom: 2px solid #27272a !important;
   }
+
+  /* Chart Variables - Dark Mode */
+  --chart-line: #ffffff;
+  --chart-text: #ffffff;
 }
 
 /* ==================================================== */
@@ -142,6 +146,27 @@
   .pc-header, .navbar-content {
     border-bottom: 1px solid #e4e4e7 !important;
   }
+
+  /* Map Variables - Fixed for Visibility in Light Mode */
+  --map-bg: #F9FAFB;
+  --map-country-fill: #18181b;
+  --map-country-stroke: #e4e4e7;
+  --map-country-hover: #D4AF37;
+  --map-marker-fill: #D4AF37;
+  --map-marker-stroke: #18181b;
+
+  /* KPI Card Variables - Light Mode */
+  --kpi-bg: #ffffff;
+  --kpi-border: #e4e4e7;
+  --kpi-icon-bg: rgba(212, 175, 55, 0.1);
+  --kpi-icon-color: #D4AF37;
+  --kpi-value-color: #000000;
+  --kpi-title-color: #71717a;
+  --kpi-divider: linear-gradient(90deg, rgba(212, 175, 55, 0.3) 0%, transparent 100%);
+
+  /* Chart Variables - Light Mode */
+  --chart-line: #18181b;
+  --chart-text: #18181b;
 
   .card, [data-gsap-card], .prompt-card {
     background: #ffffff !important;
@@ -246,8 +271,14 @@
 
   /* Active Nav Item - Remove Beige/Cream */
   .pc-sidebar .pc-item.active > .pc-link {
-    background-color: #18181b !important;
-    color: #ffffff !important;
+    background-color: rgba(212, 175, 55, 0.15) !important;
+    color: #b48a04 !important;
+    border-right: 2px solid #D4AF37 !important;
+  }
+  
+  .pc-sidebar .pc-item.active > .pc-link .pc-micon i,
+  .pc-sidebar .pc-item.active > .pc-link .pc-mtext {
+    color: #b48a04 !important;
   }
 
   .pc-sidebar .pc-item.active > .pc-link .pc-m-icon svg {
@@ -351,27 +382,4 @@
     background: #18181b !important;
   }
   
-  /* Map Variables */
-  --map-bg: #ffffff;
-  --map-country-fill: #fdfdfd;
-  --map-country-stroke: rgba(0, 0, 0, 0.2);
-  --map-country-hover: #18181b;
-  --map-marker-fill: #000000;
-  --map-marker-stroke: #18181b;
-
-  /* KPI Card Variables - Preserve Gold */
-  --kpi-bg: #ffffff;
-  --kpi-border: #000000;
-  --kpi-icon-bg: rgba(212, 175, 55, 0.1);
-  --kpi-icon-color: #D4AF37;
-  --kpi-value-color: #D4AF37;
-  --kpi-title-color: #000000;
-  --kpi-divider: linear-gradient(90deg, rgba(212, 175, 55, 0.6) 0%, transparent 100%);
-  --kpi-glow: rgba(212, 175, 55, 0.1);
-
-
-  /* Table Theme Variables */
-  --table-filter-bg: var(--bs-card-bg);
-  --table-footer-bg: var(--bs-card-bg);
-  --table-input-bg: var(--bs-card-bg);
 }

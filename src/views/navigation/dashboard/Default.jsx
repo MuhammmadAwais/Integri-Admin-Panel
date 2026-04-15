@@ -79,7 +79,7 @@ export default function DefaultPage() {
       {/* ── ROW 1: KPI Cards ── */}
       {dynamicKpiData.map((kpi, index) => (
         <Col key={index} md={6} xl={4}>
-          <div style={{ background: 'var(--kpi-bg)', border: '2px solid var(--kpi-border)', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
+          <div style={{ background: 'var(--kpi-bg)', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
              <KpiCard {...kpi} />
           </div>
         </Col>

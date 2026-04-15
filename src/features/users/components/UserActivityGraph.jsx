@@ -50,14 +50,15 @@ export default function UserActivityGraph({ users }) {
     if (active && payload && payload.length) {
       return (
         <div style={{
-          background: 'rgba(10, 10, 10, 0.9)',
-          border: '1px solid rgba(212, 175, 55, 0.3)',
+          background: 'var(--integri-surface)',
+          border: '1px solid var(--integri-border)',
           padding: '10px 15px',
           borderRadius: '8px',
-          backdropFilter: 'blur(8px)',
-          color: '#e0d5b8'
+          backdropFilter: 'var(--integri-glass-blur)',
+          color: 'var(--bs-body-color)',
+          boxShadow: 'var(--integri-card-shadow)'
         }}>
-          <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#a8956b', fontWeight: 600 }}>{label}</p>
+          <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: 'var(--integri-gold)', fontWeight: 600 }}>{label}</p>
           {payload.map((entry, index) => (
             <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
               <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', backgroundColor: entry.color }}></span>
@@ -71,12 +72,12 @@ export default function UserActivityGraph({ users }) {
   };
 
   return (
-    <MainCard title="Activity Pulse" bodyClassName="p-3" ref={wrapperRef}>
+    <MainCard title="Activity Pulse" bodyClassName="p-3" ref={wrapperRef} style={{ background: 'var(--kpi-bg)', border: '2px solid var(--kpi-border)' }}>
       <div style={{ width: '100%', height: '400px', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <XAxis dataKey="time" stroke="#5a5a5a" tick={{ fill: '#a8956b', fontSize: 12 }} />
-            <YAxis stroke="#5a5a5a" tick={{ fill: '#a8956b', fontSize: 12 }} />
+            <XAxis dataKey="time" stroke="var(--integri-border)" tick={{ fill: 'var(--bs-body-color)', fontSize: 12, opacity: 0.7 }} />
+            <YAxis stroke="var(--integri-border)" tick={{ fill: 'var(--bs-body-color)', fontSize: 12, opacity: 0.7 }} />
             <Tooltip content={<CustomTooltip />} />
             <Line 
               type="monotone" 
@@ -84,7 +85,7 @@ export default function UserActivityGraph({ users }) {
               name="Online Now"
               stroke="#D4AF37" 
               strokeWidth={3} 
-              dot={{ r: 4, fill: '#050505', stroke: '#D4AF37', strokeWidth: 2 }}
+              dot={{ r: 4, fill: 'var(--kpi-bg)', stroke: '#D4AF37', strokeWidth: 2 }}
               activeDot={{ r: 6, fill: '#D4AF37', stroke: '#fff' }}
               animationDuration={1500}
             />
