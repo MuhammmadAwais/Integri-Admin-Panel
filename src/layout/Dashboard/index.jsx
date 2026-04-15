@@ -2,9 +2,7 @@ import { Outlet } from 'react-router-dom';
 
 // project-imports
 import Drawer from './Drawer';
-import Footer from './Footer';
 import Header from './Header';
-import Breadcrumbs from 'components/Breadcrumbs';
 import NavigationScroll from 'components/NavigationScroll';
 import { useSelector } from 'react-redux';
 import { useEffect } from 'react';
@@ -30,13 +28,11 @@ export default function MainLayout() {
       <Header />
       <div className="pc-container">
         <div className="pc-content">
-          <Breadcrumbs />
           <NavigationScroll>
             <Outlet />
           </NavigationScroll>
         </div>
       </div>
-      <Footer />
     </>
   );
 }

@@ -109,17 +109,6 @@ export default function Header() {
                 <i className="ph ph-list" />
               </Nav.Link>
             </Nav.Item>
-
-            <Dropdown className="pc-h-item dropdown">
-              <Dropdown.Toggle variant="link" className="pc-head-link arrow-none m-0 trig-drp-search" id="dropdown-search">
-                <i className="ph ph-magnifying-glass" />
-              </Dropdown.Toggle>
-              <Dropdown.Menu className="pc-h-dropdown drp-search">
-                <Form className="px-3 py-2">
-                  <Form.Control type="search" placeholder="Search here. . ." className="border-0 shadow-none" />
-                </Form>
-              </Dropdown.Menu>
-            </Dropdown>
           </Nav>
         </div>
         <div className="ms-auto">

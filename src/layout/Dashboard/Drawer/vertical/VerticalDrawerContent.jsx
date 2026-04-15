@@ -6,7 +6,7 @@ import Navigation from '../DrawerContent';
 
 export default function VerticalDrawerContent({ selectedItems, setSelectedItems }) {
   return (
-    <SimpleBarScroll style={{ height: 'calc(100vh - 74px)' }}>
+    <SimpleBarScroll style={{ height: '100%' }}>
       <Navigation selectedItems={selectedItems} setSelectedItems={setSelectedItems} />
     </SimpleBarScroll>
   );

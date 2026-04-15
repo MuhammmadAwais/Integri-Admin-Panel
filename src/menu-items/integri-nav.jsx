@@ -54,13 +54,6 @@ const integriNav = {
       type: 'item',
       icon: ShieldCheck,
       url: '/sub-admins'
-    },
-    {
-      id: 'logout',
-      title: 'Logout',
-      type: 'item',      // NavItem handles 'logout' url specially → navigate('/login')
-      icon: LogOut,
-      url: '/login'
     }
   ]
 };

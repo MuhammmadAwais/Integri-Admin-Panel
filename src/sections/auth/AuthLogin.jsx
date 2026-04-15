@@ -61,7 +61,7 @@ export default function AuthLoginForm({ className }) {
   return (
     <MainCard className="mb-0">
       <div className="text-center mb-4">
-        <h2 style={{ fontWeight: 700, color: 'var(--bs-heading-color)' }}>Integri AI</h2>
+        <h2 style={{ fontWeight: 700, color: 'var(--bs-red)' }}>Integri AI</h2>
       </div>
       <Form onSubmit={handleSubmit(onSubmit)}>
         <h4 className={`text-center f-w-500 mt-4 mb-3 ${className || ''}`}>Login</h4>
@@ -105,7 +105,7 @@ export default function AuthLoginForm({ className }) {
               type="checkbox"
               label="Remember me?"
               defaultChecked
-              className={`input-primary ${className ? className : 'text-muted'}`}
+              className={`text-[#DC143C] ${className ? className : 'text-muted'}`}
             />
           </Form.Group>
         </Stack>

@@ -75,10 +75,9 @@ export default function EarningChart() {
   const [options, setOptions] = useState(earningChartOptions);
 
   useEffect(() => {
-    // Dynamically get the chart line and text colors from CSS variables
-    const rootStyle = getComputedStyle(document.documentElement);
-    const lineColor = rootStyle.getPropertyValue('--chart-line').trim() || '#ffffff';
-    const textColor = rootStyle.getPropertyValue('--chart-text').trim() || '#ffffff';
+    // Override with Red and Green as requested
+    const lineColor = '#22c55e'; // Green for the line
+    const textColor = '#18181b'; // Default for labels, but I'll set specific ones below
 
     setOptions({
       ...earningChartOptions,
@@ -87,7 +86,7 @@ export default function EarningChart() {
         ...earningChartOptions.xaxis, 
         labels: { 
           style: { 
-            colors: textColor,
+            colors: 'var(--chart-text)', // Keep dynamic for axis
             fontFamily: 'inherit'
           } 
         } 
@@ -106,17 +105,17 @@ export default function EarningChart() {
 
   return (
     <MainCard
-      title={<p className="mb-0" style={{ color: 'var(--chart-text)' }}>Earnings</p>}
+      title={<p className="mb-0" style={{ color: '#DC143C', fontWeight: 700 }}>Earnings</p>}
       headerClassName="border-0"
-      className="overflow-hidden"
+      className="overflow-hidden header-border-0"
       bodyClassName="py-0"
       style={{ background: 'var(--kpi-bg)', border: '2px solid var(--kpi-border)' }}
     >
       <div className="earning-text">
-        <h3 className="mb-2 f-w-300" style={{ color: 'var(--chart-text)' }}>
-          $4295.36 <i className="ph ph-arrow-up" />
+        <h3 className="mb-2 f-w-300" style={{ color: '#22c55e' }}>
+          $4295.36 <i className="ph ph-arrow-up" style={{ color: '#22c55e' }} />
         </h3>
-        <span className="text-uppercase d-block" style={{ color: 'var(--chart-text)', opacity: 0.8 }}>Total Earnings</span>
+        <span className="text-uppercase d-block" style={{ color: '#DC143C', opacity: 0.9, fontWeight: 600, fontSize: '0.75rem' }}>Total Earnings</span>
       </div>
       <ReactApexChart options={options} series={series} type="line" height={210} />
     </MainCard>
