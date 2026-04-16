@@ -8,18 +8,18 @@ import DashboardLayout from 'layout/Dashboard';
 import ProtectedRoute from 'components/ProtectedRoute';
 
 // ── Core Dashboard ──
-const DefaultPage = Loadable(lazy(() => import('views/navigation/dashboard/Default')));
+const HomePage = Loadable(lazy(() => import('pages/Home')));
 
 // ── Integri Feature Pages ──
-const NewsPage      = Loadable(lazy(() => import('features/news/NewsPage')));
-const NewsEditor    = Loadable(lazy(() => import('features/news/components/NewsEditor')));
-const NewsPreview   = Loadable(lazy(() => import('features/news/components/NewsPreview')));
-const UsersPage     = Loadable(lazy(() => import('features/users/UsersPage')));
-const TokensPage    = Loadable(lazy(() => import('features/tokens/TokensPage')));
-const SubAdminsPage = Loadable(lazy(() => import('features/sub-admins/SubAdminsPage')));
-const UserDetailPage = Loadable(lazy(() => import('features/users/components/UserDetailPage')));
-const PromptsPage   = Loadable(lazy(() => import('features/prompts/PromptsPage')));
-const ProfilePage   = Loadable(lazy(() => import('features/profile/ProfilePage')));
+const NewsPage       = Loadable(lazy(() => import('pages/NewsPage')));
+const NewsEditorPage = Loadable(lazy(() => import('pages/NewsEditorPage')));
+const NewsDetailPage = Loadable(lazy(() => import('pages/NewsDetailPage')));
+const UsersPage      = Loadable(lazy(() => import('pages/UsersPage')));
+const TokensPage     = Loadable(lazy(() => import('pages/TokensPage')));
+const SubAdminsPage  = Loadable(lazy(() => import('pages/SubAdminsPage')));
+const UserDetailPage = Loadable(lazy(() => import('pages/UserDetailPage')));
+const PromptsPage    = Loadable(lazy(() => import('pages/PromptsPage')));
+const ProfilePage    = Loadable(lazy(() => import('pages/ProfilePage')));
 
 // ==============================|| INTEGRI APP — NAVIGATION ROUTES ||============================== //
 
@@ -30,11 +30,11 @@ const NavigationRoutes = {
       path: '/',
       element: <ProtectedRoute><DashboardLayout /></ProtectedRoute>,
       children: [
-        { path: '/',           element: <DefaultPage /> },
+        { path: '/',           element: <HomePage /> },
         { path: '/news',           element: <NewsPage /> },
-        { path: '/news/create',     element: <NewsEditor /> },
-        { path: '/news/edit/:id',   element: <NewsEditor /> },
-        { path: '/news/preview/:id', element: <NewsPreview /> },
+        { path: '/news/create',     element: <NewsEditorPage /> },
+        { path: '/news/edit/:id',   element: <NewsEditorPage /> },
+        { path: '/news/preview/:id', element: <NewsDetailPage /> },
         { path: '/users',      element: <UsersPage /> },
         { path: '/tokens',     element: <TokensPage /> },
         { path: '/sub-admins', element: <SubAdminsPage /> },

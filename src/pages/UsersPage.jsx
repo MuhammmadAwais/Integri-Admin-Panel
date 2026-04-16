@@ -2,10 +2,11 @@ import React from 'react';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 
-import useUsers from './hooks/useUsers';
+import useUsers from 'features/users/hooks/useUsers';
 import UsersMap from 'sections/dashboard/UsersMap';
-import UserActivityGraph from './components/UserActivityGraph';
-import UserTable from './components/UserTable';
+import UserActivityGraph from 'features/users/components/UserActivityGraph';
+import UserTable from 'features/users/components/UserTable';
+import ParticleBackground from 'components/ParticleBackground';
 
 // ==============================|| FEATURE: USERS — INTELLIGENCE COMMAND ||============================== //
 
@@ -28,6 +29,7 @@ export default function UsersPage() {
 
   return (
     <Row>
+       <ParticleBackground />
       {/* Tier 1 & 2: Geo-Pulse Map and Activity Graph */}
       <Col md={12} xl={7} className="mb-4">
         {/* Reusing the dashboard's world map ui for consistency */}
@@ -39,6 +41,7 @@ export default function UsersPage() {
 
       {/* Tier 3: The Archive (Shadow Table) */}
       <Col md={12}>
+      <ParticleBackground />
         <UserTable 
           users={filteredUsers} 
           loading={loading} 

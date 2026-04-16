@@ -15,7 +15,7 @@ import { db } from 'lib/firebase/firebase';
 
 // project-imports
 import MainCard from 'components/MainCard';
-import { useNewsPublisher } from '../hooks/useNewsPublisher';
+import { useNewsPublisher } from 'features/news/hooks/useNewsPublisher';
 import { cn } from 'lib/utils';
 
 // icons
@@ -37,9 +37,9 @@ import {
 } from 'lucide-react';
 
 // styles
-import '../styles/news-editor.scss';
+import 'features/news/styles/news-editor.scss';
 
-export default function NewsEditor() {
+export default function NewsEditorPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditMode = Boolean(id);

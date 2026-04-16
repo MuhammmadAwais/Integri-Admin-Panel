@@ -1,9 +1,9 @@
 // project-imports
-import AuthRegisterForm from 'sections/auth/AuthRegister';
+import AuthLoginForm from 'sections/auth/AuthLogin';
 
-// ===========================|| AUTH - REGISTER PAGE ||=========================== //
+// ===========================|| AUTH - LOGIN PAGE ||=========================== //
 
-export default function RegisterPage() {
+export default function LoginPage() {
   return (
     <div className="auth-main">
       <div className="auth-wrapper v1">
@@ -15,7 +15,7 @@ export default function RegisterPage() {
               <span className="r s"></span>
               <span className="r"></span>
             </div>
-            <AuthRegisterForm link="/login" />
+            <AuthLoginForm link="/signup" />
           </div>
         </div>
       </div>

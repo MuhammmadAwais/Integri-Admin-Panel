@@ -19,10 +19,10 @@ const pages = {
           target: true
         },
         {
-          id: 'register',
-          title: 'Register',
+          id: 'signup',
+          title: 'Signup',
           type: 'item',
-          url: '/register',
+          url: '/signup',
           target: true
         }
       ]

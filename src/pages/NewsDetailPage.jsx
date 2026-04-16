@@ -9,9 +9,9 @@ import Logo from 'components/Logo';
 import { Edit3, Trash2, MoreVertical, ChevronLeft, Globe, Calendar, Tag, User, ExternalLink } from 'lucide-react';
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  NewsPreview — Full-width immersive article view
+//  NewsDetailPage — Full-width immersive article view
 // ══════════════════════════════════════════════════════════════════════════════
-export default function NewsPreview({ onDelete }) {
+export default function NewsDetailPage({ onDelete }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [article, setArticle] = useState(null);

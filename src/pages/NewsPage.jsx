@@ -5,13 +5,15 @@ import { Plus, Search, RotateCw } from 'lucide-react';
 
 // project-imports
 import Logo from 'components/Logo';
-import { useNews } from './hooks/useNews';
-import NewsTable from './components/NewsTable';
+import { useNews } from 'features/news/hooks/useNews';
+import NewsTable from 'features/news/components/NewsTable';
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
-
+import { db } from 'lib/firebase/firebase';
+import { collection, addDoc } from 'firebase/firestore';
+import ParticleBackground from 'components/ParticleBackground';
 // styles
-import './styles/news.scss';
+import 'features/news/styles/news.scss';
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  NewsPage — Main archive with table layout
@@ -77,11 +79,70 @@ export default function NewsPage() {
     }
   };
 
+  const seedDummyData = async () => {
+    const dummyNews = [
+      {
+        heading: "Global Markets Pivot: Interdependent Economies Signal Resilience Amid Quantitative Shifts",
+        topic: "Economy",
+        tags: ["Finance", "Global", "Markets"],
+        countries: ["United Kingdom", "United States", "Germany"],
+        sourceName: "Financial Narrative",
+        sourceUrl: "https://example.com/finance",
+        status: "Published",
+        releaseDate: new Date().toISOString().split('T')[0],
+        coverImageUrl: "https://images.unsplash.com/photo-1611974717482-536412f7169a?q=80&w=1000",
+        blocks: [
+          { type: 'text', content: 'Leading analysts suggest a shift in quantitative measures as major central banks maintain a cautious stance on interest rate adjustments.' },
+          { type: 'image', url: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?q=80&w=1000', caption: 'Central Bank Headquarters Analysis' }
+        ]
+      },
+      {
+        heading: "Neural-Mesh Integration: The Frontier of Silicon-Biological Interfaces",
+        topic: "Technology",
+        tags: ["BioTech", "Silicon", "Integration"],
+        countries: ["Japan", "South Korea"],
+        sourceName: "Tech Horizon",
+        sourceUrl: "https://example.com/tech",
+        status: "Published",
+        releaseDate: new Date().toISOString().split('T')[0],
+        coverImageUrl: "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1000",
+        blocks: [
+          { type: 'text', content: 'The integration of biological neural pathways with high-speed silicon mesh platforms has reached a critical milestone in pilot testing.' },
+          { type: 'video', url: 'https://www.w3schools.com/html/mov_bbb.mp4', thumbnail: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000' }
+        ]
+      },
+      {
+        heading: "Infrastructure Recalibration: Urban Density and Transit-Oriented Development",
+        topic: "Regional",
+        tags: ["Urban", "Transit", "Infrastructure"],
+        countries: ["Pakistan", "UAE"],
+        sourceName: "Metropolis Update",
+        sourceUrl: "https://example.com/regional",
+        status: "Draft",
+        releaseDate: new Date().toISOString().split('T')[0],
+        coverImageUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1000",
+        blocks: [
+          { type: 'text', content: 'Future urban planning initiatives are focusing on high-density mixed-use developments to reduce transit friction.' }
+        ]
+      }
+    ];
+
+    try {
+      for (const item of dummyNews) {
+        await addDoc(collection(db, 'News'), item);
+      }
+      alert("Dummy data seeded successfully!");
+    } catch (error) {
+      console.error("Error seeding data:", error);
+      alert("Failed to seed data.");
+    }
+  };
+
   const TABS = ['All', 'Published', 'Drafts', 'Economy', 'Technology'];
 
   return (
     <div className="news-glass-archive">
-
+      <ParticleBackground />
       {/* ── Page Header ─────────────────────────────────────────────────── */}
       <div ref={headerRef} className="news-command-header">
         <div>
@@ -90,12 +151,22 @@ export default function NewsPage() {
             {news.length} article{news.length !== 1 ? 's' : ''} in the archive
           </p>
         </div>
-        <Button
-          className="btn-publish-gold d-flex align-items-center gap-2"
-          onClick={() => navigate('/news/create')}
-        >
-          <Plus size={16} /> Publish New Article
-        </Button>
+        <div className="d-flex align-items-center gap-2">
+          <Button
+            variant="outline-secondary"
+            className="d-flex align-items-center gap-2"
+            style={{ borderRadius: 4, fontWeight: 600, fontSize: '0.85rem' }}
+            onClick={seedDummyData}
+          >
+            Seed UI Data
+          </Button>
+          <Button
+            className="btn-publish-gold d-flex align-items-center gap-2"
+            onClick={() => navigate('/news/create')}
+          >
+            <Plus size={16} /> Publish New Article
+          </Button>
+        </div>
       </div>
 
       {/* ── Control Bar ─────────────────────────────────────────────────── */}
@@ -299,6 +370,7 @@ function EmptyState({ onPublish, isFiltered }) {
           Publish First Article
         </button>
       )}
+            <ParticleBackground />
     </div>
   );
 }

@@ -4,11 +4,9 @@ import { lazy } from 'react';
 import Loadable from 'components/Loadable';
 import AuthLayout from 'layout/Auth';
 
-// render - login pages
-const LoginPage = Loadable(lazy(() => import('views/auth/login/Login')));
-
-// render - register pages
-const RegisterPage = Loadable(lazy(() => import('views/auth/register/Register')));
+// render - auth pages
+const LoginPage = Loadable(lazy(() => import('pages/LoginPage')));
+const SignupPage = Loadable(lazy(() => import('pages/SignupPage')));
 
 // ==============================|| AUTH PAGES ROUTING ||============================== //
 
@@ -24,8 +22,8 @@ const PagesRoutes = {
           element: <LoginPage />
         },
         {
-          path: 'register',
-          element: <RegisterPage />
+          path: 'signup',
+          element: <SignupPage />
         }
       ]
     }

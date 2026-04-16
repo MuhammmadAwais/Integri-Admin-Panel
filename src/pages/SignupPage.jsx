@@ -1,9 +1,9 @@
-// project-imoports
-import AuthLoginForm from 'sections/auth/AuthLogin';
+// project-imports
+import AuthRegisterForm from 'sections/auth/AuthRegister';
 
-// ===========================|| AUTH - LOGIN PAGE ||=========================== //
+// ===========================|| AUTH - SIGNUP PAGE ||=========================== //
 
-export default function LoginPage() {
+export default function SignupPage() {
   return (
     <div className="auth-main">
       <div className="auth-wrapper v1">
@@ -15,7 +15,7 @@ export default function LoginPage() {
               <span className="r s"></span>
               <span className="r"></span>
             </div>
-            <AuthLoginForm link="/register" />
+            <AuthRegisterForm link="/login" />
           </div>
         </div>
       </div>
