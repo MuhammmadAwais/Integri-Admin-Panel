@@ -12,6 +12,8 @@ const DefaultPage = Loadable(lazy(() => import('views/navigation/dashboard/Defau
 
 // ── Integri Feature Pages ──
 const NewsPage      = Loadable(lazy(() => import('features/news/NewsPage')));
+const NewsEditor    = Loadable(lazy(() => import('features/news/components/NewsEditor')));
+const NewsPreview   = Loadable(lazy(() => import('features/news/components/NewsPreview')));
 const UsersPage     = Loadable(lazy(() => import('features/users/UsersPage')));
 const TokensPage    = Loadable(lazy(() => import('features/tokens/TokensPage')));
 const SubAdminsPage = Loadable(lazy(() => import('features/sub-admins/SubAdminsPage')));
@@ -29,7 +31,10 @@ const NavigationRoutes = {
       element: <ProtectedRoute><DashboardLayout /></ProtectedRoute>,
       children: [
         { path: '/',           element: <DefaultPage /> },
-        { path: '/news',       element: <NewsPage /> },
+        { path: '/news',           element: <NewsPage /> },
+        { path: '/news/create',     element: <NewsEditor /> },
+        { path: '/news/edit/:id',   element: <NewsEditor /> },
+        { path: '/news/preview/:id', element: <NewsPreview /> },
         { path: '/users',      element: <UsersPage /> },
         { path: '/tokens',     element: <TokensPage /> },
         { path: '/sub-admins', element: <SubAdminsPage /> },

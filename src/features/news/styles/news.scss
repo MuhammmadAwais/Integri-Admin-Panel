@@ -1,0 +1,160 @@
+// ==============================|| LUXE NEWS SCSS ||============================== //
+
+/**
+ * Integri Luxe Design System - News Module
+ * Palette: #D4AF37 (Gold), #DC143C (Red), #000000 (Obsidian), #27272a (Zinc)
+ */
+
+.news-glass-archive {
+  padding: 30px;
+  background: transparent;
+
+  /* ── Page Header ──────────────────────────────────────────────────────── */
+  .news-command-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+
+    .news-title-sharp {
+      font-weight: 800;
+      font-size: 1.65rem;
+      letter-spacing: -0.5px;
+      color: #DC143C;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .btn-publish-gold {
+      background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%);
+      border: none;
+      color: #000;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 10px 22px;
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(212, 175, 55, 0.15);
+      transition: all 0.25s ease;
+      white-space: nowrap;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
+        filter: brightness(1.08);
+      }
+    }
+  }
+
+  /* ── Command Bar ──────────────────────────────────────────────────────── */
+  .news-command-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    align-items: center;
+
+    .search-command-wrapper {
+      position: relative;
+      flex-grow: 1;
+
+      .search-input-sharp {
+        width: 100%;
+        padding: 11px 16px 11px 42px;
+        background: #000;
+        border: 1px solid #27272a;
+        border-radius: 4px;
+        color: #e4e4e7;
+        font-family: inherit;
+        font-size: 0.9rem;
+        transition: all 0.25s ease;
+
+        &::placeholder { color: #52525b; }
+
+        &:focus {
+          border-color: #D4AF37;
+          box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.06);
+          outline: none;
+        }
+      }
+
+      .search-icon-gold {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #D4AF37;
+        opacity: 0.7;
+      }
+    }
+  }
+
+  /* ── Pill Navigation ──────────────────────────────────────────────────── */
+  .news-pills-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+
+    .nav-item { flex: none; }
+
+    .nav-link {
+      background: transparent !important;
+      border: 1px solid #27272a !important;
+      color: #71717a !important;
+      padding: 7px 20px;
+      border-radius: 100px;
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      line-height: 1;
+
+      &.active {
+        background: #D4AF37 !important;
+        color: #000 !important;
+        border-color: #D4AF37 !important;
+        box-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+      }
+
+      &:hover:not(.active) {
+        border-color: #3f3f46 !important;
+        color: #e4e4e7 !important;
+        background: rgba(255, 255, 255, 0.03) !important;
+      }
+    }
+  }
+}
+
+/* ── Search Highlight ───────────────────────────────────────────────────────── */
+.search-highlight-red {
+  color: #DC143C !important;
+  font-weight: 900;
+  text-decoration: underline;
+  text-decoration-color: rgba(220, 20, 60, 0.3);
+  text-underline-offset: 2px;
+}
+
+/* ── Delete Modal ───────────────────────────────────────────────────────────── */
+.news-delete-modal-content {
+  background: #09090b !important;
+  border: 1px solid #27272a !important;
+  border-radius: 4px !important;
+  color: #fff !important;
+}
+
+/* ── Live Indicator ─────────────────────────────────────────────────────────── */
+.indicator-pulse-sharp {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #DC143C;
+  animation: pulse-sharp 1.5s infinite;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+@keyframes pulse-sharp {
+  0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(220, 20, 60, 0.7); }
+  60% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(220, 20, 60, 0); }
+  100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(220, 20, 60, 0); }
+}
