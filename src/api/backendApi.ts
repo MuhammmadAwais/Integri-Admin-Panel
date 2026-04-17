@@ -141,6 +141,7 @@ export const PromptsService = {
   getOthersPrompt: async (): Promise<any> => {
     try {
       const response = await backendApi.get('/api/v1/prompts/others');
+      console.log(response.data);
       return response.data;
     } catch (e) {
       console.error("❌ [API] Failure getting others prompt:", e);

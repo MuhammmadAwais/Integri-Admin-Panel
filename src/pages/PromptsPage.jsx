@@ -50,12 +50,12 @@ export default function PromptsPage() {
     }
   }, [loading, prompts]);
 
-  const handleEdit = (prompt) => {
-    setEditingId(prompt.id);
+  const handleEdit = (promptItem) => {
+    setEditingId(promptItem.id);
     setEditForm({
-      instructions: prompt.instructions || '',
-      model: prompt.model || 'gpt-4o',
-      provider: prompt.provider || 'openai'
+      prompt: promptItem.prompt || promptItem.instructions || '',
+      model: promptItem.model || 'gpt-4o',
+      provider: promptItem.provider || 'openai'
     });
   };
 
@@ -133,8 +133,8 @@ export default function PromptsPage() {
                       <label style={{ color: '#a8956b', fontSize: '0.8rem', marginBottom: '8px' }}>SYSTEM INSTRUCTIONS</label>
                       <textarea 
                         className="form-control" 
-                        value={editForm.instructions} 
-                        onChange={(e) => setEditForm({...editForm, instructions: e.target.value})}
+                        value={editForm.prompt || ''} 
+                        onChange={(e) => setEditForm({...editForm, prompt: e.target.value})}
                         style={{ background: '#0a0a0a', color: '#e0d5b8', border: '1px solid rgba(212,175,55,0.3)', minHeight: '120px' }}
                       />
                     </div>
@@ -165,7 +165,7 @@ export default function PromptsPage() {
                         whiteSpace: 'pre-wrap'
                       }}
                     >
-                      {prompt.instructions || 'No implicit instructions defined.'}
+                      {prompt.prompt || prompt.instructions || 'No implicit instructions defined.'}
                     </div>
                     <div className="d-flex justify-content-end mt-3">
                       <button 
