@@ -8,6 +8,10 @@ import { useSelector } from 'react-redux';
 import { useEffect } from 'react';
 import { useGetMenuMaster } from 'api/menu';
 
+// Silently pre-fetch the News collection as soon as the user is authenticated,
+// so the /news page loads instantly without waiting for Firestore.
+import { startPreload as preloadNews } from 'features/news/hooks/newsPreloadService';
+
 // ==============================|| MAIN LAYOUT ||============================== //
 
 export default function MainLayout() {
@@ -23,6 +27,10 @@ export default function MainLayout() {
       document.body.classList.remove('dark-theme');
       document.body.setAttribute('data-pc-theme', 'light');
     }
+
+    // Kick the background news prefetch. The service is a singleton — this
+    // call is a no-op on every re-render after the first.
+    preloadNews();
   }, [isDark]);
 
   return (
