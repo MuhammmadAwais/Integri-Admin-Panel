@@ -9,12 +9,12 @@ import {
 } from '@tanstack/react-table';
 import { gsap } from 'gsap';
 import Dropdown from 'react-bootstrap/Dropdown';
-import { MoreVertical, Edit3, Trash2, Eye } from 'lucide-react';
+import { MoreVertical, Edit3, Trash2, Eye, CheckCircle, TrendingUp, Globe } from 'lucide-react';
 
 // ── Highlight helper ────────────────────────────────────────────────────────
 const Hl = ({ text, q }) => {
   if (!q || !text) return <>{text}</>;
-  const parts = String(text).split(new RegExp(`(${q})`, 'gi'));
+  const parts = String(text).split(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
   return (
     <>
       {parts.map((p, i) =>
@@ -26,9 +26,30 @@ const Hl = ({ text, q }) => {
   );
 };
 
-// ── Status Badge ─────────────────────────────────────────────────────────────
+// ── Status Badge — uses Flutter's status values: "Approved" / "Pending" ──────
 const StatusBadge = ({ status }) => {
-  const isActive = status === 'Published' || status === 'Active';
+  const isApproved = status === 'Approved';
+  const styles = {
+    Approved: {
+      bg: 'rgba(34,197,94,0.1)',
+      color: '#22c55e',
+      border: 'rgba(34,197,94,0.3)',
+      label: 'Approved'
+    },
+    Pending: {
+      bg: 'rgba(234,179,8,0.1)',
+      color: '#eab308',
+      border: 'rgba(234,179,8,0.3)',
+      label: 'Pending'
+    },
+    default: {
+      bg: 'rgba(113,113,122,0.15)',
+      color: '#71717a',
+      border: 'rgba(113,113,122,0.3)',
+      label: status || 'Draft'
+    }
+  };
+  const s = styles[status] || styles.default;
   return (
     <span style={{
       padding: '4px 12px',
@@ -37,29 +58,38 @@ const StatusBadge = ({ status }) => {
       textTransform: 'uppercase',
       fontWeight: 700,
       letterSpacing: '0.5px',
-      backgroundColor: isActive ? 'rgba(34, 197, 94, 0.1)' : 'rgba(113, 113, 122, 0.15)',
-      color: isActive ? '#22c55e' : '#71717a',
-      border: `1px solid ${isActive ? 'rgba(34,197,94,0.3)' : 'rgba(113,113,122,0.3)'}`
+      backgroundColor: s.bg,
+      color: s.color,
+      border: `1px solid ${s.border}`,
+      whiteSpace: 'nowrap'
     }}>
-      {isActive ? 'Published' : 'Draft'}
+      {s.label}
     </span>
   );
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  NewsTable Component
+//  NewsTable — Reads from real Flutter/Firestore News schema
+//  Key field mappings:
+//    heading       → _headlineDisplay (normalised from headline:{en,ar} map)
+//    countries     → forCountries[]
+//    releaseDate   → _dateDisplay (normalised from Firestore Timestamp 'date')
+//    sourceName    → _sourceNameDisplay (from newsSource.company map)
+//    status        → "Approved" | "Pending"
 // ══════════════════════════════════════════════════════════════════════════════
-const NewsTable = ({ news, loading, searchTerm, onDelete, onStatusToggle }) => {
+const NewsTable = ({ news, loading, searchTerm, onDelete, onApprove }) => {
   const navigate = useNavigate();
   const tableRef = useRef(null);
   const [sorting, setSorting] = useState([]);
 
   const columns = useMemo(() => [
+    // ── Thumbnail ──────────────────────────────────────────────────────────
     {
       id: 'thumb',
       header: '',
       cell: ({ row }) => {
-        const src = row.original.coverImageUrl;
+        // Real schema: coverImage (not coverImageUrl)
+        const src = row.original.coverImage;
         return src ? (
           <img
             src={src}
@@ -77,12 +107,13 @@ const NewsTable = ({ news, loading, searchTerm, onDelete, onStatusToggle }) => {
           <div style={{
             width: 64, height: 42,
             background: 'rgba(212,175,55,0.05)',
-            border: '1px solid rgba(212,175,55,0.2)',
+            border: '1px solid rgba(212,175,55,0.15)',
             borderRadius: 2,
             display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" strokeWidth="2">
-              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3f3f46" strokeWidth="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
               <polyline points="21 15 16 10 5 21"/>
             </svg>
           </div>
@@ -91,60 +122,105 @@ const NewsTable = ({ news, loading, searchTerm, onDelete, onStatusToggle }) => {
       enableSorting: false,
       size: 80
     },
+
+    // ── Headline + meta ────────────────────────────────────────────────────
     {
-      accessorKey: 'heading',
+      id: 'headline',
       header: 'Headline',
-      cell: ({ row, getValue }) => (
-        <div>
-          <div style={{ color: '#D4AF37', fontWeight: 700, fontSize: '0.95rem', marginBottom: 3 }}>
-            <Hl text={getValue()} q={searchTerm} />
+      accessorFn: (row) => row._headlineDisplay || '',
+      cell: ({ row, getValue }) => {
+        const item = row.original;
+        return (
+          <div>
+            <div style={{ color: '#e4e4e7', fontWeight: 700, fontSize: '0.93rem', marginBottom: 4, lineHeight: 1.4 }}>
+              <Hl text={getValue()} q={searchTerm} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ color: '#71717a', fontSize: '0.76rem', fontWeight: 600 }}>
+                <Hl text={item.topic || 'General'} q={searchTerm} />
+              </span>
+              {item._sourceNameDisplay && (
+                <>
+                  <span style={{ color: '#3f3f46', fontSize: '0.72rem' }}>·</span>
+                  <span style={{ color: '#52525b', fontSize: '0.76rem' }}>
+                    {item._sourceNameDisplay}
+                  </span>
+                </>
+              )}
+              {item.markAsTrending && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 3,
+                  padding: '1px 7px', borderRadius: 10,
+                  background: 'rgba(220,20,60,0.1)', border: '1px solid rgba(220,20,60,0.25)',
+                  color: '#DC143C', fontSize: '0.68rem', fontWeight: 700
+                }}>
+                  <TrendingUp size={9} /> Trending
+                </span>
+              )}
+              {item.addToGeneralTopic === false && (
+                <span style={{
+                  padding: '1px 7px', borderRadius: 10,
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid #3f3f46',
+                  color: '#52525b', fontSize: '0.68rem', fontWeight: 600
+                }}>
+                  Others
+                </span>
+              )}
+            </div>
           </div>
-          <div style={{ color: '#71717a', fontSize: '0.78rem', fontWeight: 600 }}>
-            {row.original.topic || 'General'}
-            {row.original.sourceName && ` · ${row.original.sourceName}`}
-          </div>
-        </div>
-      )
+        );
+      }
     },
+
+    // ── Region (forCountries) ──────────────────────────────────────────────
     {
-      accessorKey: 'countries',
+      id: 'forCountries',
       header: 'Region',
-      cell: ({ getValue }) => {
-        const countries = getValue() || [];
-        return countries.length > 0 ? (
-          <span style={{
-            padding: '3px 10px', borderRadius: 12,
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            fontSize: '0.8rem', color: '#e4e4e7'
-          }}>
-            {countries[0]}{countries.length > 1 && ` +${countries.length - 1}`}
-          </span>
-        ) : (
-          <span style={{ color: '#52525b', fontSize: '0.8rem' }}>Global</span>
+      accessorFn: (row) => (row.forCountries || []).join(', '),
+      cell: ({ row }) => {
+        const countries = row.original.forCountries || [];
+        if (countries.length === 0) {
+          return <span style={{ color: '#3f3f46', fontSize: '0.8rem' }}>Global</span>;
+        }
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+            <Globe size={11} style={{ color: '#52525b', flexShrink: 0 }} />
+            <span style={{
+              padding: '3px 10px', borderRadius: 12,
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.07)',
+              fontSize: '0.79rem', color: '#a1a1aa', fontWeight: 600
+            }}>
+              <Hl text={countries[0]} q={searchTerm} />
+              {countries.length > 1 && <span style={{ color: '#52525b', marginLeft: 4 }}>+{countries.length - 1}</span>}
+            </span>
+          </div>
         );
       },
-      size: 130
+      size: 150
     },
+
+    // ── Tags ───────────────────────────────────────────────────────────────
     {
       accessorKey: 'tags',
       header: 'Tags',
       cell: ({ getValue }) => {
         const tags = getValue() || [];
+        if (tags.length === 0) return <span style={{ color: '#3f3f46', fontSize: '0.79rem' }}>—</span>;
         return (
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {tags.slice(0, 2).map(tag => (
               <span key={tag} style={{
                 padding: '2px 8px', borderRadius: 12,
-                background: 'rgba(212,175,55,0.08)',
-                border: '1px solid rgba(212,175,55,0.2)',
-                fontSize: '0.72rem', color: '#D4AF37', fontWeight: 600
+                background: 'rgba(212,175,55,0.07)',
+                border: '1px solid rgba(212,175,55,0.18)',
+                fontSize: '0.71rem', color: '#D4AF37', fontWeight: 600
               }}>
-                {tag}
+                <Hl text={tag} q={searchTerm} />
               </span>
             ))}
             {tags.length > 2 && (
-              <span style={{ color: '#52525b', fontSize: '0.72rem' }}>+{tags.length - 2}</span>
+              <span style={{ color: '#52525b', fontSize: '0.71rem', alignSelf: 'center' }}>+{tags.length - 2}</span>
             )}
           </div>
         );
@@ -152,31 +228,40 @@ const NewsTable = ({ news, loading, searchTerm, onDelete, onStatusToggle }) => {
       size: 160,
       enableSorting: false
     },
+
+    // ── Date (from Firestore Timestamp 'date') ─────────────────────────────
     {
-      accessorKey: 'releaseDate',
-      header: 'Release Date',
+      id: 'date',
+      header: 'Date',
+      accessorFn: (row) => row._dateDisplay,
+      sortingFn: 'datetime',
       cell: ({ getValue }) => {
-        const v = getValue();
-        if (!v) return <span style={{ color: '#52525b' }}>—</span>;
+        const d = getValue();
+        if (!d) return <span style={{ color: '#3f3f46' }}>—</span>;
         return (
-          <span style={{ color: '#a1a1aa', fontSize: '0.85rem', fontWeight: 600 }}>
-            {new Date(v).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+          <span style={{ color: '#a1a1aa', fontSize: '0.83rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+            {d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
           </span>
         );
       },
       size: 130
     },
+
+    // ── Status (Approved / Pending) ────────────────────────────────────────
     {
       accessorKey: 'status',
       header: 'Status',
       cell: ({ getValue }) => <StatusBadge status={getValue()} />,
       size: 110
     },
+
+    // ── Row Actions ────────────────────────────────────────────────────────
     {
       id: 'actions',
       header: '',
       cell: ({ row }) => {
         const item = row.original;
+        const isPending = item.status === 'Pending';
         return (
           <Dropdown onClick={e => e.stopPropagation()}>
             <Dropdown.Toggle
@@ -191,7 +276,7 @@ const NewsTable = ({ news, loading, searchTerm, onDelete, onStatusToggle }) => {
               border: '1px solid #27272a',
               borderRadius: 4,
               padding: '4px',
-              minWidth: 160,
+              minWidth: 170,
               boxShadow: '0 10px 40px rgba(0,0,0,0.6)'
             }}>
               <Dropdown.Item
@@ -208,6 +293,21 @@ const NewsTable = ({ news, loading, searchTerm, onDelete, onStatusToggle }) => {
               >
                 <Edit3 size={14} style={{ color: '#D4AF37' }} /> Edit Article
               </Dropdown.Item>
+
+              {/* Approve action — only shown for Pending articles */}
+              {isPending && onApprove && (
+                <>
+                  <Dropdown.Divider style={{ borderColor: '#27272a', margin: '4px 0' }} />
+                  <Dropdown.Item
+                    onClick={() => onApprove(item.id)}
+                    style={{ color: '#22c55e', padding: '8px 12px', borderRadius: 3, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}
+                    className="news-menu-item-approve"
+                  >
+                    <CheckCircle size={14} /> Approve
+                  </Dropdown.Item>
+                </>
+              )}
+
               <Dropdown.Divider style={{ borderColor: '#27272a', margin: '4px 0' }} />
               <Dropdown.Item
                 onClick={() => onDelete(item.id)}
@@ -223,7 +323,7 @@ const NewsTable = ({ news, loading, searchTerm, onDelete, onStatusToggle }) => {
       enableSorting: false,
       size: 50
     }
-  ], [navigate, searchTerm, onDelete, onStatusToggle]);
+  ], [navigate, searchTerm, onDelete, onApprove]);
 
   const table = useReactTable({
     data: news,
@@ -236,7 +336,7 @@ const NewsTable = ({ news, loading, searchTerm, onDelete, onStatusToggle }) => {
     initialState: { pagination: { pageSize: 15 } }
   });
 
-  // GSAP row stagger
+  // GSAP row stagger on data change
   useEffect(() => {
     if (tableRef.current && !loading && news.length > 0) {
       const rows = tableRef.current.querySelectorAll('tbody tr');
@@ -256,21 +356,20 @@ const NewsTable = ({ news, loading, searchTerm, onDelete, onStatusToggle }) => {
           50% { opacity: 0.7; }
         }
         .skeleton-cell {
-          background: rgba(212,175,55,0.08);
+          background: rgba(212,175,55,0.07);
           border-radius: 3px;
-          height: 20px;
+          height: 18px;
           animation: skeletonPulse 1.8s ease infinite;
         }
         .news-table-row {
           cursor: pointer;
           transition: background 0.15s ease;
-          border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+          border-bottom: 1px solid rgba(255,255,255,0.03) !important;
         }
-        .news-table-row:hover {
-          background: rgba(212,175,55,0.04) !important;
-        }
+        .news-table-row:hover { background: rgba(212,175,55,0.035) !important; }
         .news-table-row:hover td { border-color: transparent !important; }
         .news-menu-item:hover { background: rgba(212,175,55,0.08) !important; color: #fff !important; }
+        .news-menu-item-approve:hover { background: rgba(34,197,94,0.1) !important; }
         .news-menu-item-danger:hover { background: rgba(220,20,60,0.1) !important; }
         [bsprefix="no-caret"]::after { display: none !important; }
       `}</style>
@@ -279,7 +378,7 @@ const NewsTable = ({ news, loading, searchTerm, onDelete, onStatusToggle }) => {
         <div className="card-body p-0">
           <div className="table-responsive" style={{ overflowX: 'auto' }}>
             <table ref={tableRef} className="table mb-0" style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ background: 'rgba(212,175,55,0.05)', position: 'sticky', top: 0, zIndex: 2, backdropFilter: 'blur(8px)' }}>
+              <thead style={{ background: 'rgba(212,175,55,0.04)', position: 'sticky', top: 0, zIndex: 2, backdropFilter: 'blur(8px)' }}>
                 {table.getHeaderGroups().map(hg => (
                   <tr key={hg.id} style={{ borderBottom: '1px solid #27272a' }}>
                     {hg.headers.map(header => (
@@ -290,13 +389,14 @@ const NewsTable = ({ news, loading, searchTerm, onDelete, onStatusToggle }) => {
                           padding: '14px 16px',
                           color: '#D4AF37',
                           fontWeight: 700,
-                          fontSize: '0.78rem',
+                          fontSize: '0.76rem',
                           textTransform: 'uppercase',
                           letterSpacing: '1px',
                           cursor: header.column.getCanSort() ? 'pointer' : 'default',
                           borderBottom: 'none',
                           whiteSpace: 'nowrap',
-                          width: header.column.columnDef.size ? `${header.column.columnDef.size}px` : 'auto'
+                          width: header.column.columnDef.size ? `${header.column.columnDef.size}px` : 'auto',
+                          userSelect: 'none'
                         }}
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
@@ -309,10 +409,10 @@ const NewsTable = ({ news, loading, searchTerm, onDelete, onStatusToggle }) => {
               <tbody>
                 {loading ? (
                   [...Array(8)].map((_, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      {[80, 300, 130, 160, 130, 110, 50].map((w, j) => (
+                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                      {[80, 320, 150, 160, 130, 110, 50].map((w, j) => (
                         <td key={j} style={{ padding: '14px 16px', borderBottom: 'none', verticalAlign: 'middle' }}>
-                          <div className="skeleton-cell" style={{ width: j === 0 ? '64px' : `${Math.min(w * 0.7, 180)}px`, height: j === 0 ? '42px' : '18px' }} />
+                          <div className="skeleton-cell" style={{ width: j === 0 ? '64px' : `${Math.min(w * 0.65, 180)}px`, height: j === 0 ? '42px' : '16px' }} />
                         </td>
                       ))}
                     </tr>
