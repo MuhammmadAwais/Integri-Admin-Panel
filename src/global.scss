@@ -282,9 +282,20 @@
   @media (min-width: 1025px) {
     .pc-container {
       margin-left: 210px !important;
+      transition: margin-left 0.2s ease;
     }
     .pc-header {
       left: 210px !important;
+      transition: left 0.2s ease;
+    }
+
+    .pc-sidebar-hide {
+      .pc-container {
+        margin-left: 0 !important;
+      }
+      .pc-header {
+        left: 0 !important;
+      }
     }
   }
 
@@ -692,9 +703,20 @@
   @media (min-width: 1025px) {
     .pc-container {
       margin-left: 210px !important;
+      transition: margin-left 0.2s ease;
     }
     .pc-header {
       left: 210px !important;
+      transition: left 0.2s ease;
+    }
+
+    .pc-sidebar-hide {
+      .pc-container {
+        margin-left: 0 !important;
+      }
+      .pc-header {
+        left: 0 !important;
+      }
     }
   }
 }
