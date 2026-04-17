@@ -158,3 +158,29 @@
   60% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(220, 20, 60, 0); }
   100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(220, 20, 60, 0); }
 }
+
+/* ── Custom Scrollbar for Table ────────────────────────────────────────────── */
+.table-responsive {
+  scrollbar-width: thin;
+  scrollbar-color: #27272a #000;
+
+  &::-webkit-scrollbar {
+    height: 7px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #09090b;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #27272a;
+    border-radius: 4px;
+    border: 1px solid rgba(212, 175, 55, 0.1);
+    
+    &:hover {
+      background: #D4AF37;
+      border-color: #D4AF37;
+    }
+  }
+}

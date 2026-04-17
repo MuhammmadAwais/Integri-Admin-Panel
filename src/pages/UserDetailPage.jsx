@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from 'lib/firebase/firebase';
 import { UserMemoryService } from 'api/backendApi';
-import { ArrowLeft, Clock, MapPin, Mail, Shield, Zap, BrainCircuit, Search as SearchIcon, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, Mail, Shield, Zap, User as UserIcon, Search as SearchIcon, Copy, Check, Activity, Fingerprint, History } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { gsap } from 'gsap';
 import MainCard from 'components/MainCard';
@@ -34,7 +34,6 @@ const MemoryCard = ({ label, value }) => {
   const renderMemoryValue = (val, key) => {
     if (val === null || val === undefined) return <span style={{ color: '#a8956b', fontStyle: 'italic' }}>N/A</span>;
 
-    // 1. Semantic Handler: Notable Facts (Narrative List)
     if (key === 'notable_facts' && Array.isArray(val)) {
       return (
         <div className="mt-2">
@@ -53,7 +52,6 @@ const MemoryCard = ({ label, value }) => {
       );
     }
 
-    // 2. Semantic Handler: Session/Context/Preferences (Object Key-Value Grid)
     if (typeof val === 'object' && !Array.isArray(val)) {
       const entries = Object.entries(val);
       if (entries.length === 0) return <span style={{ color: '#a8956b', fontStyle: 'italic' }}>Empty dataset.</span>;
@@ -72,7 +70,6 @@ const MemoryCard = ({ label, value }) => {
       );
     }
 
-    // 3. Semantic Handler: Arrays (Tag Matrix)
     if (Array.isArray(val)) {
       if (val.length === 0) return <span style={{ color: '#a8956b', fontStyle: 'italic' }}>No associations.</span>;
       return (
@@ -94,7 +91,6 @@ const MemoryCard = ({ label, value }) => {
       );
     }
 
-    // 4. ISO Date Prettification
     const isoRegEx = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
     if (typeof val === 'string' && isoRegEx.test(val)) {
       return (
@@ -104,7 +100,6 @@ const MemoryCard = ({ label, value }) => {
       );
     }
 
-    // 5. Default Forensic Value
     return (
       <span style={{ fontFamily: "'Roboto Mono', monospace", color: '#fff' }}>
         {String(val)}
@@ -134,7 +129,7 @@ const MemoryCard = ({ label, value }) => {
             style={{ opacity: 0.6, transition: 'opacity 0.2s' }}
             onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
             onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
-            title="Copy Raw Intel"
+            title="Copy Raw Data"
           >
             {copied ? <Check size={16} color="#D4AF37" /> : <Copy size={16} />}
           </button>
@@ -163,7 +158,7 @@ const MemoryGrid = ({ data }) => {
       <div className="d-flex align-items-center mb-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212,175,55,0.2)', borderRadius: '8px', padding: '8px 16px' }}>
         <SearchIcon size={16} color="#a8956b" />
         <input 
-          placeholder="Filter semantic keys..."
+          placeholder="Filter saved data..."
           className="border-0 shadow-none bg-transparent w-100 ms-2"
           style={{ color: '#e0d5b8', outline: 'none', fontSize: '0.9rem' }}
           value={search}
@@ -176,7 +171,7 @@ const MemoryGrid = ({ data }) => {
           <MemoryCard key={key} label={key} value={val} />
         )) : (
           <div className="col-12 text-center py-4" style={{ color: '#a8956b', fontStyle: 'italic' }}>
-            No intelligence matches found.
+            No user records found.
           </div>
         )}
       </div>
@@ -190,6 +185,7 @@ export default function UserDetailPage() {
   const [user, setUser] = useState(null);
   const [memoryData, setMemoryData] = useState(null);
   const [tokenHistory, setTokenHistory] = useState([]);
+  const [rawLogs, setRawLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const pageRef = useRef(null);
 
@@ -199,9 +195,6 @@ export default function UserDetailPage() {
     async function fetchUser() {
       try {
         setLoading(true);
-        console.log("Firebase Action: Fetching discrete user intelligence for ID:", id);
-        
-        // Explicitly targeting '/Users' (Capitalized) as per architecture spec
         const docRef = doc(db, 'Users', id);
         const docSnap = await getDoc(docRef);
         
@@ -216,54 +209,48 @@ export default function UserDetailPage() {
             selectedLanguage: data.selectedLanguage || 'System (EN-US)',
             tokens: data.tokens || 0,
             freeDays: data.freeDays || 0,
-            // Handle Firestore Timestamp precisely
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toLocaleDateString() : 'Unknown',
             status: data.status || 'inactive'
           };
           
-          console.log("Firebase Response: Received [User Detail] payload:", mappedUser);
           setUser(mappedUser);
 
-          // Fetch API memory context
           try {
             const memory = await UserMemoryService.getUserMemory(id);
             setMemoryData(memory);
           } catch (e) {
-            console.warn("User Intelligence API connection not established or user has no memory.");
+            console.warn("User data connection not established.");
           }
 
-          // Sub-collection onSnapshot
-          console.log("Firebase Action: Listening to [generatedTokens] for user:", id);
           const tokensRef = collection(db, 'Users', id, 'generatedTokens');
-          const tokensQuery = query(tokensRef, orderBy('createdAt', 'asc'));
+          const tokensQuery = query(tokensRef, orderBy('createdAt', 'desc'));
           
           unsubTokens = onSnapshot(tokensQuery, (tokensSnap) => {
             const history = [];
+            const logs = [];
+            
             tokensSnap.forEach((tDoc) => {
               const tData = tDoc.data();
-              history.push({
-                name: tData.createdAt?.toDate ? tData.createdAt.toDate().toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Unknown',
+              const dateObj = tData.createdAt?.toDate ? tData.createdAt.toDate() : new Date();
+              
+              history.unshift({
+                name: dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
                 tokens: tData.tokens || tData.amount || 0
+              });
+
+              logs.push({
+                time: dateObj.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                event: `Generated ${tData.tokens || tData.amount || 0} tokens`,
+                status: 'Success'
               });
             });
             
-            if (history.length > 0) {
-              setTokenHistory(history);
-            } else {
-              setTokenHistory([
-                { name: 'Mon', tokens: Math.max(0, mappedUser.tokens - 500) },
-                { name: 'Tue', tokens: Math.max(0, mappedUser.tokens - 300) },
-                { name: 'Wed', tokens: Math.max(0, mappedUser.tokens - 200) },
-                { name: 'Thu', tokens: Math.max(0, mappedUser.tokens - 100) },
-                { name: 'Fri', tokens: mappedUser.tokens },
-              ]);
-            }
+            setRawLogs(logs);
+            setTokenHistory(history);
           });
-        } else {
-          console.warn("Firebase Response: User ID not found in [/Users] collection.");
         }
       } catch (error) {
-        console.error("Firestore [Users Detail] Error:", error);
+        console.error("User Detail Error:", error);
       } finally {
         setLoading(false);
       }
@@ -284,11 +271,9 @@ export default function UserDetailPage() {
     }
   }, [loading]);
 
-  if (loading) return <div className="text-center p-5 mt-5" style={{ color: '#D4AF37' }}>Loading Intelligence Data...</div>;
-  if (!user) return <div className="text-center p-5 mt-5 text-danger">User not found in the Archive.</div>;
+  if (loading) return <div className="text-center p-5 mt-5" style={{ color: '#D4AF37' }}>Loading User Profile...</div>;
+  if (!user) return <div className="text-center p-5 mt-5 text-danger">User not found in the database.</div>;
 
-  // We are now using dynamic tokenHistory from Firebase instead of static simulation.
-  // We keep statusColor and initial as before.
   const statusColor = user.status === 'active' ? '#D4AF37' : '#DC143C';
   const initial = user.name.charAt(0).toUpperCase();
 
@@ -299,10 +284,10 @@ export default function UserDetailPage() {
         className="btn btn-link px-0 mb-4 d-flex align-items-center gap-2"
         style={{ color: '#a8956b', textDecoration: 'none' }}
       >
-        <ArrowLeft size={18} /> Back to Archive
+        <ArrowLeft size={18} /> Back to Users
       </button>
 
-      {/* Top Identity Card */}
+      {/* Identity Card */}
       <MainCard className="mb-4" bodyClassName="d-flex align-items-center gap-4">
         {user.avatar ? (
           <img src={user.avatar} alt="avatar" style={{ width: 80, height: 80, borderRadius: '50%', border: '2px solid #D4AF37' }} />
@@ -326,10 +311,17 @@ export default function UserDetailPage() {
       </MainCard>
 
       <Row>
-        {/* Account Details */}
+        {/* User Details */}
         <Col md={5}>
-          <MainCard title="Account Details" className="h-100">
+          <MainCard title="Account Profile" className="h-100">
             <ul className="list-group list-group-flush" style={{ background: 'transparent' }}>
+               <li className="list-group-item d-flex align-items-center gap-3 py-3" style={{ background: 'transparent', borderBottom: '1px solid rgba(212,175,55,0.1)' }}>
+                 <Fingerprint size={18} color="#D4AF37" />
+                 <div>
+                    <small style={{ color: '#a8956b', display: 'block' }}>Account ID</small>
+                    <strong style={{ color: '#e0d5b8', fontSize: '0.8rem', fontFamily: 'monospace' }}>{user.id}</strong>
+                 </div>
+               </li>
                <li className="list-group-item d-flex align-items-center gap-3 py-3" style={{ background: 'transparent', borderBottom: '1px solid rgba(212,175,55,0.1)' }}>
                  <Mail size={18} color="#D4AF37" />
                  <div>
@@ -340,99 +332,126 @@ export default function UserDetailPage() {
                <li className="list-group-item d-flex align-items-center gap-3 py-3" style={{ background: 'transparent', borderBottom: '1px solid rgba(212,175,55,0.1)' }}>
                  <MapPin size={18} color="#D4AF37" />
                  <div>
-                    <small style={{ color: '#a8956b', display: 'block' }}>Region & Language</small>
+                    <small style={{ color: '#a8956b', display: 'block' }}>Location & Language</small>
                     <strong style={{ color: '#e0d5b8' }}>{user.country} • {user.selectedLanguage}</strong>
                  </div>
                </li>
                <li className="list-group-item d-flex align-items-center gap-3 py-3" style={{ background: 'transparent', borderBottom: 'none' }}>
-                 <Zap size={18} color="#D4AF37" />
-                 <div style={{ flex: 1 }}>
-                    <div className="d-flex justify-content-between mb-1">
-                       <small style={{ color: '#a8956b' }}>Free Days Remaining</small>
-                       <small style={{ color: '#D4AF37' }}>{user.freeDays}/30</small>
-                    </div>
-                    <div style={{ height: '6px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ width: `${Math.min((user.freeDays/30)*100, 100)}%`, height: '100%', backgroundColor: '#D4AF37' }}></div>
-                    </div>
+                 <History size={18} color="#D4AF37" />
+                 <div>
+                    <small style={{ color: '#a8956b', display: 'block' }}>Last Activity</small>
+                    <strong style={{ color: '#e0d5b8' }}>{rawLogs.length > 0 ? rawLogs[0].time : 'Awaiting activity...'}</strong>
                  </div>
                </li>
             </ul>
           </MainCard>
         </Col>
 
-        {/* Token History Graph */}
+        {/* Usage History Section */}
         <Col md={7}>
-          <MainCard title="Token Trajectory" className="h-100" bodyClassName="d-flex flex-column">
-             <h3 style={{ color: '#D4AF37', margin: '0 0 20px 0' }}>₮ {user.tokens.toLocaleString()} <span style={{fontSize: '1rem', color: '#a8956b', fontWeight: 400}}>Current Balance</span></h3>
+          <MainCard title="Usage Trends" className="h-100" bodyClassName="d-flex flex-column">
+             <div className="d-flex justify-content-between align-items-start mb-4">
+                <div>
+                   <h3 style={{ color: '#D4AF37', margin: 0 }}>₮ {user.tokens.toLocaleString()}</h3>
+                   <span style={{fontSize: '0.85rem', color: '#a8956b'}}>Current Account Balance</span>
+                </div>
+                {user.freeDays > 0 && (
+                   <div className="text-end" style={{ minWidth: '150px' }}>
+                      <div className="d-flex justify-content-between mb-1">
+                         <small style={{ color: '#a8956b' }}>Trial Access</small>
+                         <small style={{ color: '#D4AF37' }}>{user.freeDays}d left</small>
+                      </div>
+                      <div style={{ height: '4px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                         <div style={{ width: `${Math.min((user.freeDays/30)*100, 100)}%`, height: '100%', backgroundColor: '#D4AF37' }}></div>
+                      </div>
+                   </div>
+                )}
+             </div>
              
-             <div style={{ height: "400px", width: "100%", position: "relative" }}>
-                <ResponsiveContainer width="100%" height="100%">
-                   <AreaChart data={tokenHistory} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorTokens" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#D4AF37" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="name" stroke="#5a5a5a" tick={{fill: '#a8956b', fontSize: 12}} />
-                      <YAxis stroke="#5a5a5a" tick={{fill: '#a8956b', fontSize: 12}} />
-                      <Tooltip 
-                        contentStyle={{ background: 'rgba(10,10,10,0.9)', border: '1px solid rgba(212,175,55,0.3)', borderRadius: '8px' }} 
-                        itemStyle={{ color: '#D4AF37', fontWeight: 600 }}
-                      />
-                      <Area type="monotone" dataKey="tokens" stroke="#D4AF37" strokeWidth={2} fillOpacity={1} fill="url(#colorTokens)" />
-                   </AreaChart>
-                </ResponsiveContainer>
+             <div style={{ flex: 1, minHeight: "350px", width: "100%", position: "relative" }}>
+                 {tokenHistory.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                       <AreaChart data={tokenHistory} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorTokens" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#D4AF37" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <XAxis dataKey="name" stroke="#5a5a5a" tick={{fill: '#a8956b', fontSize: 10}} />
+                          <YAxis stroke="#5a5a5a" tick={{fill: '#a8956b', fontSize: 10}} />
+                          <Tooltip 
+                            contentStyle={{ background: 'rgba(10,10,10,0.9)', border: '1px solid rgba(212,175,55,0.3)', borderRadius: '8px' }} 
+                            itemStyle={{ color: '#D4AF37', fontWeight: 600 }}
+                          />
+                          <Area type="monotone" dataKey="tokens" stroke="#D4AF37" strokeWidth={2} fillOpacity={1} fill="url(#colorTokens)" />
+                       </AreaChart>
+                    </ResponsiveContainer>
+                 ) : (
+                    <div className="h-100 d-flex flex-column align-items-center justify-content-center text-center p-4">
+                       <Zap size={48} color="rgba(212,175,55,0.1)" className="mb-3" />
+                       <h5 style={{ color: '#a8956b', fontWeight: 500 }}>No Usage Records Found</h5>
+                       <p style={{ color: 'rgba(168,149,107,0.6)', fontSize: '0.85rem', maxWidth: '300px' }}>
+                          This account hasn't generated any tokens yet. Activity trends will appear here once usage begins.
+                       </p>
+                    </div>
+                 )}
              </div>
           </MainCard>
         </Col>
       </Row>
 
-      {/* User Core Memory */}
+      {/* Saved User Data */}
       <Row className="mt-4">
         <Col md={12}>
           <MainCard title={
             <div className="d-flex align-items-center gap-2">
-              <BrainCircuit size={18} color="#D4AF37" />
-              <span style={{ color: '#D4AF37' }}>User Intelligence Memory</span>
+              <UserIcon size={18} color="#D4AF37" />
+              <span style={{ color: '#D4AF37' }}>Saved User Data & Preferences</span>
             </div>
           } bodyClassName="p-0">
              {memoryData ? (
                <MemoryGrid data={memoryData} />
              ) : (
-               <div className="p-4 text-center" style={{ color: '#a8956b', fontStyle: 'italic' }}>
-                 No semantic memory footprint recorded.
+               <div className="p-5 text-center" style={{ color: '#a8956b', fontStyle: 'italic' }}>
+                 No persistent user preferences recorded.
                </div>
              )}
           </MainCard>
         </Col>
       </Row>
 
-      {/* Account Activity Logs */}
+      {/* Activity Timeline */}
       <Row className="mt-4">
         <Col md={12}>
-          <MainCard title="Account Activity Log" bodyClassName="p-0">
+          <MainCard title={
+            <div className="d-flex align-items-center gap-2">
+              <Activity size={18} color="#D4AF37" />
+              <span style={{ color: '#D4AF37' }}>Account Activity History</span>
+            </div>
+          } bodyClassName="p-0">
             <div className="table-responsive">
               <table className="table table-hover mb-0">
                 <thead style={{ background: 'rgba(212,175,55,0.05)' }}>
                   <tr>
-                    <th style={{ color: '#D4AF37', borderBottom: 'none' }}>Timestamp</th>
-                    <th style={{ color: '#D4AF37', borderBottom: 'none' }}>Event Type</th>
-                    <th style={{ color: '#D4AF37', borderBottom: 'none' }}>IP Address</th>
+                    <th style={{ color: '#D4AF37', borderBottom: 'none', paddingLeft: '24px' }}>Date & Time</th>
+                    <th style={{ color: '#D4AF37', borderBottom: 'none' }}>Action Description</th>
                     <th style={{ color: '#D4AF37', borderBottom: 'none' }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { time: 'Just Now', event: 'Token Validation Check', ip: '192.168.1.104', status: 'Success' },
-                    { time: '2 Hours Ago', event: 'Dashboard Session Initiated', ip: '192.168.1.104', status: 'Success' },
-                    { time: 'Yesterday', event: 'Profile Setting Sync', ip: 'Unknown Carrier', status: 'Success' },
-                    { time: '3 Days Ago', event: 'Failed Authentication Attempt', ip: '10.0.0.32', status: 'Warning' }
-                  ].map((log, idx) => (
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <td style={{ color: '#e0d5b8', borderBottom: 'none', paddingLeft: '24px' }}>{user.createdAt}</td>
+                    <td style={{ color: '#e0d5b8', borderBottom: 'none' }}>Account initialized in system</td>
+                    <td style={{ borderBottom: 'none' }}>
+                      <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'rgba(212,175,55,0.1)', color: '#D4AF37', border: '1px solid #D4AF37' }}>SUCCESS</span>
+                    </td>
+                  </tr>
+
+                  {rawLogs.map((log, idx) => (
                     <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                       <td style={{ color: '#e0d5b8', borderBottom: 'none', paddingLeft: '24px' }}>{log.time}</td>
                       <td style={{ color: '#e0d5b8', borderBottom: 'none' }}>{log.event}</td>
-                      <td style={{ color: '#a8956b', fontFamily: 'monospace', borderBottom: 'none' }}>{log.ip}</td>
                       <td style={{ borderBottom: 'none' }}>
                         <span style={{ 
                           padding: '4px 10px', 
@@ -448,6 +467,14 @@ export default function UserDetailPage() {
                       </td>
                     </tr>
                   ))}
+
+                  {rawLogs.length === 0 && (
+                    <tr>
+                      <td colSpan="3" className="text-center p-5" style={{ color: '#a8956b', fontStyle: 'italic' }}>
+                        No additional activity has been recorded for this user yet.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
