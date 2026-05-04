@@ -1,19 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from 'lib/firebase/firebase';
 import { gsap } from 'gsap';
-import Dropdown from 'react-bootstrap/Dropdown';
 import Spinner from 'react-bootstrap/Spinner';
 import Logo from 'components/Logo';
 import {
-  Edit3, Trash2, MoreVertical, ChevronLeft,
-  Globe, Calendar, Tag, ExternalLink, TrendingUp,
+  ChevronLeft, Globe, Calendar, Tag, ExternalLink, TrendingUp,
   CheckCircle, Eye, Clock
 } from 'lucide-react';
-import { getLocalizedStr, toDate } from 'features/news/hooks/useNews';
-import { deleteDoc } from 'firebase/firestore';
-
+import { getLocalizedStr, toDate } from 'features/news/hooks/useAdminNews';
+import { NewsService } from 'api/backendApi';
 // ══════════════════════════════════════════════════════════════════════════════
 //  NewsDetailPage — Full-width immersive article view
 //  Reads from Flutter/Firestore News schema:
@@ -30,23 +25,23 @@ export default function NewsDetailPage() {
   const navigate = useNavigate();
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const headerRef = useRef(null);
   const contentRef = useRef(null);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchArticle = async () => {
       try {
-        const snap = await getDoc(doc(db, 'News', id));
-        if (snap.exists()) setArticle({ id: snap.id, ...snap.data() });
+        const data = await NewsService.fetchArticleDetails(id);
+        if (!cancelled) setArticle(data);
       } catch (e) {
-        console.error('Failed to load article:', e);
+        if (!cancelled) console.error('Failed to load article:', e);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     fetchArticle();
+    return () => { cancelled = true; };
   }, [id]);
 
   // GSAP entrance
@@ -113,17 +108,7 @@ export default function NewsDetailPage() {
   const sourceUrl   = article.newsSource?.url || '';
   const sourceLogo  = article.newsSource?.image || '';
 
-  // ── Delete handler ─────────────────────────────────────────────────────────
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      await deleteDoc(doc(db, 'News', id));
-      navigate('/news');
-    } catch (e) {
-      console.error('Delete failed:', e);
-      setIsDeleting(false);
-    }
-  };
+
 
   return (
     <div style={{ maxWidth: 920, margin: '0 auto', padding: '0 20px 80px' }}>
@@ -149,17 +134,6 @@ export default function NewsDetailPage() {
 
         {/* Actions */}
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          {/* Status badge */}
-          <span style={{
-            padding: '4px 12px', borderRadius: 12, fontSize: '0.72rem',
-            fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1,
-            background: isApproved ? 'rgba(34,197,94,0.1)' : 'rgba(234,179,8,0.1)',
-            color: isApproved ? '#22c55e' : '#eab308',
-            border: `1px solid ${isApproved ? 'rgba(34,197,94,0.3)' : 'rgba(234,179,8,0.3)'}`
-          }}>
-            {isApproved ? 'Approved' : 'Pending'}
-          </span>
-
           {/* Trending badge */}
           {article.markAsTrending && (
             <span style={{
@@ -171,54 +145,6 @@ export default function NewsDetailPage() {
               <TrendingUp size={11} /> Trending
             </span>
           )}
-
-          <button
-            onClick={() => navigate(`/news/edit/${id}`)}
-            style={{
-              background: '#D4AF37', color: '#000', border: 'none', padding: '8px 20px',
-              borderRadius: 3, fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(1.1)'; }}
-            onMouseLeave={e => { e.currentTarget.style.filter = 'brightness(1)'; }}
-          >
-            <Edit3 size={14} /> Edit Article
-          </button>
-
-          {/* 3-Dots More Menu */}
-          <Dropdown>
-            <Dropdown.Toggle
-              as="div"
-              bsPrefix="no-caret"
-              style={{
-                width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'transparent', border: '1px solid #27272a', borderRadius: 3,
-                cursor: 'pointer', color: '#71717a', transition: 'all 0.2s ease'
-              }}
-            >
-              <MoreVertical size={16} />
-            </Dropdown.Toggle>
-            <Dropdown.Menu style={{
-              background: '#09090b', border: '1px solid #27272a', borderRadius: 4,
-              padding: '4px', minWidth: 170, boxShadow: '0 10px 40px rgba(0,0,0,0.6)'
-            }}>
-              <Dropdown.Item
-                onClick={() => navigate(`/news/edit/${id}`)}
-                style={{ color: '#e4e4e7', padding: '9px 12px', borderRadius: 3, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}
-                className="news-menu-item"
-              >
-                <Edit3 size={14} style={{ color: '#D4AF37' }} /> Edit Article
-              </Dropdown.Item>
-              <Dropdown.Divider style={{ borderColor: '#27272a', margin: '4px 0' }} />
-              <Dropdown.Item
-                onClick={() => setShowDeleteConfirm(true)}
-                style={{ color: '#DC143C', padding: '9px 12px', borderRadius: 3, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}
-                className="news-menu-item-danger"
-              >
-                <Trash2 size={14} /> Delete Article
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown>
         </div>
       </div>
 
@@ -421,43 +347,45 @@ export default function NewsDetailPage() {
         )}
       </article>
 
-      {/* ── Delete Confirmation ───────────────────────────────────────────── */}
-      {showDeleteConfirm && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 9999, backdropFilter: 'blur(4px)'
-        }}>
-          <div style={{
-            background: '#09090b', border: '1px solid #27272a', borderRadius: 4,
-            padding: '40px', maxWidth: 420, width: '90%', textAlign: 'center'
-          }}>
-            <div style={{ marginBottom: 20 }}>
-              <Trash2 size={36} style={{ color: '#DC143C' }} />
-            </div>
-            <h4 style={{ color: '#fff', fontWeight: 800, marginBottom: 10 }}>Delete Article?</h4>
-            <p style={{ color: '#71717a', fontSize: '0.9rem', marginBottom: 28, lineHeight: 1.6 }}>
-              This will permanently remove <strong style={{ color: '#fff' }}>"{headline}"</strong> from the archive. This cannot be undone.
-            </p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                disabled={isDeleting}
-                style={{ background: 'transparent', border: '1px solid #27272a', color: '#a1a1aa', padding: '10px 24px', borderRadius: 3, fontWeight: 600, cursor: 'pointer' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                style={{ background: '#DC143C', border: 'none', color: '#fff', padding: '10px 24px', borderRadius: 3, fontWeight: 700, cursor: 'pointer', minWidth: 140 }}
-              >
-                {isDeleting ? 'Deleting…' : 'Delete Permanently'}
-              </button>
+        {/* ── Grammar Points ──────────────────────────────────────────────── */}
+        {article.grammar && article.grammar.length > 0 && (
+          <div style={{ marginTop: 56 }}>
+            <h3 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 800, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <CheckCircle size={20} style={{ color: '#D4AF37' }} /> Grammar Focus
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {article.grammar.map((g, idx) => (
+                <div key={idx} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid #27272a', borderRadius: 4, padding: 24 }}>
+                  <h4 style={{ color: '#D4AF37', fontSize: '1.1rem', fontWeight: 700, margin: '0 0 12px' }}>{getLocalizedStr(g.title)}</h4>
+                  <p style={{ color: '#e4e4e7', fontSize: '0.95rem', lineHeight: 1.6, margin: '0 0 16px' }}>{getLocalizedStr(g.description)}</p>
+                  <div style={{ background: '#000', padding: 16, borderRadius: 3, borderLeft: '3px solid #D4AF37' }}>
+                    <p style={{ margin: 0, color: '#a1a1aa', fontStyle: 'italic', fontSize: '0.95rem' }}>"{getLocalizedStr(g.example)}"</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* ── Keywords ────────────────────────────────────────────────────── */}
+        {article.keywords && article.keywords.length > 0 && (
+          <div style={{ marginTop: 56 }}>
+            <h3 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 800, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Tag size={20} style={{ color: '#DC143C' }} /> Key Vocabulary
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+              {article.keywords.map((k, idx) => (
+                <div key={idx} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid #27272a', borderRadius: 4, padding: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+                    <span style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 700 }}>{getLocalizedStr(k.title)}</span>
+                    <span style={{ color: '#71717a', fontSize: '0.8rem', fontStyle: 'italic' }}>{getLocalizedStr(k.nouns)}</span>
+                  </div>
+                  <p style={{ color: '#a1a1aa', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>{getLocalizedStr(k.description)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       <style>{`
         .news-menu-item:hover { background: rgba(212,175,55,0.08) !important; color: #fff !important; }

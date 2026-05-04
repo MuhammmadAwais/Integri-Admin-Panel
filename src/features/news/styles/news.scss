@@ -13,6 +13,37 @@
   padding: 30px;
   background: transparent;
 
+  /* ── Theme Variables ────────────────────────────────────────────────── */
+  --news-card-bg: #000;
+  --news-card-border: #27272a;
+  --news-table-header-bg: rgba(212, 175, 55, 0.04);
+  --news-text-main: #e4e4e7;
+  --news-text-muted: #71717a;
+  --news-text-dim: #52525b;
+  --news-input-bg: #000;
+  --news-dropdown-bg: #09090b;
+  --news-panel-bg: #09090b;
+  --news-panel-border: #27272a;
+  --news-panel-overlay: rgba(0, 0, 0, 0.62);
+  --news-scroll-track: #09090b;
+  --news-scroll-thumb: #27272a;
+
+  [data-pc-theme='light'] & {
+    --news-card-bg: #fff;
+    --news-card-border: #e4e4e7;
+    --news-table-header-bg: rgba(0, 0, 0, 0.03);
+    --news-text-main: #18181b;
+    --news-text-muted: #71717a;
+    --news-text-dim: #a1a1aa;
+    --news-input-bg: #fff;
+    --news-dropdown-bg: #fff;
+    --news-panel-bg: #fff;
+    --news-panel-border: #e4e4e7;
+    --news-panel-overlay: rgba(0, 0, 0, 0.3);
+    --news-scroll-track: #f4f4f5;
+    --news-scroll-thumb: #d4d4d8;
+  }
+
   /* ── Page Header ──────────────────────────────────────────────────────── */
   .news-command-header {
     display: flex;
@@ -166,21 +197,22 @@
 /* ── Custom Scrollbar for Table ────────────────────────────────────────────── */
 .table-responsive {
   scrollbar-width: thin;
-  scrollbar-color: #27272a #000;
+  scrollbar-color: var(--news-scroll-thumb) var(--news-scroll-track);
 
   &::-webkit-scrollbar {
-    height: 7px;
+    width: 6px;
+    height: 6px;
   }
   
   &::-webkit-scrollbar-track {
-    background: #09090b;
+    background: var(--news-scroll-track);
     border-radius: 4px;
   }
   
   &::-webkit-scrollbar-thumb {
-    background: #27272a;
+    background: var(--news-scroll-thumb);
     border-radius: 4px;
-    border: 1px solid rgba(212, 175, 55, 0.1);
+    border: 1px solid rgba(212, 175, 55, 0.05);
     
     &:hover {
       background: #D4AF37;

@@ -241,10 +241,15 @@ export interface ArticleDetail {
   video: string;
 }
 
+export interface CountryDetails {
+  locale: string;
+  pipeline_note: string;
+}
+
 /** Admin countries endpoint response */
 export interface AdminCountriesResponse {
-  total_countries: number;
-  supported_countries: Record<string, string>;
+  total: number;
+  supported_countries: Record<string, CountryDetails>;
 }
 
 

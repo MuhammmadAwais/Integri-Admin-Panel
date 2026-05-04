@@ -33,6 +33,7 @@ export default function NewsPage() {
   const [panelOpen, setPanelOpen]       = useState(false);
   const [selectedId, setSelectedId]     = useState(null);
   const [countryOpen, setCountryOpen]   = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
   const countryDropRef                  = useRef(null);
 
   const handleRowClick = (id) => {
@@ -61,6 +62,7 @@ export default function NewsPage() {
     const handler = (e) => {
       if (countryDropRef.current && !countryDropRef.current.contains(e.target)) {
         setCountryOpen(false);
+        setCountrySearch('');
       }
     };
     document.addEventListener('mousedown', handler);
@@ -73,6 +75,11 @@ export default function NewsPage() {
     if (!isNaN(v)) setDays(v);
   };
 
+  // ── Filter countries ──────────────────────────────────────────────────────
+  const filteredCountries = Object.keys(countries || {}).filter(c =>
+    c.toLowerCase().includes(countrySearch.toLowerCase())
+  );
+
   return (
     <div className="news-glass-archive">
       <ParticleBackground />
@@ -81,14 +88,14 @@ export default function NewsPage() {
       <div ref={headerRef} className="news-command-header">
         <div>
           <h2 className="news-title-sharp">News Management</h2>
-          <p style={{ color: '#71717a', margin: 0, fontSize: '0.84rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <p style={{ color: 'var(--news-text-muted)', margin: 0, fontSize: '0.84rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
             {loading ? (
-              <span style={{ color: '#52525b' }}>Fetching articles…</span>
+              <span style={{ color: 'var(--news-text-dim)' }}>Fetching articles…</span>
             ) : error ? (
               <span style={{ color: '#DC143C' }}>⚠ {error}</span>
             ) : (
               <>
-                <span style={{ color: '#a1a1aa' }}>
+                <span style={{ color: 'var(--news-text-dim)' }}>
                   <span style={{ color: '#D4AF37', fontWeight: 700 }}>{total.toLocaleString()}</span> article{total !== 1 ? 's' : ''} — last {days} day{days !== 1 ? 's' : ''}
                 </span>
                 {country && (
@@ -103,9 +110,9 @@ export default function NewsPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Button
             className="btn-publish-gold d-flex align-items-center gap-2"
-            onClick={() => navigate('/news/create')}
+            onClick={() => navigate('/news/configuration')}
           >
-            <Plus size={15} /> Publish Article
+            News Configuration
           </Button>
         </div>
       </div>
@@ -129,10 +136,10 @@ export default function NewsPage() {
               style={{
                 width: 110,
                 padding: '10px 14px',
-                background: '#000',
-                border: '1px solid #27272a',
+                background: 'var(--news-input-bg)',
+                border: '1px solid var(--news-card-border)',
                 borderRadius: 3,
-                color: '#e4e4e7',
+                color: 'var(--news-text-main)',
                 fontSize: '0.9rem',
                 fontWeight: 700,
                 outline: 'none',
@@ -141,13 +148,13 @@ export default function NewsPage() {
                 MozAppearance: 'textfield',
               }}
               onFocus={e => { e.currentTarget.style.borderColor = '#D4AF37'; }}
-              onBlur={e => { e.currentTarget.style.borderColor = '#27272a'; }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'var(--news-card-border)'; }}
             />
-            <span style={{ position: 'absolute', right: 10, color: '#52525b', fontSize: '0.74rem', fontWeight: 600, pointerEvents: 'none' }}>
+            <span style={{ position: 'absolute', right: 10, color: 'var(--news-text-dim)', fontSize: '0.74rem', fontWeight: 600, pointerEvents: 'none' }}>
               days
             </span>
           </div>
-          <span style={{ color: '#3f3f46', fontSize: '0.68rem' }}>Min 1 · Max 90 · 500ms debounce</span>
+          <span style={{ color: 'var(--news-text-dim)', fontSize: '0.68rem' }}>Min 1 · Max 90 · 500ms debounce</span>
         </div>
 
         {/* Country Dropdown */}
@@ -161,10 +168,10 @@ export default function NewsPage() {
             style={{
               minWidth: 200,
               padding: '10px 14px',
-              background: '#000',
-              border: `1px solid ${countryOpen ? '#D4AF37' : '#27272a'}`,
+              background: 'var(--news-input-bg)',
+              border: `1px solid ${countryOpen ? '#D4AF37' : 'var(--news-card-border)'}`,
               borderRadius: 3,
-              color: country ? '#e4e4e7' : '#52525b',
+              color: country ? 'var(--news-text-main)' : 'var(--news-text-dim)',
               fontSize: '0.88rem',
               fontWeight: country ? 700 : 500,
               fontFamily: 'inherit',
@@ -179,7 +186,7 @@ export default function NewsPage() {
             <span>{country || (countriesLoading ? 'Loading…' : 'All Countries')}</span>
             <ChevronDown
               size={14}
-              style={{ color: '#52525b', transition: 'transform 0.2s ease', transform: countryOpen ? 'rotate(180deg)' : 'none', flexShrink: 0 }}
+              style={{ color: 'var(--news-text-dim)', transition: 'transform 0.2s ease', transform: countryOpen ? 'rotate(180deg)' : 'none', flexShrink: 0 }}
             />
           </button>
 
@@ -190,63 +197,88 @@ export default function NewsPage() {
               top: 'calc(100% + 6px)',
               left: 0,
               zIndex: 200,
-              background: '#09090b',
-              border: '1px solid #27272a',
+              background: 'var(--news-dropdown-bg)',
+              border: '1px solid var(--news-card-border)',
               borderRadius: 3,
-              boxShadow: '0 16px 48px rgba(0,0,0,0.7)',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
               minWidth: 220,
               maxHeight: 280,
               overflowY: 'auto',
-              padding: '4px',
-              scrollbarWidth: 'thin',
-              scrollbarColor: '#27272a #09090b',
+              display: 'flex',
+              flexDirection: 'column',
             }}>
-              {/* All Countries option */}
-              <button
-                onClick={() => { setCountry(null); setCountryOpen(false); }}
-                style={{
-                  width: '100%', textAlign: 'left', padding: '9px 12px',
-                  background: country === null ? 'rgba(212,175,55,0.1)' : 'transparent',
-                  border: 'none', borderRadius: 2,
-                  color: country === null ? '#D4AF37' : '#71717a',
-                  fontSize: '0.85rem', fontWeight: country === null ? 700 : 500,
-                  cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 8,
-                }}
-                onMouseEnter={e => { if (country !== null) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
-                onMouseLeave={e => { if (country !== null) e.currentTarget.style.background = 'transparent'; }}
-              >
-                <Globe size={12} style={{ color: '#52525b' }} />
-                All Countries
-              </button>
+              {/* Search Input */}
+              <div style={{ padding: '8px', borderBottom: '1px solid var(--news-card-border)', position: 'sticky', top: 0, background: 'var(--news-dropdown-bg)', zIndex: 1 }}>
+                <input
+                  type="text"
+                  placeholder="Search Country..."
+                  value={countrySearch}
+                  onChange={e => setCountrySearch(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    background: 'var(--news-input-bg)',
+                    border: '1px solid var(--news-card-border)',
+                    borderRadius: 3,
+                    color: 'var(--news-text-main)',
+                    fontSize: '0.85rem',
+                    outline: 'none',
+                    fontFamily: 'inherit',
+                  }}
+                  onFocus={e => { e.currentTarget.style.borderColor = '#D4AF37'; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'var(--news-card-border)'; }}
+                  onClick={e => e.stopPropagation()}
+                />
+              </div>
 
-              {/* Divider */}
-              <div style={{ height: 1, background: '#1c1c1e', margin: '4px 0' }} />
-
-              {/* Country list from API */}
-              {countries.map(c => (
+              <div style={{ padding: '4px', overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: 'var(--news-card-border) var(--news-dropdown-bg)' }}>
+                {/* All Countries option */}
                 <button
-                  key={c}
-                  onClick={() => { setCountry(c); setCountryOpen(false); }}
+                  onClick={() => { setCountry(null); setCountryOpen(false); setCountrySearch(''); }}
                   style={{
                     width: '100%', textAlign: 'left', padding: '9px 12px',
-                    background: country === c ? 'rgba(212,175,55,0.1)' : 'transparent',
+                    background: country === null ? 'rgba(212,175,55,0.1)' : 'transparent',
                     border: 'none', borderRadius: 2,
-                    color: country === c ? '#D4AF37' : '#a1a1aa',
-                    fontSize: '0.85rem', fontWeight: country === c ? 700 : 400,
-                    cursor: 'pointer', fontFamily: 'inherit',
+                    color: country === null ? '#D4AF37' : '#71717a',
+                    fontSize: '0.85rem', fontWeight: country === null ? 700 : 500,
+                    cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 8,
                   }}
-                  onMouseEnter={e => { if (country !== c) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
-                  onMouseLeave={e => { if (country !== c) e.currentTarget.style.background = 'transparent'; }}
+                  onMouseEnter={e => { if (country !== null) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                  onMouseLeave={e => { if (country !== null) e.currentTarget.style.background = 'transparent'; }}
                 >
-                  {c}
+                  <Globe size={12} style={{ color: '#52525b' }} />
+                  All Countries
                 </button>
-              ))}
 
-              {countries.length === 0 && !countriesLoading && (
-                <div style={{ padding: '12px', color: '#52525b', fontSize: '0.82rem', textAlign: 'center' }}>
-                  No countries available
-                </div>
-              )}
+                {/* Divider */}
+                <div style={{ height: 1, background: 'var(--news-card-border)', margin: '4px 0' }} />
+
+                {/* Country list from API */}
+                {filteredCountries.map(c => (
+                  <button
+                    key={c}
+                    onClick={() => { setCountry(c); setCountryOpen(false); setCountrySearch(''); }}
+                    style={{
+                      width: '100%', textAlign: 'left', padding: '9px 12px',
+                      background: country === c ? 'rgba(212,175,55,0.1)' : 'transparent',
+                      border: 'none', borderRadius: 2,
+                      color: country === c ? '#D4AF37' : 'var(--news-text-main)',
+                      fontSize: '0.85rem', fontWeight: country === c ? 700 : 400,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                    onMouseEnter={e => { if (country !== c) e.currentTarget.style.background = 'rgba(0,0,0,0.04)'; }}
+                    onMouseLeave={e => { if (country !== c) e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    {c}
+                  </button>
+                ))}
+
+                {filteredCountries.length === 0 && !countriesLoading && (
+                  <div style={{ padding: '12px', color: '#52525b', fontSize: '0.82rem', textAlign: 'center' }}>
+                    No countries match
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -262,13 +294,13 @@ export default function NewsPage() {
             onClick={refetch}
             disabled={loading}
             style={{
-              background: 'transparent', border: '1px solid #27272a', color: '#71717a',
+              background: 'transparent', border: '1px solid var(--news-card-border)', color: 'var(--news-text-muted)',
               width: 42, height: 42, borderRadius: 3,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 0.2s ease', flexShrink: 0
             }}
             onMouseEnter={e => { if (!loading) { e.currentTarget.style.borderColor = '#D4AF37'; e.currentTarget.style.color = '#D4AF37'; } }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#27272a'; e.currentTarget.style.color = '#71717a'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--news-card-border)'; e.currentTarget.style.color = 'var(--news-text-muted)'; }}
           >
             <RotateCw size={16} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
           </button>

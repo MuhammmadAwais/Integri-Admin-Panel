@@ -32,15 +32,24 @@ function fmt(dateStr: string | null): string {
 const TopicBadge = ({ topic }: { topic: string }) => {
   const color = topic === 'technology' ? '#7c3aed'
     : topic === 'general' ? '#0ea5e9'
-    : '#52525b';
+    : '#71717a';
+  
+  // Truncate topic if it's too long (more than 4 words)
+  const words = (topic || 'general').split(' ');
+  const truncated = words.length > 4 ? words.slice(0, 4).join(' ') + '...' : topic || 'general';
+
   return (
-    <span style={{
-      padding: '3px 10px', borderRadius: 2,
-      background: `${color}18`, border: `1px solid ${color}40`,
-      color, fontSize: '0.72rem', fontWeight: 700, textTransform: 'capitalize',
-      whiteSpace: 'nowrap', letterSpacing: '0.3px'
-    }}>
-      {topic || 'general'}
+    <span 
+      title={topic} // Show full topic on hover
+      style={{
+        padding: '3px 10px', borderRadius: 2,
+        background: `${color}15`, border: `1px solid ${color}35`,
+        color, fontSize: '0.7rem', fontWeight: 700, textTransform: 'capitalize',
+        whiteSpace: 'nowrap', letterSpacing: '0.3px',
+        display: 'inline-block',
+      }}
+    >
+      {truncated}
     </span>
   );
 };
@@ -133,7 +142,7 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
         const a = row.original;
         return (
           <div style={{ minWidth: 0 }}>
-            <div style={{ color: '#e4e4e7', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.4, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 420 }}>
+            <div style={{ color: 'var(--news-text-main)', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.4, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 420 }}>
               {a.headline_en || a.headline_de || '—'}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -159,26 +168,26 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
       cell: ({ row }) => {
         const countries = row.original.forCountries || [];
         if (countries.length === 0) {
-          return <span style={{ color: '#52525b', fontSize: '0.8rem' }}>Global</span>;
+          return <span style={{ color: 'var(--news-text-dim)', fontSize: '0.8rem' }}>Global</span>;
         }
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Globe size={11} style={{ color: '#52525b', flexShrink: 0 }} />
-            <span style={{ color: '#a1a1aa', fontSize: '0.8rem', fontWeight: 600 }}>
+            <Globe size={11} style={{ color: 'var(--news-text-dim)', flexShrink: 0 }} />
+            <span style={{ color: 'var(--news-text-muted)', fontSize: '0.8rem', fontWeight: 600 }}>
               {countries[0]}
-              {countries.length > 1 && <span style={{ color: '#52525b', marginLeft: 4 }}>+{countries.length - 1}</span>}
+              {countries.length > 1 && <span style={{ color: 'var(--news-text-dim)', marginLeft: 4 }}>+{countries.length - 1}</span>}
             </span>
           </div>
         );
       },
-      size: 150,
+      size: 140,
     },
     {
       id: 'topic',
       header: 'Topic',
       accessorFn: (row) => row.topic,
       cell: ({ getValue }) => <TopicBadge topic={String(getValue() || 'general')} />,
-      size: 130,
+      size: 160,
     },
     {
       id: 'date',
@@ -186,22 +195,22 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
       accessorFn: (row) => row.date,
       sortingFn: 'datetime',
       cell: ({ getValue }) => (
-        <span style={{ color: '#71717a', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+        <span style={{ color: 'var(--news-text-muted)', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
           {fmt(getValue() as string)}
         </span>
       ),
-      size: 130,
+      size: 120,
     },
     {
       id: 'views',
       header: 'Views',
       accessorFn: (row) => row.views,
       cell: ({ getValue }) => (
-        <span style={{ color: '#a1a1aa', fontSize: '0.85rem', fontWeight: 700 }}>
+        <span style={{ color: 'var(--news-text-muted)', fontSize: '0.85rem', fontWeight: 700 }}>
           {(getValue() as number).toLocaleString()}
         </span>
       ),
-      size: 80,
+      size: 70,
     },
     {
       id: 'actions',
@@ -211,27 +220,22 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Dropdown onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-            <Dropdown.Toggle as="div" bsPrefix="no-caret" style={{ cursor: 'pointer', color: '#52525b', padding: '4px', display: 'inline-flex' }}>
-              <MoreVertical size={17} />
-            </Dropdown.Toggle>
-            <Dropdown.Menu style={{ background: '#09090b', border: '1px solid #27272a', borderRadius: 3, padding: '4px', minWidth: 170, boxShadow: '0 10px 40px rgba(0,0,0,0.7)' }}>
-              <Dropdown.Item onClick={() => navigate(`/news/preview/${item.id}`)} className="nv-menu-item" style={{ color: '#e4e4e7', padding: '8px 12px', borderRadius: 2, fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Eye size={13} style={{ color: '#D4AF37' }} /> View Article
-              </Dropdown.Item>
-              <Dropdown.Item onClick={() => navigate(`/news/edit/${item.id}`)} className="nv-menu-item" style={{ color: '#e4e4e7', padding: '8px 12px', borderRadius: 2, fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Edit3 size={13} style={{ color: '#D4AF37' }} /> Edit Article
-              </Dropdown.Item>
-              {onDelete && (
-                <>
-                  <Dropdown.Divider style={{ borderColor: '#27272a', margin: '4px 0' }} />
-                  <Dropdown.Item onClick={() => onDelete(item.id)} className="nv-menu-item-danger" style={{ color: '#DC143C', padding: '8px 12px', borderRadius: 2, fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Trash2 size={13} /> Delete
-                  </Dropdown.Item>
-                </>
-              )}
-            </Dropdown.Menu>
-          </Dropdown>
+          <div 
+            onClick={(e) => { e.stopPropagation(); navigate(`/news/preview/${item.id}`); }}
+            style={{ 
+              cursor: 'pointer', 
+              color: 'var(--news-text-dim)', 
+              padding: '6px', 
+              display: 'inline-flex',
+              transition: 'all 0.2s ease',
+              borderRadius: 4
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#D4AF37'; e.currentTarget.style.background = 'rgba(212,175,55,0.1)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--news-text-dim)'; e.currentTarget.style.background = 'transparent'; }}
+            title="View Full Article"
+          >
+            <Eye size={18} />
+          </div>
         );
       },
     },
@@ -295,17 +299,17 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
         [bsprefix="no-caret"]::after { display: none !important; }
       `}</style>
 
-      <div className="card" style={{ overflow: 'hidden', border: '1px solid #27272a', borderRadius: 3, background: '#000' }}>
+      <div className="card" style={{ overflow: 'hidden', border: '1px solid var(--news-card-border)', borderRadius: 3, background: 'var(--news-card-bg)' }}>
         {/* Scrollable wrapper — virtualizer scrolls here */}
         <div
           ref={scrollRef}
           className="table-responsive"
           style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 310px)', minHeight: 300 }}
         >
-          <table ref={tableRef} className="table mb-0" style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
-            <thead style={{ background: 'rgba(212,175,55,0.04)', position: 'sticky', top: 0, zIndex: 2, backdropFilter: 'blur(8px)' }}>
+          <table ref={tableRef} className="table mb-0" style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+            <thead style={{ background: 'var(--news-table-header-bg)', position: 'sticky', top: 0, zIndex: 2, backdropFilter: 'blur(8px)' }}>
               {table.getHeaderGroups().map(hg => (
-                <tr key={hg.id} style={{ borderBottom: '1px solid #27272a' }}>
+                <tr key={hg.id} style={{ borderBottom: '1px solid var(--news-card-border)' }}>
                   {hg.headers.map(header => (
                     <th
                       key={header.id}
@@ -353,13 +357,13 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
                         className="nv-row"
                         data-index={virtualRow.index}
                         ref={virtualizer.measureElement}
-                        style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}
+                        style={{ borderBottom: '1px solid var(--news-card-border)', opacity: loading ? 0.5 : 1 }}
                         onClick={() => onRowClick(row.original.id)}
                       >
                         {row.getVisibleCells().map(cell => (
                           <td
                             key={cell.id}
-                            style={{ padding: '12px 16px', verticalAlign: 'middle', borderBottom: 'none', color: '#e4e4e7' }}
+                            style={{ padding: '12px 16px', verticalAlign: 'middle', borderBottom: 'none', color: 'var(--news-text-main)' }}
                           >
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </td>
@@ -377,14 +381,14 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
         </div>
 
         {/* Footer */}
-        <div style={{ background: 'rgba(0,0,0,0.5)', borderTop: '1px solid #27272a', padding: '11px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ color: '#52525b', fontSize: '0.8rem', fontWeight: 600 }}>
+        <div style={{ background: 'rgba(0,0,0,0.02)', borderTop: '1px solid var(--news-card-border)', padding: '11px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ color: 'var(--news-text-dim)', fontSize: '0.8rem', fontWeight: 600 }}>
             {loading ? 'Fetching…' : (
-              <><span style={{ color: '#D4AF37' }}>{articles.length.toLocaleString()}</span> of <span style={{ color: '#a1a1aa' }}>{total.toLocaleString()}</span> articles</>
+              <><span style={{ color: '#D4AF37' }}>{articles.length.toLocaleString()}</span> of <span style={{ color: 'var(--news-text-muted)' }}>{total.toLocaleString()}</span> articles</>
             )}
           </span>
-          <span style={{ color: '#3f3f46', fontSize: '0.74rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-            Virtualized · {articles.length} rows in DOM-efficient view
+          <span style={{ color: 'var(--news-text-dim)', fontSize: '0.74rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+            Virtualized · {articles.length} rows
           </span>
         </div>
       </div>

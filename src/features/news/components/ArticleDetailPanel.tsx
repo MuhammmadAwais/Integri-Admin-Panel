@@ -61,7 +61,7 @@ const DetailSkeleton = () => (
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SectionHeader = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '1px solid #1c1c1e' }}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '1px solid var(--news-panel-border)' }}>
     <span style={{ color: '#D4AF37', display: 'flex' }}>{icon}</span>
     <span style={{ color: '#D4AF37', fontWeight: 800, fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '1.2px' }}>{label}</span>
   </div>
@@ -88,7 +88,7 @@ const ContentBlockRenderer = ({ block }: { block: ContentBlock }) => {
   if (!text) return null;
 
   return (
-    <p style={{ color: '#a1a1aa', fontSize: '0.9rem', lineHeight: 1.8, margin: '0 0 18px', letterSpacing: '0.1px' }}>
+    <p style={{ color: 'var(--news-text-muted)', fontSize: '0.9rem', lineHeight: 1.8, margin: '0 0 18px', letterSpacing: '0.1px' }}>
       {text}
     </p>
   );
@@ -152,7 +152,7 @@ const ArticleDetailPanel: React.FC<Props> = ({ open, newsId, onClose }) => {
       <style>{`
         .dp-overlay {
           position: fixed; inset: 0; z-index: 1050;
-          background: rgba(0,0,0,0.62);
+          background: var(--news-panel-overlay);
           backdrop-filter: blur(6px);
           -webkit-backdrop-filter: blur(6px);
           transition: opacity 0.25s ease;
@@ -161,8 +161,8 @@ const ArticleDetailPanel: React.FC<Props> = ({ open, newsId, onClose }) => {
         .dp-panel {
           position: fixed; top: 0; right: 0; bottom: 0;
           width: ${PANEL_WIDTH}px; max-width: 100vw;
-          background: #09090b;
-          border-left: 1px solid #27272a;
+          background: var(--news-panel-bg);
+          border-left: 1px solid var(--news-panel-border);
           z-index: 1051;
           display: flex; flex-direction: column;
           transform: translateX(100%);
@@ -176,11 +176,11 @@ const ArticleDetailPanel: React.FC<Props> = ({ open, newsId, onClose }) => {
           flex: 1;
           overflow-y: auto;
           scrollbar-width: thin;
-          scrollbar-color: #27272a #09090b;
+          scrollbar-color: var(--news-panel-border) var(--news-panel-bg);
         }
         .dp-scroll::-webkit-scrollbar { width: 6px; }
-        .dp-scroll::-webkit-scrollbar-track { background: #09090b; }
-        .dp-scroll::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
+        .dp-scroll::-webkit-scrollbar-track { background: var(--news-panel-bg); }
+        .dp-scroll::-webkit-scrollbar-thumb { background: var(--news-panel-border); border-radius: 3px; }
         .dp-scroll::-webkit-scrollbar-thumb:hover { background: #D4AF37; }
         .dp-source-card:hover { background: rgba(212,175,55,0.06) !important; border-color: rgba(212,175,55,0.3) !important; }
         .dp-close-btn:hover { background: rgba(220,20,60,0.12) !important; border-color: rgba(220,20,60,0.4) !important; color: #DC143C !important; }
@@ -201,17 +201,17 @@ const ArticleDetailPanel: React.FC<Props> = ({ open, newsId, onClose }) => {
         aria-label="Article detail"
       >
         {/* ── Header bar ──────────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 18px 28px', borderBottom: '1px solid #1c1c1e', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 18px 28px', borderBottom: '1px solid var(--news-panel-border)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ width: 3, height: 20, background: '#DC143C', borderRadius: 1, flexShrink: 0 }} />
-            <span style={{ color: '#e4e4e7', fontWeight: 800, fontSize: '0.88rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <span style={{ color: 'var(--news-text-main)', fontWeight: 800, fontSize: '0.88rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
               Article Preview
             </span>
           </div>
           <button
             className="dp-close-btn"
             onClick={onClose}
-            style={{ background: 'transparent', border: '1px solid #27272a', color: '#71717a', width: 34, height: 34, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s ease', flexShrink: 0 }}
+            style={{ background: 'transparent', border: '1px solid var(--news-panel-border)', color: 'var(--news-text-dim)', width: 34, height: 34, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s ease', flexShrink: 0 }}
           >
             <X size={16} />
           </button>
@@ -249,7 +249,7 @@ const ArticleDetailPanel: React.FC<Props> = ({ open, newsId, onClose }) => {
               )}
 
               {/* Headline */}
-              <h2 style={{ color: '#fff', fontWeight: 800, fontSize: '1.15rem', lineHeight: 1.45, marginBottom: 12, letterSpacing: '-0.3px' }}>
+              <h2 style={{ color: 'var(--news-text-main)', fontWeight: 800, fontSize: '1.15rem', lineHeight: 1.45, marginBottom: 12, letterSpacing: '-0.3px' }}>
                 {getEn(article.headline, '—')}
               </h2>
 
@@ -261,14 +261,14 @@ const ArticleDetailPanel: React.FC<Props> = ({ open, newsId, onClose }) => {
                   </span>
                 )}
                 {article.forCountries?.map(c => (
-                  <span key={c} style={{ padding: '4px 12px', borderRadius: 2, background: 'rgba(255,255,255,0.04)', border: '1px solid #27272a', color: '#a1a1aa', fontSize: '0.72rem', fontWeight: 600 }}>
+                  <span key={c} style={{ padding: '4px 12px', borderRadius: 2, background: 'rgba(0,0,0,0.03)', border: '1px solid var(--news-panel-border)', color: 'var(--news-text-muted)', fontSize: '0.72rem', fontWeight: 600 }}>
                     {c}
                   </span>
                 ))}
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 12px', borderRadius: 2, background: 'rgba(255,255,255,0.03)', border: '1px solid #1c1c1e', color: '#52525b', fontSize: '0.72rem', fontWeight: 600 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 12px', borderRadius: 2, background: 'rgba(0,0,0,0.02)', border: '1px solid var(--news-panel-border)', color: 'var(--news-text-dim)', fontSize: '0.72rem', fontWeight: 600 }}>
                   <Eye size={11} /> {article.views?.toLocaleString() ?? 0}
                 </span>
-                <span style={{ padding: '4px 12px', borderRadius: 2, background: 'rgba(255,255,255,0.03)', border: '1px solid #1c1c1e', color: '#52525b', fontSize: '0.72rem', fontWeight: 600 }}>
+                <span style={{ padding: '4px 12px', borderRadius: 2, background: 'rgba(0,0,0,0.02)', border: '1px solid var(--news-panel-border)', color: 'var(--news-text-dim)', fontSize: '0.72rem', fontWeight: 600 }}>
                   {fmt(article.date)}
                 </span>
               </div>
@@ -297,18 +297,18 @@ const ArticleDetailPanel: React.FC<Props> = ({ open, newsId, onClose }) => {
                         <div style={{ color: '#D4AF37', fontWeight: 800, fontSize: '0.83rem', marginBottom: 6 }}>
                           {getEn(g.title)}
                         </div>
-                        <div style={{ color: '#71717a', fontSize: '0.82rem', lineHeight: 1.7, marginBottom: 8 }}>
+                        <div style={{ color: 'var(--news-text-muted)', fontSize: '0.82rem', lineHeight: 1.7, marginBottom: 8 }}>
                           {getEn(g.description)}
                         </div>
                         {rules.length > 0 && (
                           <ul style={{ margin: '0 0 8px', paddingLeft: 18 }}>
                             {rules.map((rule, ri) => (
-                              <li key={ri} style={{ color: '#a1a1aa', fontSize: '0.8rem', lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: rule }} />
+                              <li key={ri} style={{ color: 'var(--news-text-muted)', fontSize: '0.8rem', lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: rule }} />
                             ))}
                           </ul>
                         )}
                         {getEn(g.example) && (
-                          <div style={{ borderLeft: '2px solid #D4AF37', paddingLeft: 12, marginTop: 8, color: '#e4e4e7', fontSize: '0.82rem', fontStyle: 'italic', lineHeight: 1.6 }}
+                          <div style={{ borderLeft: '2px solid #D4AF37', paddingLeft: 12, marginTop: 8, color: 'var(--news-text-main)', fontSize: '0.82rem', fontStyle: 'italic', lineHeight: 1.6 }}
                             dangerouslySetInnerHTML={{ __html: getEn(g.example) }}
                           />
                         )}
@@ -324,7 +324,7 @@ const ArticleDetailPanel: React.FC<Props> = ({ open, newsId, onClose }) => {
                   <SectionHeader icon={<Tag size={14} />} label={`Keywords (${article.keywords.length})`} />
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                     {article.keywords.map((kw, i) => (
-                      <span key={i} title={getEn(kw.description)} style={{ padding: '5px 13px', borderRadius: 2, background: 'rgba(255,255,255,0.04)', border: '1px solid #27272a', color: '#e4e4e7', fontSize: '0.8rem', fontWeight: 600, cursor: 'default' }}>
+                      <span key={i} title={getEn(kw.description)} style={{ padding: '5px 13px', borderRadius: 2, background: 'rgba(0,0,0,0.02)', border: '1px solid var(--news-panel-border)', color: 'var(--news-text-main)', fontSize: '0.8rem', fontWeight: 600, cursor: 'default' }}>
                         {getEn(kw.title)}
                       </span>
                     ))}
@@ -354,15 +354,15 @@ const ArticleDetailPanel: React.FC<Props> = ({ open, newsId, onClose }) => {
                       {src.image ? (
                         <img src={src.image} alt="" style={{ width: 48, height: 36, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />
                       ) : (
-                        <div style={{ width: 48, height: 36, background: '#1c1c1e', borderRadius: 2, flexShrink: 0 }} />
+                        <div style={{ width: 48, height: 36, background: 'rgba(0,0,0,0.05)', borderRadius: 2, flexShrink: 0 }} />
                       )}
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ color: '#e4e4e7', fontSize: '0.83rem', fontWeight: 600, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div style={{ color: 'var(--news-text-main)', fontSize: '0.83rem', fontWeight: 600, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {src.title}
                         </div>
-                        <div style={{ color: '#52525b', fontSize: '0.74rem', marginTop: 2 }}>{src.source}</div>
+                        <div style={{ color: 'var(--news-text-dim)', fontSize: '0.74rem', marginTop: 2 }}>{src.source}</div>
                       </div>
-                      <ExternalLink size={13} style={{ color: '#3f3f46', flexShrink: 0, marginLeft: 'auto' }} />
+                      <ExternalLink size={13} style={{ color: 'var(--news-text-dim)', flexShrink: 0, marginLeft: 'auto' }} />
                     </a>
                   ))}
                 </section>

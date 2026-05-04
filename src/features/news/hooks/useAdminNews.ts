@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   NewsService,
   type ArticleSummary,
   type AdminCountriesResponse,
+  type CountryDetails,
 } from 'api/backendApi';
+import useSWR, { mutate } from 'swr';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Helpers
@@ -45,83 +47,59 @@ interface UseAdminNewsReturn {
   country: string | null;
   setCountry: (v: string | null) => void;
 
-  countries: string[];
+  countries: Record<string, CountryDetails>;
   countriesLoading: boolean;
 
   refetch: () => void;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Persistence — Module-level state survives route changes within the same session
+// ─────────────────────────────────────────────────────────────────────────────
+let PERSISTENT_DAYS = 7;
+let PERSISTENT_COUNTRY: string | null = null;
+
 export function useAdminNews(): UseAdminNewsReturn {
-  const [articles, setArticles] = useState<ArticleSummary[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState<string | null>(null);
-  const [total, setTotal]       = useState(0);
-
-  const [days, setDaysRaw]         = useState(7);
-  const [country, setCountryRaw]   = useState<string | null>(null);
-
-  // Countries dropdown
-  const [countries, setCountries]             = useState<string[]>([]);
-  const [countriesLoading, setCountriesLoading] = useState(true);
-
-  // Debounce ref for "days" input so we don't fire on every keystroke
+  const [days, setDaysRaw] = useState(PERSISTENT_DAYS);
+  const [country, setCountryRaw] = useState<string | null>(PERSISTENT_COUNTRY);
+  const [committedDays, setCommittedDays] = useState(PERSISTENT_DAYS);
   const daysDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Committed days value (after debounce resolves)
-  const [committedDays, setCommittedDays] = useState(7);
 
-  // ── Country list (fetched once on mount) ─────────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
-    setCountriesLoading(true);
-    NewsService.fetchAdminCountries()
-      .then((res: AdminCountriesResponse) => {
-        if (cancelled) return;
-        const list = Object.keys(res.supported_countries).sort();
-        setCountries(list);
-      })
-      .catch(() => {
-        if (!cancelled) setCountries([]);
-      })
-      .finally(() => {
-        if (!cancelled) setCountriesLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
+  // ── Countries list (cached globally by SWR) ──────────────────────────────
+  const { 
+    data: countriesData, 
+    isLoading: countriesLoading 
+  } = useSWR('admin-countries', () => NewsService.fetchAdminCountries(), {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    revalidateIfStale: false,
+    dedupingInterval: 3600000, // 1 hour
+  });
 
-  // ── Articles fetch — re-runs when committedDays or country changes ────────
-  const fetchArticles = useCallback(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    NewsService.fetchAdminArticles(country, committedDays)
-      .then(res => {
-        if (cancelled) return;
-        setArticles(res.articles);
-        setTotal(res.total);
-      })
-      .catch((e: unknown) => {
-        if (cancelled) return;
-        const msg = e instanceof Error ? e.message : 'Failed to fetch articles';
-        setError(msg);
-        setArticles([]);
-        setTotal(0);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [committedDays, country]);
+  const countries = countriesData?.supported_countries || {};
 
-  useEffect(() => {
-    const cleanup = fetchArticles();
-    return cleanup;
-  }, [fetchArticles]);
+  // ── Articles list (cached globally by SWR) ───────────────────────────────
+  const cacheKey = ['admin-articles', country, committedDays];
+  const {
+    data: articlesData,
+    error: swrError,
+    isValidating: loading,
+    mutate: mutateArticles
+  } = useSWR(cacheKey, () => NewsService.fetchAdminArticles(country, committedDays), {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    revalidateIfStale: false, // This is key: don't refetch on mount if we have data
+  });
+
+  const articles = articlesData?.articles || [];
+  const total = articlesData?.total || 0;
+  const error = swrError ? (swrError.message || 'Failed to fetch articles') : null;
 
   // ── Setters ───────────────────────────────────────────────────────────────
 
-  /** Debounce days by 500 ms — prevents API spam while typing */
   const setDays = useCallback((v: number) => {
     const clamped = Math.max(1, Math.min(90, v));
+    PERSISTENT_DAYS = clamped;
     setDaysRaw(clamped);
     if (daysDebounceRef.current) clearTimeout(daysDebounceRef.current);
     daysDebounceRef.current = setTimeout(() => {
@@ -130,6 +108,7 @@ export function useAdminNews(): UseAdminNewsReturn {
   }, []);
 
   const setCountry = useCallback((v: string | null) => {
+    PERSISTENT_COUNTRY = v;
     setCountryRaw(v);
   }, []);
 
@@ -144,6 +123,6 @@ export function useAdminNews(): UseAdminNewsReturn {
     setCountry,
     countries,
     countriesLoading,
-    refetch: fetchArticles,
+    refetch: () => mutateArticles(),
   };
 }
