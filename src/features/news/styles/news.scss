@@ -3,6 +3,10 @@
 /**
  * Integri Luxe Design System - News Module
  * Palette: #D4AF37 (Gold), #DC143C (Red), #000000 (Obsidian), #27272a (Zinc)
+ *
+ * Note: ArticleDetailPanel and NewsVirtualTable inject scoped <style> blocks
+ * directly (for virtualized/portal elements that need global scope). All
+ * shared structural styles live here.
  */
 
 .news-glass-archive {

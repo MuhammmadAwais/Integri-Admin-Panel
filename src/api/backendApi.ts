@@ -128,6 +128,127 @@ backendApi.interceptors.response.use(
 // 🚀 SERVICES MAP
 // ==========================================
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  📰 NEWS ADMIN — Type Definitions
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ArticleSource {
+  title: string;
+  image: string;
+  source: string;
+  url: string;
+}
+
+export interface LocalizedString {
+  en?: string;
+  de?: string;
+  nl?: string;
+  fr?: string;
+  ar?: string;
+  tr?: string;
+  sv?: string;
+  [key: string]: string | undefined;
+}
+
+/** Lightweight article object returned by the list endpoint */
+export interface ArticleSummary {
+  id: string;
+  country: string;
+  collection: string;
+  isAiCompiled: boolean;
+  countryLanguageCode: string;
+  topic: string;
+  headline: LocalizedString;
+  headline_en: string;
+  headline_de: string;
+  coverImage: string;
+  forCountries: string[];
+  views: number;
+  markAsTrending: boolean;
+  date: string;
+  compiledAt: string | null;
+  sources_count: number;
+  keywords_count: number;
+  grammar_count: number;
+  rawArticleIds: string[];
+  sources: ArticleSource[];
+}
+
+export interface AdminArticlesResponse {
+  total: number;
+  days_back: number;
+  country_filter: string | null;
+  articles: ArticleSummary[];
+}
+
+/** Content block from the full article */
+export interface ContentBlock {
+  type: 'description' | 'image' | 'video' | string;
+  value: LocalizedString | string;
+  caption: string | null;
+  videoThumbnail?: string;
+}
+
+/** Grammar point from the full article */
+export interface GrammarPoint {
+  title: LocalizedString;
+  description: LocalizedString;
+  example: LocalizedString;
+  rules: { [lang: string]: string[] };
+}
+
+/** Vocabulary keyword from the full article */
+export interface ArticleKeyword {
+  title: LocalizedString;
+  nouns: LocalizedString;
+  description: LocalizedString;
+}
+
+export interface NewsSource {
+  companyName: string;
+  company: LocalizedString;
+  description: LocalizedString;
+  image: string;
+  url: string;
+  companyDescription: string;
+}
+
+/** Full Firestore document returned by the detail endpoint */
+export interface ArticleDetail {
+  _id: string;
+  _collection: string;
+  headline: LocalizedString;
+  content: ContentBlock[];
+  grammar: GrammarPoint[];
+  keywords: ArticleKeyword[];
+  sources: ArticleSource[];
+  coverImage: string;
+  country: string;
+  forCountries: string[];
+  topic: string;
+  date: string;
+  compiledAt: string | null;
+  createdTime: string;
+  views: number;
+  isAiCompiled: boolean;
+  markAsTrending: boolean;
+  articleType: string;
+  newsSource: NewsSource;
+  rawArticleIds: string[];
+  tags: string[];
+  countryLanguageCode: string;
+  addToGeneralTopic: boolean;
+  video: string;
+}
+
+/** Admin countries endpoint response */
+export interface AdminCountriesResponse {
+  total_countries: number;
+  supported_countries: Record<string, string>;
+}
+
+
+
 export const PromptsService = {
   getDefaultPrompt: async (): Promise<any> => {
     try {
@@ -178,4 +299,65 @@ export const UserMemoryService = {
       throw e;
     }
   }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  📰 NEWS ADMIN — Service
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const NewsService = {
+  /**
+   * Fetch admin articles list.
+   * GET /api/v1/news/admin/articles?days=7&country=Germany
+   */
+  fetchAdminArticles: async (
+    country?: string | null,
+    days: number = 7
+  ): Promise<AdminArticlesResponse> => {
+    try {
+      const params: Record<string, string | number> = { days };
+      if (country) params.country = country;
+      const response = await backendApi.get<AdminArticlesResponse>(
+        '/api/v1/news/admin/articles',
+        { params }
+      );
+      return response.data;
+    } catch (e) {
+      console.error('❌ [NewsService] fetchAdminArticles error:', e);
+      throw e;
+    }
+  },
+
+  /**
+   * Fetch full article detail (content, grammar, keywords).
+   * GET /api/v1/news/admin/articles/{news_id}?collection=News
+   */
+  fetchArticleDetails: async (news_id: string): Promise<ArticleDetail> => {
+    try {
+      const response = await backendApi.get<ArticleDetail>(
+        `/api/v1/news/admin/articles/${news_id}`,
+        { params: { collection: 'News' } }
+      );
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [NewsService] fetchArticleDetails error for ${news_id}:`, e);
+      throw e;
+    }
+  },
+
+  /**
+   * Fetch the list of supported countries for the dropdown.
+   * GET /api/v1/news/admin/countries
+   */
+  fetchAdminCountries: async (): Promise<AdminCountriesResponse> => {
+    try {
+      const response = await backendApi.get<AdminCountriesResponse>(
+        '/api/v1/news/admin/countries'
+      );
+      return response.data;
+    } catch (e) {
+      console.error('❌ [NewsService] fetchAdminCountries error:', e);
+      throw e;
+    }
+  },
 };
