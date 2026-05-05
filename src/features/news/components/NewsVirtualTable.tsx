@@ -59,29 +59,29 @@ const TopicBadge = ({ topic }: { topic: string }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const SkeletonRows = () => (
   <>
-    {[...Array(8)].map((_, i) => (
+    {[...Array(15)].map((_, i) => (
       <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-        <td style={{ padding: '12px 16px' }}>
-          <div className="nv-skeleton" style={{ width: 64, height: 42 }} />
+        <td style={{ padding: '12px 16px', width: 80 }}>
+          <div className="nv-skeleton" style={{ width: 42, height: 42, borderRadius: '50%' }} />
         </td>
         <td style={{ padding: '12px 16px' }}>
-          <div className="nv-skeleton" style={{ width: '75%', height: 15, marginBottom: 6 }} />
+          <div className="nv-skeleton" style={{ width: '75%', height: 16, marginBottom: 8 }} />
           <div className="nv-skeleton" style={{ width: '40%', height: 11 }} />
         </td>
-        <td style={{ padding: '12px 16px' }}>
-          <div className="nv-skeleton" style={{ width: 80, height: 15 }} />
+        <td style={{ padding: '12px 16px', width: 140 }}>
+          <div className="nv-skeleton" style={{ width: 80, height: 14 }} />
         </td>
-        <td style={{ padding: '12px 16px' }}>
+        <td style={{ padding: '12px 16px', width: 160 }}>
           <div className="nv-skeleton" style={{ width: 70, height: 22, borderRadius: 2 }} />
         </td>
-        <td style={{ padding: '12px 16px' }}>
-          <div className="nv-skeleton" style={{ width: 90, height: 15 }} />
+        <td style={{ padding: '12px 16px', width: 120 }}>
+          <div className="nv-skeleton" style={{ width: 90, height: 14 }} />
         </td>
-        <td style={{ padding: '12px 16px' }}>
-          <div className="nv-skeleton" style={{ width: 40, height: 15 }} />
+        <td style={{ padding: '12px 16px', width: 70 }}>
+          <div className="nv-skeleton" style={{ width: 40, height: 14 }} />
         </td>
-        <td style={{ padding: '12px 16px' }}>
-          <div className="nv-skeleton" style={{ width: 20, height: 20, borderRadius: '50%' }} />
+        <td style={{ padding: '12px 16px', width: 48 }}>
+          <div className="nv-skeleton" style={{ width: 16, height: 20 }} />
         </td>
       </tr>
     ))}
@@ -280,13 +280,15 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
     <>
       <style>{`
         .nv-skeleton {
-          background: rgba(212,175,55,0.07);
-          border-radius: 2px;
-          animation: nvSkeletonPulse 1.8s ease infinite;
+          background: rgba(212,175,55,0.1);
+          border: 1px solid rgba(212,175,55,0.2);
+          border-radius: 4px;
+          animation: glowPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
-        @keyframes nvSkeletonPulse {
-          0%,100% { opacity: 0.35; }
-          50% { opacity: 0.65; }
+        @keyframes glowPulse {
+          0% { opacity: 0.3; }
+          50% { opacity: 0.7; }
+          100% { opacity: 0.3; }
         }
         .nv-row {
           cursor: pointer;
@@ -336,7 +338,7 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
               ))}
             </thead>
             <tbody>
-              {loading ? (
+              {loading && articles.length === 0 ? (
                 <SkeletonRows />
               ) : articles.length === 0 ? (
                 <tr>
@@ -357,7 +359,11 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
                         className="nv-row"
                         data-index={virtualRow.index}
                         ref={virtualizer.measureElement}
-                        style={{ borderBottom: '1px solid var(--news-card-border)', opacity: loading ? 0.5 : 1 }}
+                        style={{ 
+                          borderBottom: '1px solid var(--news-card-border)', 
+                          opacity: loading ? 0.6 : 1,
+                          transition: 'opacity 0.2s ease'
+                        }}
                         onClick={() => onRowClick(row.original.id)}
                       >
                         {row.getVisibleCells().map(cell => (

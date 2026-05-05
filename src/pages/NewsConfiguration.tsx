@@ -5,6 +5,34 @@ import ParticleBackground from 'components/ParticleBackground';
 import { NewsService, type AdminCountriesResponse, type CountryDetails } from 'api/backendApi';
 import 'features/news/styles/news.scss';
 
+// ── Skeleton ─────────────────────────────────────────────────────────────
+const ConfigSkeleton = () => (
+  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
+    {[...Array(6)].map((_, i) => (
+      <div 
+        key={i}
+        style={{
+          background: 'rgba(212,175,55,0.05)',
+          border: '1px solid rgba(212,175,55,0.2)',
+          borderRadius: 4,
+          padding: 24,
+          height: 220,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div className="nv-skeleton" style={{ width: 140, height: 22 }} />
+          <div className="nv-skeleton" style={{ width: 40, height: 22 }} />
+        </div>
+        <div className="nv-skeleton" style={{ flex: 1, borderRadius: 3 }} />
+        <div className="nv-skeleton" style={{ width: '100%', height: 36 }} />
+      </div>
+    ))}
+  </div>
+);
+
 export default function NewsConfigurationPage() {
   const navigate = useNavigate();
   const [countries, setCountries] = useState<Record<string, CountryDetails>>({});
@@ -52,8 +80,22 @@ export default function NewsConfigurationPage() {
       </div>
 
       {/* ── Content ─────────────────────────────────────────────────────── */}
+      <style>{`
+        .nv-skeleton {
+          background: rgba(212,175,55,0.1);
+          border: 1px solid rgba(212,175,55,0.2);
+          border-radius: 4px;
+          animation: glowPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes glowPulse {
+          0% { opacity: 0.3; }
+          50% { opacity: 0.7; }
+          100% { opacity: 0.3; }
+        }
+      `}</style>
+
       {loading ? (
-        <div style={{ color: 'var(--news-text-dim)', fontSize: '0.9rem', fontWeight: 600 }}>Loading configuration...</div>
+        <ConfigSkeleton />
       ) : error ? (
         <div style={{ color: '#DC143C', fontSize: '0.9rem', fontWeight: 600 }}>⚠ {error}</div>
       ) : (
