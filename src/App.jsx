@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // project-imports
 import router from 'routes';
@@ -7,6 +8,15 @@ import { getBackendToken } from 'api/backendApi';
 import { AuthProvider } from 'contexts/AuthContext';
 
 // ==============================|| APP - THEME, ROUTER, LOCAL ||============================== //
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 function App() {
   useEffect(() => {
@@ -26,9 +36,11 @@ function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

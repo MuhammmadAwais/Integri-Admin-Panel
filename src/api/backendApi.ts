@@ -252,6 +252,104 @@ export interface AdminCountriesResponse {
   supported_countries: Record<string, CountryDetails>;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  📰 NEWS ADMIN — Notifications & Schedules Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ScheduleEntry {
+  entry_id: string;
+  article_type: string;
+  hour: number;
+  minute: number;
+  enabled: boolean;
+}
+
+export interface CountrySchedule {
+  country: string;
+  entries: ScheduleEntry[];
+  languages: string[];
+  updated_at: string;
+}
+
+export interface FetchSchedulesResponse {
+  schedules: CountrySchedule[];
+  total_entries: number;
+  active_entries: number;
+}
+
+export interface UpdateScheduleResponse {
+  country: string;
+  entries: ScheduleEntry[];
+  languages: string[];
+  updated_at: string;
+}
+
+export interface NotificationStatsSummary {
+  total_sent: number;
+  total_failed: number;
+  grand_total_tokens: number;
+  total_runs: number;
+  countries_with_data: number;
+  overall_success_rate: number;
+  countries_notified_today: string[];
+  missing_today: string[];
+  note: string;
+}
+
+export interface CountryNotificationStat {
+  runs: number;
+  total_sent: number;
+  total_failed: number;
+  total_tokens: number;
+  last_run: {
+    notified_at: string;
+    sent: number;
+    failed: number;
+    batches: number;
+    success_rate: number;
+    headline_en: string;
+    news_id: string;
+    triggered_by: string;
+  };
+  notified_today: boolean;
+  avg_success_rate: number;
+}
+
+export interface RecentNotificationRun {
+  id: string;
+  country: string;
+  news_id: string;
+  collection: string;
+  headline_en: string;
+  sent: number;
+  failed: number;
+  batches: number;
+  total_tokens: number;
+  success_rate: number;
+  per_topic: Record<string, any>;
+  triggered_by: string;
+  notified_at: string;
+}
+
+export interface NotificationStatsResponse {
+  summary: NotificationStatsSummary;
+  by_country: Record<string, CountryNotificationStat>;
+  recent_runs: RecentNotificationRun[];
+  country_filter: string | null;
+  limit_applied: number;
+}
+
+export interface TestNotificationResponse {
+  status: string;
+  sent: number;
+  failed: number;
+  test_token_last4: string;
+  country: string;
+  news_id: string;
+  headline: string;
+  note: string;
+}
+
 
 
 export const PromptsService = {
@@ -362,6 +460,58 @@ export const NewsService = {
       return response.data;
     } catch (e) {
       console.error('❌ [NewsService] fetchAdminCountries error:', e);
+      throw e;
+    }
+  },
+
+  fetchNotificationStats: async (country?: string, limit: number = 7): Promise<NotificationStatsResponse> => {
+    try {
+      const params: Record<string, string | number> = { limit };
+      if (country) params.country = country;
+      const response = await backendApi.get<NotificationStatsResponse>('/api/v1/news/admin/notification-stats', { params });
+      return response.data;
+    } catch (e) {
+      console.error('❌ [NewsService] fetchNotificationStats error:', e);
+      throw e;
+    }
+  },
+
+  sendTestNotification: async (country: string): Promise<TestNotificationResponse> => {
+    try {
+      const response = await backendApi.post<TestNotificationResponse>(`/api/v1/news/admin/test-notification/${country}`);
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [NewsService] sendTestNotification error for ${country}:`, e);
+      throw e;
+    }
+  },
+
+  fetchSchedules: async (): Promise<FetchSchedulesResponse> => {
+    try {
+      const response = await backendApi.get<FetchSchedulesResponse>('/api/v1/news/admin/schedule');
+      return response.data;
+    } catch (e) {
+      console.error('❌ [NewsService] fetchSchedules error:', e);
+      throw e;
+    }
+  },
+
+  updateSchedule: async (country: string, entries: ScheduleEntry[]): Promise<UpdateScheduleResponse> => {
+    try {
+      const response = await backendApi.put<UpdateScheduleResponse>(`/api/v1/news/admin/schedule/${country}`, { entries });
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [NewsService] updateSchedule error for ${country}:`, e);
+      throw e;
+    }
+  },
+
+  deleteScheduleEntry: async (country: string, entry_id: string): Promise<UpdateScheduleResponse> => {
+    try {
+      const response = await backendApi.delete<UpdateScheduleResponse>(`/api/v1/news/admin/schedule/${country}/entry/${entry_id}`);
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [NewsService] deleteScheduleEntry error for ${country} - ${entry_id}:`, e);
       throw e;
     }
   },

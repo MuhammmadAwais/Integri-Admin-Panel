@@ -11,8 +11,9 @@ import ProtectedRoute from 'components/ProtectedRoute';
 const HomePage = Loadable(lazy(() => import('pages/Home')));
 
 // ── Integri Feature Pages ──
-const NewsPage       = Loadable(lazy(() => import('pages/NewsPage')));
+const NewsPage              = Loadable(lazy(() => import('pages/NewsPage')));
 const NewsConfigurationPage = Loadable(lazy(() => import('pages/NewsConfiguration')));
+const NotificationsPage     = Loadable(lazy(() => import('pages/NotificationsPage')));
 
 const NewsDetailPage = Loadable(lazy(() => import('pages/NewsDetailPage')));
 const UsersPage      = Loadable(lazy(() => import('pages/UsersPage')));
@@ -32,6 +33,7 @@ const NavigationRoutes = {
         { path: '/',           element: <HomePage /> },
         { path: '/news',           element: <NewsPage /> },
         { path: '/news/configuration', element: <NewsConfigurationPage /> },
+        { path: '/news/notifications', element: <NotificationsPage /> },
 
         { path: '/news/preview/:id', element: <NewsDetailPage /> },
         { path: '/users',      element: <UsersPage /> },
