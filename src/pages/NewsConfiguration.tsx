@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Globe, Settings, Activity } from 'lucide-react';
 import ParticleBackground from 'components/ParticleBackground';
+import LanguageConfigSection from 'features/news/components/LanguageConfigSection';
 import { NewsService, type AdminCountriesResponse, type CountryDetails } from 'api/backendApi';
 import 'features/news/styles/news.scss';
 
@@ -159,6 +160,9 @@ export default function NewsConfigurationPage() {
           ))}
         </div>
       )}
+
+      {/* ── Language Configurations ─────────────────────────────────────── */}
+      <LanguageConfigSection />
     </div>
   );
 }

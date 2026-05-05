@@ -253,6 +253,35 @@ export interface AdminCountriesResponse {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  📰 NEWS ADMIN — Language Configurations Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface SupportedLanguage {
+  code: string;
+  name: string;
+}
+
+export interface SupportedLanguagesResponse {
+  languages: SupportedLanguage[];
+}
+
+export interface CountryLangConfig {
+  country: string;
+  languages: string[];
+  is_default: boolean;
+  missing_native_language: boolean;
+  updated_at?: string;
+}
+
+export interface AllCountryLangConfigsResponse {
+  configs: CountryLangConfig[];
+}
+
+export interface CountryLangConfigResponse {
+  config: CountryLangConfig;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  📰 NEWS ADMIN — Notifications & Schedules Types
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -512,6 +541,47 @@ export const NewsService = {
       return response.data;
     } catch (e) {
       console.error(`❌ [NewsService] deleteScheduleEntry error for ${country} - ${entry_id}:`, e);
+      throw e;
+    }
+  },
+
+  fetchSupportedLanguages: async (): Promise<SupportedLanguagesResponse> => {
+    try {
+      const response = await backendApi.get<SupportedLanguagesResponse>('/api/v1/news/admin/languages/supported');
+      return response.data;
+    } catch (e) {
+      console.error('❌ [NewsService] fetchSupportedLanguages error:', e);
+      throw e;
+    }
+  },
+
+  fetchAllCountryLangConfigs: async (): Promise<AllCountryLangConfigsResponse> => {
+    try {
+      const response = await backendApi.get<AllCountryLangConfigsResponse>('/api/v1/news/admin/languages');
+      return response.data;
+    } catch (e) {
+      console.error('❌ [NewsService] fetchAllCountryLangConfigs error:', e);
+      throw e;
+    }
+  },
+
+  fetchCountryLangConfig: async (country: string): Promise<CountryLangConfigResponse> => {
+    try {
+      const response = await backendApi.get<CountryLangConfigResponse>(`/api/v1/news/admin/languages/${country}`);
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [NewsService] fetchCountryLangConfig error for ${country}:`, e);
+      throw e;
+    }
+  },
+
+  updateCountryLanguages: async (country: string, languages: string[]): Promise<CountryLangConfigResponse> => {
+    try {
+      // Ensuring the body is strictly an object with a languages string array.
+      const response = await backendApi.put<CountryLangConfigResponse>(`/api/v1/news/admin/languages/${country}`, { languages });
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [NewsService] updateCountryLanguages error for ${country}:`, e);
       throw e;
     }
   },
