@@ -282,6 +282,36 @@ export interface CountryLangConfigResponse {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  📰 NEWS ADMIN — Topic Configurations Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface SupportedTopicCategory {
+  slug: string;
+  is_api_category: boolean;
+}
+
+export interface SupportedTopicsResponse {
+  categories: SupportedTopicCategory[];
+  note: string;
+}
+
+export interface TopicConfig {
+  country: string;
+  topics: string[];
+  search_terms: string[];
+  exclude_categories: string[];
+  domains: string[];
+  exclude_domains: string[];
+  raw_limit_per_topic: number;
+  is_default: boolean;
+  updated_at?: string;
+}
+
+export interface AllTopicConfigsResponse {
+  configs: TopicConfig[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  📰 NEWS ADMIN — Notifications & Schedules Types
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -585,4 +615,132 @@ export const NewsService = {
       throw e;
     }
   },
+
+  fetchSupportedTopics: async (): Promise<SupportedTopicsResponse> => {
+    try {
+      const response = await backendApi.get<SupportedTopicsResponse>('/api/v1/news/admin/topics/supported');
+      return response.data;
+    } catch (e) {
+      console.error('❌ [NewsService] fetchSupportedTopics error:', e);
+      throw e;
+    }
+  },
+
+  fetchAllTopicConfigs: async (): Promise<AllTopicConfigsResponse> => {
+    try {
+      const response = await backendApi.get<AllTopicConfigsResponse>('/api/v1/news/admin/topics');
+      return response.data;
+    } catch (e) {
+      console.error('❌ [NewsService] fetchAllTopicConfigs error:', e);
+      throw e;
+    }
+  },
+
+  fetchCountryTopicConfig: async (country: string): Promise<TopicConfig> => {
+    try {
+      const response = await backendApi.get<TopicConfig>(`/api/v1/news/admin/topics/${country}`);
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [NewsService] fetchCountryTopicConfig error for ${country}:`, e);
+      throw e;
+    }
+  },
+
+  updateTopicConfig: async (country: string, config: Partial<TopicConfig>): Promise<TopicConfig> => {
+    try {
+      const response = await backendApi.put<TopicConfig>(`/api/v1/news/admin/topics/${country}`, config);
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [NewsService] updateTopicConfig error for ${country}:`, e);
+      throw e;
+    }
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  🧑‍💻 USER ADMIN — Types & Services
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface UserUsageRecord {
+  user_id: string;
+  email: string;
+  tier: string;
+  total_tokens_used: number;
+  total_api_requests: number;
+  created_at: string;
+}
+
+export interface UsersUsageResponse {
+  users: UserUsageRecord[];
+  count: number;
+  next_key?: string;
+}
+
+export interface EndpointStats {
+  [endpoint: string]: number;
+}
+
+export interface UserStatsResponse {
+  user_id: string;
+  tokens: {
+    user_id: string;
+    today: {
+      date: string;
+      total_tokens: number;
+    };
+    all_time: {
+      total_tokens: number;
+    };
+  };
+  api_requests: {
+    user_id: string;
+    today: {
+      date: string;
+      total_requests: number;
+      by_endpoint: EndpointStats;
+    };
+    all_time: {
+      total_requests: number;
+    };
+  };
+}
+
+export const UserService = {
+  fetchUserStats: async (user_id: string): Promise<UserStatsResponse> => {
+    try {
+      const response = await backendApi.get<UserStatsResponse>(`/api/v1/users/${user_id}/stats`);
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [UserService] fetchUserStats error for ${user_id}:`, e);
+      throw e;
+    }
+  },
+
+  fetchUsersUsage: async (limit: number = 50): Promise<UsersUsageResponse> => {
+    try {
+      const response = await backendApi.get<UsersUsageResponse>('/api/v1/users/usage', {
+        params: { limit }
+      });
+      return response.data;
+    } catch (e) {
+      console.error('❌ [UserService] fetchUsersUsage error:', e);
+      throw e;
+    }
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  🤖 MODELS — Types & Services
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const ModelsService = {
+  fetchModels: async (): Promise<string[]> => {
+    try {
+      const response = await backendApi.get<string[]>('/api/v1/models');
+      return response.data;
+    } catch (e) {
+      console.error('❌ [ModelsService] fetchModels error:', e);
+      throw e;
+    }
+  }
 };

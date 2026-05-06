@@ -1,5 +1,5 @@
 // lucide-react icons — Integri App Navigation
-import { LayoutDashboard, Newspaper, Users, LogOut, Cpu, Settings, Bell } from 'lucide-react';
+import { LayoutDashboard, Newspaper, Users, LogOut, Cpu, Settings, Bell, Layers } from 'lucide-react';
 
 // ==============================|| INTEGRI APP — NAVIGATION MENU ||============================== //
 
@@ -29,7 +29,7 @@ const integriNav = {
     },
     {
       id: 'notifications',
-      title: 'Notifications & Schedule',
+      title: 'Notifications',
       type: 'item',
       icon: Bell,
       url: '/news/notifications'
@@ -47,6 +47,13 @@ const integriNav = {
       type: 'item',
       icon: Cpu,
       url: '/prompts'
+    },
+    {
+      id: 'ai-models',
+      title: 'AI Models',
+      type: 'item',
+      icon: Layers,
+      url: '/system/models'
     },
 
     {

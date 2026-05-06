@@ -8,7 +8,7 @@ import Button from 'react-bootstrap/Button';
 import { useAdminNews } from 'features/news/hooks/useAdminNews';
 import NewsVirtualTable from 'features/news/components/NewsVirtualTable';
 import ArticleDetailPanel from 'features/news/components/ArticleDetailPanel';
-import ParticleBackground from 'components/ParticleBackground';
+import MainCard from 'components/MainCard';
 
 // styles
 import 'features/news/styles/news.scss';
@@ -82,7 +82,6 @@ export default function NewsPage() {
 
   return (
     <div className="news-glass-archive">
-      <ParticleBackground />
 
       {/* ── Page Header ─────────────────────────────────────────────────── */}
       <div ref={headerRef} className="news-command-header">

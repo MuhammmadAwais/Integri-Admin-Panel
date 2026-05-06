@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from 'lib/firebase/firebase';
-import { UserMemoryService } from 'api/backendApi';
+import { useQuery } from '@tanstack/react-query';
+import { UserMemoryService, UserService } from 'api/backendApi';
 import { ArrowLeft, Clock, MapPin, Mail, Shield, Zap, User as UserIcon, Search as SearchIcon, Copy, Check, Activity, Fingerprint, History } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { gsap } from 'gsap';
@@ -179,6 +180,85 @@ const MemoryGrid = ({ data }) => {
   );
 };
 
+const UsageStatsSection = ({ userId }) => {
+  const { data: stats, isLoading, isError } = useQuery({
+    queryKey: ['userStats', userId],
+    queryFn: () => UserService.fetchUserStats(userId),
+    enabled: !!userId,
+  });
+
+  if (isLoading) {
+    return (
+      <Row className="mb-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Col md={3} key={i}>
+            <div className="glass-morphism sharp-border p-3" style={{ height: '100px' }}>
+              <div className="placeholder-glow">
+                <span className="placeholder col-6 bg-secondary mb-3"></span>
+                <span className="placeholder col-8 bg-secondary"></span>
+              </div>
+            </div>
+          </Col>
+        ))}
+      </Row>
+    );
+  }
+
+  if (isError || !stats) {
+    return null;
+  }
+
+  const formatNum = (num) => (num || 0).toLocaleString();
+  const endpoints = stats.api_requests?.today?.by_endpoint || {};
+  const hasEndpoints = Object.keys(endpoints).length > 0;
+
+  return (
+    <div className="mb-4">
+      <h5 style={{ color: '#D4AF37', marginBottom: '1rem', fontWeight: 600 }}>Usage Statistics</h5>
+      <Row className="g-3 mb-3">
+        <Col md={3}>
+          <div className="glass-morphism sharp-border p-3 h-100">
+            <div style={{ color: '#a8956b', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '8px' }}>Today's Tokens</div>
+            <div style={{ color: '#e0d5b8', fontSize: '1.5rem', fontWeight: 700 }}>{formatNum(stats.tokens?.today?.total_tokens)}</div>
+          </div>
+        </Col>
+        <Col md={3}>
+          <div className="glass-morphism sharp-border p-3 h-100">
+            <div style={{ color: '#a8956b', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '8px' }}>All-time Tokens</div>
+            <div style={{ color: '#e0d5b8', fontSize: '1.5rem', fontWeight: 700 }}>{formatNum(stats.tokens?.all_time?.total_tokens)}</div>
+          </div>
+        </Col>
+        <Col md={3}>
+          <div className="glass-morphism sharp-border p-3 h-100">
+            <div style={{ color: '#a8956b', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '8px' }}>Today's Requests</div>
+            <div style={{ color: '#e0d5b8', fontSize: '1.5rem', fontWeight: 700 }}>{formatNum(stats.api_requests?.today?.total_requests)}</div>
+          </div>
+        </Col>
+        <Col md={3}>
+          <div className="glass-morphism sharp-border p-3 h-100">
+            <div style={{ color: '#a8956b', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '8px' }}>All-time Requests</div>
+            <div style={{ color: '#e0d5b8', fontSize: '1.5rem', fontWeight: 700 }}>{formatNum(stats.api_requests?.all_time?.total_requests)}</div>
+          </div>
+        </Col>
+      </Row>
+
+      {hasEndpoints && (
+        <div className="glass-morphism sharp-border p-3">
+          <div style={{ color: '#D4AF37', fontSize: '0.85rem', textTransform: 'uppercase', marginBottom: '12px', fontWeight: 600 }}>Today's Request Breakdown</div>
+          <div className="d-flex flex-wrap gap-3">
+            {Object.entries(endpoints).map(([endpoint, count]) => (
+              <div key={endpoint} className="d-flex align-items-center gap-2" style={{ background: 'rgba(255,255,255,0.03)', padding: '6px 12px', borderRadius: '4px', border: '1px solid rgba(212,175,55,0.2)' }}>
+                <span style={{ color: '#e0d5b8', fontFamily: 'monospace', fontSize: '0.8rem' }}>{endpoint}</span>
+                <span style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>{formatNum(count)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function UserDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -309,6 +389,8 @@ export default function UserDetailPage() {
           </div>
         </div>
       </MainCard>
+
+      <UsageStatsSection userId={id} />
 
       <Row>
         {/* User Details */}

@@ -89,6 +89,17 @@ File: style.css
   --pc-sidebar-border: rgba(212, 175, 55, 0.1);
 }
 
+.glass-morphism {
+  background: rgba(10, 10, 10, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.sharp-border {
+  border-radius: 4px;
+  border: 1px solid var(--integri-border);
+}
+
 body {
   background-color: var(--bs-body-bg) !important;
   color: var(--bs-body-color) !important;

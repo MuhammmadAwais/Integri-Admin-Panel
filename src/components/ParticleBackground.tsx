@@ -17,11 +17,11 @@ const ParticleBackground: React.FC = () => {
 
     // --- CONFIGURATION ---
     const config = {
-      // Reduced count for a cleaner look (0.06 multiplier instead of 0.1)
-      particleCount: Math.min(window.innerWidth * 0.06, 70),
-      connectionDist: 120,
-      mouseDist: 150, // Distance for mouse interaction
-      speed: 0.3, // Slower, more elegant movement
+      // Restored count and speed for cool patterns
+      particleCount: Math.min(window.innerWidth * 0.1, 150),
+      connectionDist: 140,
+      mouseDist: 180, // Distance for mouse interaction
+      speed: 0.5, // Faster, more dynamic movement
       colors: {
         dark: {
           particle: "rgba(255, 255, 255, 0.6)", // Slightly transparent white
@@ -181,14 +181,13 @@ const ParticleBackground: React.FC = () => {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 pointer-events-none z-0"
       style={{
         transition: "opacity 0.5s ease",
-        position: 'absolute',
+        position: 'fixed',
         top: 0,
         left: 0,
-        width: '100%',
-        height: '100%',
+        width: '100vw',
+        height: '100vh',
         pointerEvents: 'none',
         zIndex: 0
       }}

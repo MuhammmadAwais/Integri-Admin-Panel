@@ -4,7 +4,6 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import { TrendingUp, Users, Coins, Activity, Award, MapPin } from 'lucide-react';
 import useBusinessIntelligence from 'hooks/useBusinessIntelligence';
-import ParticleBackground from 'components/ParticleBackground';
 
 // feature-based imports
 import KpiCard from 'features/dashboard/components/KpiCard';
@@ -77,7 +76,6 @@ export default function Home() {
 
   return (
     <>
-    <ParticleBackground />
     <Row>
       {/* ── ROW 1: KPI Cards ── */}
       {dynamicKpiData.map((kpi, index) => (
@@ -162,7 +160,6 @@ export default function Home() {
         <RecentUsersCard />
       </Col>
     </Row>
-<ParticleBackground />
     </>
   );
 }

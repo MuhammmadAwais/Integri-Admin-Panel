@@ -37,7 +37,7 @@ export default function MainLayout() {
     <div className={drawerOpen ? 'pc-sidebar-hide' : ''}>
       <Drawer />
       <Header />
-      <div className="pc-container">
+      <div className="pc-container" style={{ position: 'relative', zIndex: 1 }}>
         <div className="pc-content">
           <NavigationScroll>
             <Outlet />

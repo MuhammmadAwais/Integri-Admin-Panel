@@ -7,6 +7,8 @@ import router from 'routes';
 import { getBackendToken } from 'api/backendApi';
 import { AuthProvider } from 'contexts/AuthContext';
 
+import ParticleBackground from 'components/ParticleBackground';
+
 // ==============================|| APP - THEME, ROUTER, LOCAL ||============================== //
 
 const queryClient = new QueryClient({
@@ -38,6 +40,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <ParticleBackground />
         <RouterProvider router={router} />
       </AuthProvider>
     </QueryClientProvider>

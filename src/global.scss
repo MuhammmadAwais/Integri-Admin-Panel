@@ -86,8 +86,11 @@
   --kpi-glow: rgba(212, 175, 55, 0.25);
 
   /* Layout Overrides */
-  body, .pc-container, .pcoded-main-container, .main-body {
+  body {
     background-color: #09090B !important;
+  }
+  .pc-container, .pcoded-main-container, .main-body {
+    background-color: transparent !important;
   }
   .pc-sidebar, .pc-header {
     background: #000000 !important;
@@ -321,9 +324,12 @@
 /*  LUXE MINIMAL PURE B/W LIGHT THEME                   */
 /* ==================================================== */
 [data-pc-theme='light'] {
-  body, .pc-container, .pcoded-main-container, .main-body {
+  body {
     background-color: #F9FAFB !important;
     color: #000000 !important;
+  }
+  .pc-container, .pcoded-main-container, .main-body {
+    background-color: transparent !important;
   }
 
   .pc-sidebar, .pc-header {
@@ -537,9 +543,11 @@
   }
 
   /* Forcefully override any remaining gray containers */
-  body, .pc-container, .navbar-content, .pc-header, .pcoded-main-container {
+  body {
     background-color: #ffffff !important;
-    background: #ffffff !important;
+  }
+  .pc-container, .navbar-content, .pc-header, .pcoded-main-container {
+    background-color: transparent !important;
   }
 
   .pc-header, .navbar-content {

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Globe, Settings, Activity } from 'lucide-react';
-import ParticleBackground from 'components/ParticleBackground';
 import LanguageConfigSection from 'features/news/components/LanguageConfigSection';
+import TopicConfigSection from 'features/news/components/TopicConfigSection';
 import { NewsService, type AdminCountriesResponse, type CountryDetails } from 'api/backendApi';
 import 'features/news/styles/news.scss';
 
@@ -62,7 +62,6 @@ export default function NewsConfigurationPage() {
 
   return (
     <div className="news-glass-archive">
-      <ParticleBackground />
 
       {/* ── Page Header ─────────────────────────────────────────────────── */}
       <div className="news-command-header" style={{ marginBottom: 30 }}>
@@ -163,6 +162,9 @@ export default function NewsConfigurationPage() {
 
       {/* ── Language Configurations ─────────────────────────────────────── */}
       <LanguageConfigSection />
+
+      {/* ── Topic Configurations ────────────────────────────────────────── */}
+      <TopicConfigSection />
     </div>
   );
 }
