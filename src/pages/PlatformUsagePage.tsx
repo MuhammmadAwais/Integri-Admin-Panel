@@ -86,7 +86,7 @@ export default function PlatformUsagePage() {
         displayName: fbUser?.name || 'Guest',
         avatar: fbUser?.avatar || null,
         country: fbUser?.country || (u as any).country || 'Unknown',
-        cleanUserId: u.user_id?.replace('@firebase.placeholder', '')
+        cleanUserId: u.user_id?.replace('@firebase_placeholder', '')
       };
     });
 
@@ -219,24 +219,24 @@ export default function PlatformUsagePage() {
         <div style={{ background: 'var(--news-glass-bg)', backdropFilter: 'blur(12px)', border: '1px solid var(--news-glass-border)', borderRadius: 4, overflow: 'hidden', boxShadow: 'var(--news-card-shadow)' }}>
           <div className="table-responsive">
             <table className="table table-hover mb-0" style={{ borderCollapse: 'collapse' }}>
-              <thead style={{ background: 'var(--news-table-header-bg)', borderBottom: '1px solid var(--news-glass-border)', color: '#ffffff', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
+              <thead style={{ background: 'var(--news-table-header-bg)', borderBottom: '1px solid var(--news-glass-border)' }}>
                 <tr>
-                  <th style={{ padding: '16px 24px', fontWeight: 900, cursor: 'pointer' }} onClick={() => handleSort('displayName')}>
+                  <th style={{ padding: '16px 24px', fontWeight: 900, cursor: 'pointer', color: '#D4AF37', textTransform: 'uppercase', letterSpacing: '1.5px', fontSize: '0.72rem' }} onClick={() => handleSort('displayName')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>Identity {getSortIcon('displayName')}</div>
                   </th>
-                  <th style={{ padding: '16px 24px', fontWeight: 900, cursor: 'pointer' }} onClick={() => handleSort('tier')}>
+                  <th style={{ padding: '16px 24px', fontWeight: 900, cursor: 'pointer', color: '#D4AF37', textTransform: 'uppercase', letterSpacing: '1.5px', fontSize: '0.72rem' }} onClick={() => handleSort('tier')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>Tier Status {getSortIcon('tier')}</div>
                   </th>
-                  <th style={{ padding: '16px 24px', fontWeight: 900, textAlign: 'right', cursor: 'pointer' }} onClick={() => handleSort('total_tokens_used')}>
+                  <th style={{ padding: '16px 24px', fontWeight: 900, textAlign: 'right', cursor: 'pointer', color: '#D4AF37', textTransform: 'uppercase', letterSpacing: '1.5px', fontSize: '0.72rem' }} onClick={() => handleSort('total_tokens_used')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>Total Tokens {getSortIcon('total_tokens_used')}</div>
                   </th>
-                  <th style={{ padding: '16px 24px', fontWeight: 900, textAlign: 'right', cursor: 'pointer' }} onClick={() => handleSort('total_api_requests')}>
+                  <th style={{ padding: '16px 24px', fontWeight: 900, textAlign: 'right', cursor: 'pointer', color: '#D4AF37', textTransform: 'uppercase', letterSpacing: '1.5px', fontSize: '0.72rem' }} onClick={() => handleSort('total_api_requests')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>API Requests {getSortIcon('total_api_requests')}</div>
                   </th>
-                  <th style={{ padding: '16px 24px', fontWeight: 900, textAlign: 'right', cursor: 'pointer' }} onClick={() => handleSort('created_at')}>
+                  <th style={{ padding: '16px 24px', fontWeight: 900, textAlign: 'right', cursor: 'pointer', color: '#D4AF37', textTransform: 'uppercase', letterSpacing: '1.5px', fontSize: '0.72rem' }} onClick={() => handleSort('created_at')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>Joined {getSortIcon('created_at')}</div>
                   </th>
-                  <th style={{ padding: '16px 24px', fontWeight: 900, textAlign: 'center' }}>Origin</th>
+                  <th style={{ padding: '16px 24px', fontWeight: 900, textAlign: 'center', color: '#D4AF37', textTransform: 'uppercase', letterSpacing: '1.5px', fontSize: '0.72rem' }}>Origin</th>
                 </tr>
               </thead>
               <tbody>
