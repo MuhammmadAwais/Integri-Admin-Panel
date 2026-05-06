@@ -5,6 +5,7 @@ import { MoreVertical, Eye, Search, RotateCw } from 'lucide-react';
 import { gsap } from 'gsap';
 import Dropdown from 'react-bootstrap/Dropdown';
 import useDebounce from 'hooks/useDebounce';
+import CountryFlag from 'components/CountryFlag';
 
 const HighlightedText = ({ text, query }) => {
   if (!query || !text) return <>{text}</>;
@@ -106,12 +107,13 @@ const UserTable = React.memo(({
         header: 'Country',
         cell: info => {
           const country = info.getValue();
-          // Extremely rudimentary emoji flag generation based on country name logic wouldn't fit here,
-          // so we'll just style it as a badge.
           return (
-            <span style={{ padding: '4px 8px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.8rem' }}>
-               <HighlightedText text={country} query={globalFilter} />
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <CountryFlag country={country} size={22} />
+              <span style={{ padding: '4px 8px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.8rem', color: '#e0d5b8' }}>
+                 <HighlightedText text={country} query={globalFilter} />
+              </span>
+            </div>
           );
         }
       },

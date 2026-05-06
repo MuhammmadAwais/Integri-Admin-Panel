@@ -1,6 +1,6 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
-import jsconfigPaths from "vite-jsconfig-paths";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 import path from "path";
 const resolvePath = (str) => path.resolve(__dirname, str);
@@ -27,19 +27,15 @@ export default defineConfig(({ mode }) => {
     },
     resolve: {
       alias: [
-        // { find: '', replacement: path.resolve(__dirname, 'src') },
-        // {
-        //   find: /^~(.+)/,
-        //   replacement: path.join(process.cwd(), 'node_modules/$1')
-        // },
-        // {
-        //   find: /^src(.+)/,
-        //   replacement: path.join(process.cwd(), 'src/$1')
-        // }
-        // {
-        //   find: 'assets',
-        //   replacement: path.join(process.cwd(), 'src/assets')
-        // },
+        { find: 'api', replacement: path.resolve(__dirname, 'src/api') },
+        { find: 'components', replacement: path.resolve(__dirname, 'src/components') },
+        { find: 'features', replacement: path.resolve(__dirname, 'src/features') },
+        { find: 'layout', replacement: path.resolve(__dirname, 'src/layout') },
+        { find: 'lib', replacement: path.resolve(__dirname, 'src/lib') },
+        { find: 'pages', replacement: path.resolve(__dirname, 'src/pages') },
+        { find: 'routes', replacement: path.resolve(__dirname, 'src/routes') },
+        { find: 'contexts', replacement: path.resolve(__dirname, 'src/contexts') },
+        { find: 'store', replacement: path.resolve(__dirname, 'src/store') },
       ],
     },
     css: {
@@ -82,6 +78,6 @@ export default defineConfig(({ mode }) => {
       },
     },
     base: API_URL,
-    plugins: [react(), jsconfigPaths()],
+    plugins: [react(), tsconfigPaths()],
   };
 });

@@ -1,35 +1,66 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { collection, query, limit, startAfter, getDocs, where, orderBy } from 'firebase/firestore';
+import { collection, query, limit, startAfter, getDocs, where, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from 'lib/firebase/firebase';
+
+/**
+ * High-Performance User Identity Structure
+ */
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string | null;
+  country: string;
+  tokens: number;
+  freeDays: number;
+  createdAt: string;
+  status: 'active' | 'inactive' | string;
+}
+
+export interface UseUsersReturn {
+  users: User[];
+  filteredUsers: User[];
+  loading: boolean;
+  error: string | null;
+  globalFilter: string;
+  setGlobalFilter: (val: string) => void;
+  countryFilter: string;
+  setCountryFilter: (val: string) => void;
+  statusFilter: string;
+  setStatusFilter: (val: string) => void;
+  refreshUsers: () => void;
+  clearFilters: () => void;
+  fetchNextBatch: () => void;
+  hasMore: boolean;
+}
 
 /**
  * useUsers Hook - High Performance Version
  * Built by Senior Firebase Architect.
  * Implements cursor-based pagination and server-side search.
  */
-export default function useUsers() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+export default function useUsers(): UseUsersReturn {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   
-  const [globalFilter, setGlobalFilter] = useState('');
-  const [countryFilter, setCountryFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [lastVisible, setLastVisible] = useState(null);
-  const [hasMore, setHasMore] = useState(true);
+  const [globalFilter, setGlobalFilter] = useState<string>('');
+  const [countryFilter, setCountryFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | 'dual-search-cursor' | null>(null);
+  const [hasMore, setHasMore] = useState<boolean>(true);
 
-  const fetchUsers = useCallback(async (isLoadMore = false) => {
+  const fetchUsers = useCallback(async (isLoadMore: boolean = false) => {
     try {
       setLoading(true);
       setError(null);
-      let fetchedDocs = [];
+      let fetchedDocs: QueryDocumentSnapshot<DocumentData>[] = [];
       
       if (globalFilter.trim()) {
         const search = globalFilter.trim();
         const searchLower = search.toLowerCase();
         
         // Execute parallel queries to unconditionally support BOTH name and email prefix matching
-        // without relying on restrictive Firebase single-field inequality rules.
         const qName = query(collection(db, 'Users'), where('name', '>=', search), where('name', '<=', search + '\uf8ff'), limit(100));
         const qEmailLower = query(collection(db, 'Users'), where('email', '>=', searchLower), where('email', '<=', searchLower + '\uf8ff'), limit(100));
         const qEmailExact = query(collection(db, 'Users'), where('email', '>=', search), where('email', '<=', search + '\uf8ff'), limit(100));
@@ -37,20 +68,17 @@ export default function useUsers() {
         const [snapName, snapEmailLower, snapEmailExact] = await Promise.all([getDocs(qName), getDocs(qEmailLower), getDocs(qEmailExact)]);
         
         // Merge results using Map to safely eliminate duplicate documents
-        const docMap = new Map();
+        const docMap = new Map<string, QueryDocumentSnapshot<DocumentData>>();
         snapName.docs.forEach(d => docMap.set(d.id, d));
         snapEmailLower.docs.forEach(d => docMap.set(d.id, d));
         snapEmailExact.docs.forEach(d => docMap.set(d.id, d));
         
         fetchedDocs = Array.from(docMap.values());
         
-        // Use a dummy string cursor to ensure state transition for lastVisible 
-        // down the line, instead of null which breaks the reactivity hook.
         setLastVisible('dual-search-cursor');
         setHasMore(false);
       } else {
-        let constraints = [];
-        // Safely query country & status directly without Firebase FAILED_PRECONDITION indexing errors
+        const constraints: any[] = [];
         if (countryFilter) constraints.push(where('country', '==', countryFilter));
         if (statusFilter) constraints.push(where('status', '==', statusFilter));
         
@@ -67,7 +95,7 @@ export default function useUsers() {
         setHasMore(snapshot.docs.length === 100);
       }
       
-      const fetchedUsers = fetchedDocs.map((doc) => {
+      const fetchedUsers: User[] = fetchedDocs.map((doc) => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -89,11 +117,10 @@ export default function useUsers() {
       }
       
       console.log(`Firebase Action: Fetched ${fetchedUsers.length} users via Smart Engine.`);
-    } catch (err) {
-      // 2. Boss Constraint: Firestore Search Indexing catcher
+    } catch (err: any) {
       if (err.message && err.message.includes('FAILED_PRECONDITION')) {
          console.error("❌ [API] Firebase Index required for this search query.");
-         console.error(err.message); // This will output the clickable link
+         console.error(err.message);
       } else {
          console.error("Firestore [Users] Fetch Error:", err);
       }
@@ -103,7 +130,7 @@ export default function useUsers() {
     }
   }, [globalFilter, countryFilter, statusFilter, lastVisible]);
 
-  // Client-Side Semantic Filter: Enhances forensics by searching loaded batch across ALL fields instantly.
+  // Client-Side Semantic Filter
   const filteredUsers = useMemo(() => {
     let result = users;
 
@@ -129,23 +156,17 @@ export default function useUsers() {
     return result;
   }, [users, globalFilter, countryFilter, statusFilter]);
 
-  // When filters shift, cleanly trigger a fresh wipe protocol
   useEffect(() => {
     setLastVisible(null);
     setHasMore(true);
     setUsers([]);
-    // Immediately fetch users after wiping, so we don't rely on `lastVisible` state transitioning from null to null breaking the pipeline.
-    // Safe fetch explicitly bypassing pagination here.
     fetchUsers(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [globalFilter, countryFilter, statusFilter]);
 
-  // Initial load only safely checking users array length
   useEffect(() => {
     if (users.length === 0 && lastVisible === null && !globalFilter && !countryFilter && !statusFilter) {
       fetchUsers(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchNextBatch = () => {
@@ -155,7 +176,7 @@ export default function useUsers() {
   };
 
   const refreshUsers = () => {
-    setLastVisible(null); // will trigger the effect
+    setLastVisible(null);
   };
 
   const clearFilters = () => {

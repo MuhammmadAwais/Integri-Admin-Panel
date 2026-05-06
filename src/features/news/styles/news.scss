@@ -9,11 +9,7 @@
  * shared structural styles live here.
  */
 
-.news-glass-archive {
-  padding: 30px;
-  background: transparent;
-
-  /* ── Theme Variables ────────────────────────────────────────────────── */
+:root {
   --news-card-bg: #000;
   --news-card-border: #27272a;
   --news-table-header-bg: rgba(212, 175, 55, 0.04);
@@ -25,24 +21,37 @@
   --news-panel-bg: #09090b;
   --news-panel-border: #27272a;
   --news-panel-overlay: rgba(0, 0, 0, 0.62);
+  --news-glass-bg: rgba(0, 0, 0, 0.4);
+  --news-glass-border: rgba(39, 39, 42, 0.8);
+  --news-modal-bg: #0a0a0a;
+  --news-card-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
   --news-scroll-track: #09090b;
   --news-scroll-thumb: #27272a;
+}
 
-  [data-pc-theme='light'] & {
-    --news-card-bg: #fff;
-    --news-card-border: #e4e4e7;
-    --news-table-header-bg: rgba(0, 0, 0, 0.03);
-    --news-text-main: #18181b;
-    --news-text-muted: #71717a;
-    --news-text-dim: #a1a1aa;
-    --news-input-bg: #fff;
-    --news-dropdown-bg: #fff;
-    --news-panel-bg: #fff;
-    --news-panel-border: #e4e4e7;
-    --news-panel-overlay: rgba(0, 0, 0, 0.3);
-    --news-scroll-track: #f4f4f5;
-    --news-scroll-thumb: #d4d4d8;
-  }
+[data-pc-theme='light'] {
+  --news-card-bg: #fff;
+  --news-card-border: #e4e4e7;
+  --news-table-header-bg: rgba(0, 0, 0, 0.03);
+  --news-text-main: #18181b;
+  --news-text-muted: #71717a;
+  --news-text-dim: #a1a1aa;
+  --news-input-bg: #fff;
+  --news-dropdown-bg: #fff;
+  --news-panel-bg: #fff;
+  --news-panel-border: #e4e4e7;
+  --news-panel-overlay: rgba(0, 0, 0, 0.1);
+  --news-glass-bg: rgba(255, 255, 255, 0.6);
+  --news-glass-border: rgba(0, 0, 0, 0.08);
+  --news-modal-bg: #ffffff;
+  --news-card-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --news-scroll-track: #f4f4f5;
+  --news-scroll-thumb: #d4d4d8;
+}
+
+.news-glass-archive {
+  padding: 30px;
+  background: transparent;
 
   /* ── Page Header ──────────────────────────────────────────────────────── */
   .news-command-header {
@@ -219,4 +228,41 @@
       border-color: #D4AF37;
     }
   }
+}
+
+/* ── Country Cards & Metric Blocks ────────────────────────────────────────── */
+.country-card {
+  background: var(--news-glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--news-glass-border);
+  border-radius: 4px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--news-card-shadow);
+  position: relative;
+  overflow: hidden;
+
+  &:hover {
+    border-color: #3f3f46;
+    background: var(--news-table-header-bg);
+    transform: translateY(-2px);
+    box-shadow: 0 16px 60px rgba(0, 0, 0, 0.6);
+  }
+}
+
+.nv-skeleton {
+  background: var(--news-table-header-bg);
+  border: 1px solid var(--news-glass-border);
+  border-radius: 4px;
+  animation: glowPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes glowPulse {
+  0%   { opacity: 0.3; }
+  50%  { opacity: 0.7; }
+  100% { opacity: 0.3; }
 }

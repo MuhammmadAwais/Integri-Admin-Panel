@@ -1,106 +1,64 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { NewsService } from 'api/backendApi';
-import { AlertTriangle, Globe, X, Check, Search, Save } from 'lucide-react';
-import 'features/news/styles/news.scss';
+import { NewsService, CountryLangConfig } from 'api/backendApi';
+import { Languages, Save, X, Check, Search, Globe } from 'lucide-react';
+import CountryFlag from 'components/CountryFlag';
 
 type Toast = { message: string; type: 'success' | 'error' } | null;
 
-export default function LanguageConfigSection() {
+export default function LanguageConfigSection({ countryDetails }: { countryDetails: Record<string, any> }) {
   const queryClient = useQueryClient();
   const [toast, setToast] = useState<Toast>(null);
   
-  // Modal State
+  // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [tempLanguages, setTempLanguages] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const showToast = (message: string, type: 'success' | 'error') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  // ==========================================
-  // QUERIES
-  // ==========================================
-  const { data: supportedLangsData, isLoading: isLoadingSupported } = useQuery({
-    queryKey: ['supported-languages'],
-    queryFn: () => NewsService.fetchSupportedLanguages(),
-    staleTime: Infinity, // Caches globally as it rarely changes
-  });
-
   const { data: configsData, isLoading: isLoadingConfigs } = useQuery({
-    queryKey: ['all-country-langs'],
-    queryFn: () => NewsService.fetchAllCountryLangConfigs()
+    queryKey: ['allLangConfigs'],
+    queryFn: NewsService.fetchAllCountryLangConfigs
   });
 
-  // Fetch specific country config when modal opens
-  const { data: specificConfigData, isLoading: isLoadingSpecificConfig } = useQuery({
-    queryKey: ['country-lang-config', selectedCountry],
-    queryFn: () => NewsService.fetchCountryLangConfig(selectedCountry as string),
-    enabled: !!selectedCountry && isModalOpen,
+  const { data: supportedLanguages } = useQuery({
+    queryKey: ['supportedLanguages'],
+    queryFn: NewsService.fetchSupportedLanguages
   });
 
-  // Sync modal state with fetched data
-  useEffect(() => {
-    if (specificConfigData?.config) {
-      setTempLanguages([...specificConfigData.config.languages]);
-    }
-  }, [specificConfigData]);
-
-  // ==========================================
-  // MUTATIONS
-  // ==========================================
-  const updateLangsMutation = useMutation({
-    mutationFn: ({ country, languages }: { country: string; languages: string[] }) => 
+  const updateMutation = useMutation({
+    mutationFn: ({ country, languages }: { country: string, languages: string[] }) => 
       NewsService.updateCountryLanguages(country, languages),
-    onMutate: async (variables) => {
-      // Optimistic Updates
-      await queryClient.cancelQueries({ queryKey: ['all-country-langs'] });
-      const previous = queryClient.getQueryData(['all-country-langs']);
-      
-      queryClient.setQueryData(['all-country-langs'], (old: any) => {
-        if (!old || !old.configs) return old;
-        return {
-          ...old,
-          configs: old.configs.map((c: any) => 
-            c.country === variables.country 
-              ? { ...c, languages: variables.languages }
-              : c
-          )
-        };
-      });
-      return { previous };
-    },
-    onError: (err: any, variables, context) => {
-      queryClient.setQueryData(['all-country-langs'], context?.previous);
-      
-      // Handle specifically unsupported language errors if the API throws
-      if (err?.response?.data?.detail === 'value_error' || err?.message?.includes('value_error')) {
-        showToast('Error: Unsupported language code provided.', 'error');
-      } else {
-        showToast('Failed to update languages.', 'error');
-      }
-    },
     onSuccess: () => {
-      showToast('Languages updated successfully.', 'success');
+      queryClient.invalidateQueries({ queryKey: ['allLangConfigs'] });
+      setToast({ message: 'Pipeline configuration updated successfully!', type: 'success' });
       setIsModalOpen(false);
     },
-    onSettled: (data, error, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['all-country-langs'] });
-      // Also invalidate specific country cache so it re-fetches next time opened
-      queryClient.invalidateQueries({ queryKey: ['country-lang-config', variables.country] });
+    onError: () => {
+      setToast({ message: 'Failed to update configuration.', type: 'error' });
     }
   });
 
-  // ==========================================
-  // HANDLERS
-  // ==========================================
-  const handleRowClick = (country: string) => {
-    setSelectedCountry(country);
-    setSearchTerm('');
-    setTempLanguages([]); // Reset temp array
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [isModalOpen]);
+
+  const openModal = (config: CountryLangConfig) => {
+    setSelectedCountry(config.country);
+    setTempLanguages([...config.languages]);
     setIsModalOpen(true);
   };
 
@@ -111,110 +69,125 @@ export default function LanguageConfigSection() {
   };
 
   const handleSave = () => {
-    if (!selectedCountry) return;
-    updateLangsMutation.mutate({ country: selectedCountry, languages: tempLanguages });
+    updateMutation.mutate({ country: selectedCountry, languages: tempLanguages });
   };
 
-  // ==========================================
-  // RENDER HELPERS
-  // ==========================================
-  const configs = configsData?.configs || [];
-  const supportedLangs = supportedLangsData?.languages || [];
-  
-  const filteredLangs = supportedLangs.filter(l => 
+  const filteredLangs = supportedLanguages?.languages.filter(l => 
     l.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     l.code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) || [];
 
   return (
-    <div style={{ marginTop: 40, marginBottom: 40 }}>
-      {/* Toast */}
+    <div className="mt-5 position-relative">
+      {/* Toast Notification */}
       {toast && (
-        <div style={{
-          position: 'fixed', top: 20, right: 20, zIndex: 9999,
-          background: toast.type === 'success' ? 'rgba(46, 204, 113, 0.9)' : 'rgba(231, 76, 60, 0.9)',
-          color: '#fff', padding: '12px 24px', borderRadius: 4, fontWeight: 600,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.3)', backdropFilter: 'blur(4px)'
-        }}>
+        <div 
+          className="position-fixed top-0 start-50 translate-middle-x mt-4 p-3 rounded shadow-lg" 
+          style={{ 
+            zIndex: 1100, 
+            background: toast.type === 'success' ? 'rgba(46, 204, 113, 0.9)' : 'rgba(231, 76, 60, 0.9)',
+            color: '#fff',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            minWidth: '300px',
+            textAlign: 'center',
+            fontWeight: 600
+          }}
+        >
           {toast.message}
         </div>
       )}
 
-      <h3 style={{ color: 'var(--news-text-main)', fontSize: '1.2rem', fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Globe size={20} color="#D4AF37" /> Language Configurations
-      </h3>
-      <p style={{ color: 'var(--news-text-muted)', fontSize: '0.85rem', marginBottom: 24 }}>
-        Manage target translation languages for each country pipeline.
+      {/* Section Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+        <Languages size={20} color="#D4AF37" />
+        <h3 style={{ color: 'var(--news-text-main)', fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
+          Language Configurations
+        </h3>
+      </div>
+      <p style={{ color: 'var(--news-text-muted)', fontSize: '0.85rem', marginBottom: 20 }}>
+        Manage active translation targets for each country. These determine which languages articles will be translated into.
       </p>
 
       {/* Part A: Translation Overview Table */}
-      <div style={{ background: 'var(--news-card-bg)', border: '1px solid var(--news-card-border)', borderRadius: 4, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--news-glass-bg)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid var(--news-glass-border)', borderRadius: 4, overflow: 'hidden', boxShadow: 'var(--news-card-shadow)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-          <thead style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--news-card-border)', color: 'var(--news-text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 1 }}>
+          <thead style={{ background: 'var(--news-table-header-bg)', borderBottom: '1px solid var(--news-glass-border)', color: 'var(--news-text-dim)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
             <tr>
-              <th style={{ padding: '12px 16px' }}>Country</th>
-              <th style={{ padding: '12px 16px' }}>Status</th>
-              <th style={{ padding: '12px 16px' }}>Active Translations</th>
+              <th style={{ padding: '14px 20px', fontWeight: 700 }}>Country</th>
+              <th style={{ padding: '14px 20px', fontWeight: 700 }}>Native</th>
+              <th style={{ padding: '14px 20px', fontWeight: 700 }}>Status</th>
+              <th style={{ padding: '14px 20px', fontWeight: 700 }}>Active Translations</th>
+              <th style={{ padding: '14px 20px', fontWeight: 700 }}>Updated At</th>
             </tr>
           </thead>
           <tbody>
             {isLoadingConfigs ? (
-              [...Array(5)].map((_, i) => (
-                <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                  <td style={{ padding: '12px 16px', width: 200 }}><div className="nv-skeleton" style={{ height: 20 }} /></td>
-                  <td style={{ padding: '12px 16px', width: 150 }}><div className="nv-skeleton" style={{ height: 20 }} /></td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <div className="nv-skeleton" style={{ height: 24, width: 40, borderRadius: 12 }} />
-                      <div className="nv-skeleton" style={{ height: 24, width: 40, borderRadius: 12 }} />
-                    </div>
+              [1, 2, 3].map(i => (
+                <tr key={i} style={{ borderBottom: '1px solid var(--news-glass-border)' }}>
+                  <td colSpan={5} style={{ padding: '20px' }}>
+                    <div className="nv-skeleton" style={{ height: 20, borderRadius: 2 }} />
                   </td>
                 </tr>
               ))
-            ) : configs.length === 0 ? (
-              <tr><td colSpan={3} style={{ padding: '24px', textAlign: 'center', color: 'var(--news-text-dim)' }}>No configurations found.</td></tr>
             ) : (
-              configs.map((config) => (
+              configsData?.configs.map((config) => (
                 <tr 
-                  key={config.country} 
-                  onClick={() => handleRowClick(config.country)}
+                  key={config.country}
+                  onClick={() => openModal(config)}
                   style={{ 
-                    borderBottom: '1px solid rgba(255,255,255,0.03)', 
-                    color: 'var(--news-text-main)', 
-                    fontSize: '0.85rem',
+                    borderBottom: '1px solid var(--news-glass-border)', 
                     cursor: 'pointer',
-                    transition: 'background 0.2s ease'
+                    transition: 'background-color 0.2s ease'
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(212,175,55,0.05)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--news-table-header-bg)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
-                  <td style={{ padding: '12px 16px', fontWeight: 600 }}>{config.country}</td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {config.is_default && (
-                        <span style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.2)', padding: '2px 6px', borderRadius: 2, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase' }}>
-                          Global Default
-                        </span>
-                      )}
-                      {config.missing_native_language && (
-                        <span title="Missing Native Language" style={{ color: '#f39c12', display: 'flex', alignItems: 'center' }}>
-                          <AlertTriangle size={16} />
-                        </span>
-                      )}
+                  <td style={{ padding: '14px 20px', fontWeight: 700, color: 'var(--news-text-main)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <CountryFlag country={config.country} size={28} />
+                      {config.country}
                     </div>
                   </td>
-                  <td style={{ padding: '12px 16px' }}>
+
+                  {/* Native Language Column */}
+                  <td style={{ padding: '14px 20px' }}>
+                    <span style={{ 
+                      color: config.missing_native_language ? '#ff4d6d' : '#D4AF37', 
+                      fontSize: '0.8rem', 
+                      fontWeight: 700,
+                      textTransform: 'uppercase'
+                    }}>
+                      {countryDetails[config.country]?.locale || config.country.substring(0, 2)}
+                    </span>
+                  </td>
+
+                  <td style={{ padding: '14px 20px' }}>
+                    {config.missing_native_language ? (
+                      <span style={{ color: '#ff4d6d', fontSize: '0.75rem', fontWeight: 600 }}>Missing Native</span>
+                    ) : (
+                      <span style={{ color: '#2ecc71', fontSize: '0.75rem', fontWeight: 600 }}>Ready</span>
+                    )}
+                  </td>
+
+                  {/* Language chips */}
+                  <td style={{ padding: '14px 20px' }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {config.languages.length === 0 ? (
-                        <span style={{ color: 'var(--news-text-dim)', fontStyle: 'italic' }}>None</span>
+                        <span style={{ color: 'var(--news-text-dim)', fontStyle: 'italic', fontSize: '0.8rem' }}>None configured</span>
                       ) : (
                         config.languages.map(lang => (
-                          <span key={lang} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 500 }}>
+                          <span key={lang} style={{ background: 'var(--news-table-header-bg)', border: '1px solid var(--news-glass-border)', color: 'var(--news-text-main)', padding: '3px 9px', borderRadius: 3, fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.3px' }}>
                             {lang.toUpperCase()}
                           </span>
                         ))
                       )}
                     </div>
+                  </td>
+
+                  {/* Updated At Column */}
+                  <td style={{ padding: '14px 20px', color: 'var(--news-text-dim)', fontSize: '0.75rem' }}>
+                    {config.updated_at ? new Date(config.updated_at).toLocaleDateString() : 'N/A'}
                   </td>
                 </tr>
               ))
@@ -223,94 +196,163 @@ export default function LanguageConfigSection() {
         </table>
       </div>
 
-      {/* Part B: Language Editor Modal (Glassmorphism) */}
-      {isModalOpen && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999,
-          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>
-          <div style={{
-            background: '#121212', border: '1px solid rgba(212,175,55,0.3)', borderRadius: 4,
-            width: 600, maxWidth: '90%', maxHeight: '85vh', display: 'flex', flexDirection: 'column',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
-          }}>
-            <div style={{ padding: 24, borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* Part B: Language Editor Modal (Glassmorphism Portal) */}
+      {isModalOpen && createPortal(
+        <div 
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" 
+          style={{ zIndex: 9999, background: 'var(--news-panel-overlay)', backdropFilter: 'blur(12px)' }}
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div 
+            className="sharp-border shadow-lg" 
+            style={{ 
+              width: '90%', 
+              maxWidth: '650px', 
+              maxHeight: '85vh', 
+              display: 'flex',
+              flexDirection: 'column',
+              background: 'var(--news-modal-bg)', 
+              border: '1px solid var(--news-glass-border)', 
+              borderRadius: '4px',
+              overflow: 'hidden',
+              animation: 'modalEntrance 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="d-flex justify-content-between align-items-center p-4 pb-3" style={{ borderBottom: '1px solid var(--news-glass-border)' }}>
               <div>
-                <h3 style={{ color: '#D4AF37', margin: 0, fontSize: '1.2rem' }}>Configure Languages</h3>
-                <p style={{ margin: '4px 0 0 0', color: 'var(--news-text-muted)', fontSize: '0.8rem' }}>{selectedCountry}</p>
+                <h4 style={{ color: '#D4AF37', margin: 0, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>Localization Matrix</h4>
+                <p style={{ color: 'var(--news-text-muted)', margin: 0, fontSize: '0.82rem', marginTop: '4px' }}>
+                  Managing translations for <strong style={{ color: 'var(--news-text-main)' }}>{selectedCountry}</strong>
+                </p>
               </div>
-              <button onClick={() => setIsModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--news-text-muted)', cursor: 'pointer' }}>
-                <X size={20} />
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                style={{ background: 'transparent', border: 'none', color: 'var(--news-text-dim)', cursor: 'pointer', padding: 4 }}
+              >
+                <X size={24} />
               </button>
             </div>
 
-            <div style={{ padding: 24, flex: 1, overflowY: 'auto' }} className="obsidian-scroll">
-              {isLoadingSupported || isLoadingSpecificConfig ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 12 }}>
-                  {[...Array(12)].map((_, i) => <div key={i} className="nv-skeleton" style={{ height: 36, borderRadius: 18 }} />)}
+            {/* Modal Body */}
+            <div 
+              style={{ 
+                padding: '24px', 
+                overflowY: 'auto', 
+                flex: 1,
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'var(--news-scroll-thumb) var(--news-scroll-track)'
+              }}
+              className="news-modal-scroll"
+            >
+              {/* Native Language Highlight */}
+              <div style={{ background: 'rgba(212,175,55,0.06)', border: '1px dashed rgba(212,175,55,0.3)', borderRadius: 4, padding: '12px 16px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ color: '#D4AF37', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 4 }}>Native Pipeline Language</div>
+                  <div style={{ color: 'var(--news-text-main)', fontSize: '0.95rem', fontWeight: 700 }}>
+                    {countryDetails[selectedCountry]?.locale?.toUpperCase() || selectedCountry.substring(0, 2).toUpperCase()}
+                  </div>
                 </div>
-              ) : (
-                <>
-                  <div style={{ position: 'relative', marginBottom: 20 }}>
-                    <Search size={16} style={{ position: 'absolute', left: 12, top: 10, color: 'var(--news-text-dim)' }} />
-                    <input 
-                      type="text" 
-                      placeholder="Search languages..." 
-                      value={searchTerm}
-                      onChange={e => setSearchTerm(e.target.value)}
-                      style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '8px 12px 8px 36px', borderRadius: 4, outline: 'none', fontSize: '0.85rem' }}
-                    />
-                  </div>
+                <Globe size={24} color="#D4AF37" style={{ opacity: 0.5 }} />
+              </div>
+
+              {/* Search Bar */}
+              <div style={{ position: 'relative', marginBottom: 20 }}>
+                <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--news-text-dim)' }} />
+                <input 
+                  type="text" 
+                  placeholder="Search languages..." 
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  style={{ width: '100%', background: 'var(--news-input-bg)', border: '1px solid var(--news-glass-border)', color: 'var(--news-text-main)', padding: '10px 12px 10px 40px', borderRadius: 4, outline: 'none', fontSize: '0.85rem' }}
+                />
+              </div>
+
+              <div style={{ color: 'var(--news-text-main)', fontWeight: 700, fontSize: '0.85rem', marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Select Translation Targets
+              </div>
+              
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
+                gap: 12 
+              }}>
+                {filteredLangs.map((lang) => {
+                  const isSelected = tempLanguages.includes(lang.code);
+                  const isNative = lang.code === countryDetails[selectedCountry]?.locale;
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12 }}>
-                    {filteredLangs.map(lang => {
-                      const isSelected = tempLanguages.includes(lang.code);
-                      return (
-                        <div 
-                          key={lang.code}
-                          onClick={() => toggleLanguage(lang.code)}
-                          style={{
-                            background: isSelected ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.03)',
-                            border: `1px solid ${isSelected ? 'rgba(212,175,55,0.5)' : 'rgba(255,255,255,0.1)'}`,
-                            color: isSelected ? '#D4AF37' : 'var(--news-text-main)',
-                            padding: '8px 12px',
-                            borderRadius: 18,
-                            fontSize: '0.8rem',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            transition: 'all 0.2s ease'
-                          }}
-                        >
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {lang.name} <span style={{ opacity: 0.5, fontSize: '0.7rem' }}>({lang.code})</span>
-                          </span>
-                          {isSelected && <Check size={14} />}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
+                  return (
+                    <div 
+                      key={lang.code}
+                      onClick={() => toggleLanguage(lang.code)}
+                      style={{
+                        background: isSelected ? 'rgba(212,175,55,0.25)' : 'rgba(255,255,255,0.03)',
+                        border: `1px solid ${isSelected ? '#D4AF37' : 'var(--news-glass-border)'}`,
+                        color: isSelected ? (isSelected && isNative ? '#fff' : '#D4AF37') : 'var(--news-text-main)',
+                        padding: '10px 14px',
+                        borderRadius: 4,
+                        fontSize: '0.8rem',
+                        fontWeight: isSelected ? 700 : 500,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        transition: 'all 0.2s ease',
+                        boxShadow: isSelected ? '0 0 10px rgba(212,175,55,0.1)' : 'none',
+                        position: 'relative'
+                      }}
+                    >
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {lang.name}
+                      </span>
+                      {isSelected ? <Check size={14} color="#D4AF37" /> : <div style={{ width: 14 }} />}
+                      {isNative && (
+                        <div style={{ position: 'absolute', top: -6, right: -6, background: '#D4AF37', color: '#000', fontSize: '0.5rem', padding: '2px 4px', borderRadius: 2, fontWeight: 900 }}>NATIVE</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
-            <div style={{ padding: 24, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-              <button onClick={() => setIsModalOpen(false)} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', padding: '8px 16px', borderRadius: 4, cursor: 'pointer', fontSize: '0.85rem' }}>
+            {/* Modal Footer */}
+            <div className="p-4 d-flex justify-content-end gap-3" style={{ borderTop: '1px solid var(--news-glass-border)', background: 'var(--news-table-header-bg)' }}>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                style={{ background: 'transparent', border: '1px solid var(--news-glass-border)', color: 'var(--news-text-dim)', padding: '8px 20px', borderRadius: 4, fontWeight: 600, cursor: 'pointer' }}
+              >
                 Cancel
               </button>
               <button 
                 onClick={handleSave}
-                disabled={updateLangsMutation.isPending || isLoadingSpecificConfig}
-                style={{ background: '#D4AF37', border: 'none', color: '#000', padding: '8px 16px', borderRadius: 4, cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6 }}
+                disabled={updateMutation.isPending}
+                style={{ 
+                  background: '#D4AF37', 
+                  color: '#000', 
+                  border: 'none', 
+                  padding: '8px 28px', 
+                  borderRadius: 4, 
+                  fontWeight: 800, 
+                  cursor: updateMutation.isPending ? 'not-allowed' : 'pointer',
+                  opacity: updateMutation.isPending ? 0.7 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8
+                }}
               >
-                <Save size={14} /> {updateLangsMutation.isPending ? 'Saving...' : 'Save Configuration'}
+                {updateMutation.isPending ? 'Saving...' : <><Save size={18} /> Update Pipeline</>}
               </button>
             </div>
           </div>
-        </div>
+          <style>{`
+            @keyframes modalEntrance {
+              from { opacity: 0; transform: scale(0.95) translateY(10px); }
+              to { opacity: 1; transform: scale(1) translateY(0); }
+            }
+          `}</style>
+        </div>,
+        document.body
       )}
     </div>
   );
