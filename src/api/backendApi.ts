@@ -716,7 +716,7 @@ export const UserService = {
     }
   },
 
-  fetchUsersUsage: async (limit: number = 50): Promise<UsersUsageResponse> => {
+  fetchUsersUsage: async (limit: number = 200): Promise<UsersUsageResponse> => {
     try {
       const response = await backendApi.get<UsersUsageResponse>('/api/v1/users/usage', {
         params: { limit }
