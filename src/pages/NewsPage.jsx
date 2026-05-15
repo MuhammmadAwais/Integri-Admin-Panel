@@ -9,6 +9,9 @@ import { useAdminNews } from 'features/news/hooks/useAdminNews';
 import NewsVirtualTable from 'features/news/components/NewsVirtualTable';
 import ArticleDetailPanel from 'features/news/components/ArticleDetailPanel';
 import MainCard from 'components/MainCard';
+import { NewsService } from 'api/backendApi';
+import EliteModal from 'components/EliteUI/EliteModal';
+import { showToast } from 'components/EliteUI/EliteToastContainer';
 
 // styles
 import 'features/news/styles/news.scss';
@@ -36,6 +39,10 @@ export default function NewsPage() {
   const [countrySearch, setCountrySearch] = useState('');
   const countryDropRef                  = useRef(null);
 
+  // ── Modal state ───────────────────────────────────────────────────────────
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget]           = useState(null);
+
   const handleRowClick = (id) => {
     setSelectedId(id);
     setPanelOpen(true);
@@ -43,6 +50,28 @@ export default function NewsPage() {
 
   const handleClosePanel = () => {
     setPanelOpen(false);
+  };
+
+  const handleDelete = (id, collection) => {
+    setDeleteTarget({ id, collection });
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      const { id, collection } = deleteTarget;
+      const response = await NewsService.deleteArticle(id, collection);
+      console.log('Deleted successfully:', response);
+      showToast('Article deleted successfully.', 'success');
+      refetch();
+    } catch (err) {
+      console.error('Failed to delete article:', err);
+      showToast('Failed to delete article. Please try again.', 'error');
+    } finally {
+      setIsDeleteModalOpen(false);
+      setDeleteTarget(null);
+    }
   };
 
   // ── Entrance animation ────────────────────────────────────────────────────
@@ -319,6 +348,7 @@ export default function NewsPage() {
         loading={loading}
         total={total}
         onRowClick={handleRowClick}
+        onDelete={handleDelete}
       />
 
       {/* ── Article Detail Slide-over ─────────────────────────────────────── */}
@@ -327,6 +357,17 @@ export default function NewsPage() {
         newsId={selectedId}
         onClose={handleClosePanel}
       />
+
+      {/* ── Delete Confirmation Modal ─────────────────────────────────────── */}
+      <EliteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => { setIsDeleteModalOpen(false); setDeleteTarget(null); }}
+        onConfirm={confirmDelete}
+        title="Delete Article"
+        confirmText="Permanently Delete"
+      >
+        Are you sure you want to delete this article? This action is permanent and cannot be undone.
+      </EliteModal>
     </div>
   );
 }

@@ -97,7 +97,7 @@ interface Props {
   loading: boolean;
   total: number;
   onRowClick: (id: string) => void;
-  onDelete?: (id: string) => void;
+  onDelete?: (id: string, collection: string) => void;
 }
 
 const OVERSCAN = 5;
@@ -216,25 +216,45 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
       id: 'actions',
       header: '',
       enableSorting: false,
-      size: 48,
+      size: 80,
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <div 
-            onClick={(e) => { e.stopPropagation(); navigate(`/news/preview/${item.id}`); }}
-            style={{ 
-              cursor: 'pointer', 
-              color: 'var(--news-text-dim)', 
-              padding: '6px', 
-              display: 'inline-flex',
-              transition: 'all 0.2s ease',
-              borderRadius: 4
-            }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#D4AF37'; e.currentTarget.style.background = 'rgba(212,175,55,0.1)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'var(--news-text-dim)'; e.currentTarget.style.background = 'transparent'; }}
-            title="View Full Article"
-          >
-            <Eye size={18} />
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <div 
+              onClick={(e) => { e.stopPropagation(); navigate(`/news/preview/${item.id}`); }}
+              style={{ 
+                cursor: 'pointer', 
+                color: 'var(--news-text-dim)', 
+                padding: '6px', 
+                display: 'inline-flex',
+                transition: 'all 0.2s ease',
+                borderRadius: 4
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#D4AF37'; e.currentTarget.style.background = 'rgba(212,175,55,0.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--news-text-dim)'; e.currentTarget.style.background = 'transparent'; }}
+              title="View Full Article"
+            >
+              <Eye size={18} />
+            </div>
+            {onDelete && (
+              <div 
+                onClick={(e) => { e.stopPropagation(); onDelete(item.id, item.collection || 'News'); }}
+                style={{ 
+                  cursor: 'pointer', 
+                  color: 'var(--news-text-dim)', 
+                  padding: '6px', 
+                  display: 'inline-flex',
+                  transition: 'all 0.2s ease',
+                  borderRadius: 4
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--news-text-dim)'; e.currentTarget.style.background = 'transparent'; }}
+                title="Delete Article"
+              >
+                <Trash2 size={18} />
+              </div>
+            )}
           </div>
         );
       },

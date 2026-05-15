@@ -508,6 +508,23 @@ export const NewsService = {
   },
 
   /**
+   * Delete an article document from Firestore.
+   * DELETE /api/v1/news/admin/articles/{news_id}?collection=News
+   */
+  deleteArticle: async (news_id: string, collection: string = 'News'): Promise<{ deleted: boolean; news_id: string; collection: string }> => {
+    try {
+      const response = await backendApi.delete<{ deleted: boolean; news_id: string; collection: string }>(
+        `/api/v1/news/admin/articles/${news_id}`,
+        { params: { collection } }
+      );
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [NewsService] deleteArticle error for ${news_id}:`, e);
+      throw e;
+    }
+  },
+
+  /**
    * Fetch the list of supported countries for the dropdown.
    * GET /api/v1/news/admin/countries
    */
@@ -538,6 +555,7 @@ export const NewsService = {
   sendTestNotification: async (country: string): Promise<TestNotificationResponse> => {
     try {
       const response = await backendApi.post<TestNotificationResponse>(`/api/v1/news/admin/test-notification/${country}`);
+      console.log("Successful......", response.data)
       return response.data;
     } catch (e) {
       console.error(`❌ [NewsService] sendTestNotification error for ${country}:`, e);
@@ -558,6 +576,7 @@ export const NewsService = {
   updateSchedule: async (country: string, entries: ScheduleEntry[]): Promise<UpdateScheduleResponse> => {
     try {
       const response = await backendApi.put<UpdateScheduleResponse>(`/api/v1/news/admin/schedule/${country}`, { entries });
+      console.log(`Successful..., for ${country}`, response.data)
       return response.data;
     } catch (e) {
       console.error(`❌ [NewsService] updateSchedule error for ${country}:`, e);
