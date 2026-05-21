@@ -490,7 +490,7 @@ export default function NotificationsPage() {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                     {[
                       { value: 'spotlight', label: 'spotlight' },
-                      { value: 'daily-summary', label: 'daily summary' }
+                      { value: 'daily_summary', label: 'daily summary' }
                     ].map(({ value, label }) => (
                       <button 
                         key={value}
