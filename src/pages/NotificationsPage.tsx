@@ -158,12 +158,17 @@ export default function NotificationsPage() {
     const countrySchedule = schedulesData?.schedules.find(s => s.country === modalCountry);
     const currentEntries = countrySchedule?.entries || [];
     
+    // Calculate the next slot number dynamically
+    const existingSlots = currentEntries.map((e: any) => e.slot).filter((s): s is number => typeof s === 'number');
+    const nextSlot = existingSlots.length > 0 ? Math.max(...existingSlots) + 1 : 1;
+
     const newEntry: ScheduleEntry = {
       entry_id: `temp-${Date.now()}`,
       article_type: newType,
       hour: parseInt(newHour),
       minute: parseInt(newMinute),
-      enabled: true
+      enabled: true,
+      slot: nextSlot
     };
 
     addScheduleMutation.mutate({
@@ -380,7 +385,9 @@ export default function NotificationsPage() {
                             {String(entry.hour).padStart(2, '0')}:{String(entry.minute).padStart(2, '0')} <span style={{ fontSize: '0.65rem', color: 'var(--news-text-dim)', marginLeft: 4 }}>UTC</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                            <span style={{ color: '#D4AF37', fontSize: '0.62rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px' }}>{entry.article_type}</span>
+                            <span style={{ color: '#D4AF37', fontSize: '0.62rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                              {entry.article_type.replace('-', ' ')}
+                            </span>
                             <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--news-text-dim)' }} />
                             <span style={{ color: entry.enabled ? '#2ecc71' : '#e74c3c', fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase' }}>
                               {entry.enabled ? 'ACTIVE' : 'DISABLED'}
@@ -481,14 +488,17 @@ export default function NotificationsPage() {
                     <Globe size={14} /> Pipeline Target Category
                   </label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {['spotlight', 'trending', 'business', 'tech', 'science', 'health'].map(type => (
+                    {[
+                      { value: 'spotlight', label: 'spotlight' },
+                      { value: 'daily-summary', label: 'daily summary' }
+                    ].map(({ value, label }) => (
                       <button 
-                        key={type}
-                        onClick={() => setNewType(type)}
+                        key={value}
+                        onClick={() => setNewType(value)}
                         style={{
-                          background: newType === type ? 'rgba(212,175,55,0.2)' : 'var(--news-input-bg)',
-                          border: `1px solid ${newType === type ? '#D4AF37' : 'var(--news-glass-border)'}`,
-                          color: newType === type ? '#D4AF37' : 'var(--news-text-muted)',
+                          background: newType === value ? 'rgba(212,175,55,0.2)' : 'var(--news-input-bg)',
+                          border: `1px solid ${newType === value ? '#D4AF37' : 'var(--news-glass-border)'}`,
+                          color: newType === value ? '#D4AF37' : 'var(--news-text-muted)',
                           padding: '8px 16px',
                           borderRadius: 4,
                           fontSize: '0.75rem',
@@ -498,7 +508,7 @@ export default function NotificationsPage() {
                           transition: 'all 0.2s'
                         }}
                       >
-                        {type}
+                        {label}
                       </button>
                     ))}
                   </div>

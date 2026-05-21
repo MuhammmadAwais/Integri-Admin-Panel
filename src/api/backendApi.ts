@@ -321,6 +321,7 @@ export interface ScheduleEntry {
   hour: number;
   minute: number;
   enabled: boolean;
+  slot?: number;
 }
 
 export interface CountrySchedule {
@@ -575,8 +576,11 @@ export const NewsService = {
 
   updateSchedule: async (country: string, entries: ScheduleEntry[]): Promise<UpdateScheduleResponse> => {
     try {
-      const response = await backendApi.put<UpdateScheduleResponse>(`/api/v1/news/admin/schedule/${country}`, { entries });
-      console.log(`Successful..., for ${country}`, response.data)
+      const sanitizedEntries = entries.map(({ entry_id, ...rest }) => rest);
+      console.log(`[NewsService] updateSchedule Request Sent for Country: ${country}`, { entries: sanitizedEntries });
+      const response = await backendApi.put<UpdateScheduleResponse>(`/api/v1/news/admin/schedule/${country}`, { entries: sanitizedEntries });
+      console.log(`[NewsService] updateSchedule Response successful for ${country}:`, response);
+      console.log(`[NewsService] updateSchedule Response Data for ${country}:`, response.data);
       return response.data;
     } catch (e) {
       console.error(`❌ [NewsService] updateSchedule error for ${country}:`, e);
