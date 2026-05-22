@@ -29,6 +29,19 @@ function fmt(dateStr: string | null): string {
   }
 }
 
+function fmtTime(dateStr: string | null): string {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '—';
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  } catch {
+    return '—';
+  }
+}
+
 const TopicBadge = ({ topic }: { topic: string }) => {
   const color = topic === 'technology' ? '#7c3aed'
     : topic === 'general' ? '#0ea5e9'
@@ -76,6 +89,9 @@ const SkeletonRows = () => (
         </td>
         <td style={{ padding: '12px 16px', width: 120 }}>
           <div className="nv-skeleton" style={{ width: 90, height: 14 }} />
+        </td>
+        <td style={{ padding: '12px 16px', width: 80 }}>
+          <div className="nv-skeleton" style={{ width: 40, height: 14 }} />
         </td>
         <td style={{ padding: '12px 16px', width: 70 }}>
           <div className="nv-skeleton" style={{ width: 40, height: 14 }} />
@@ -200,6 +216,17 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
         </span>
       ),
       size: 120,
+    },
+    {
+      id: 'time',
+      header: 'Time',
+      accessorFn: (row) => row.date,
+      cell: ({ getValue }) => (
+        <span style={{ color: 'var(--news-text-muted)', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+          {fmtTime(getValue() as string)}
+        </span>
+      ),
+      size: 80,
     },
     {
       id: 'views',
@@ -362,14 +389,14 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
                 <SkeletonRows />
               ) : articles.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '60px 20px', textAlign: 'center', color: '#52525b', fontSize: '0.9rem' }}>
+                  <td colSpan={8} style={{ padding: '60px 20px', textAlign: 'center', color: '#52525b', fontSize: '0.9rem' }}>
                     No articles found for the selected window.
                   </td>
                 </tr>
               ) : (
                 <>
                   {paddingTop > 0 && (
-                    <tr><td colSpan={7} style={{ height: `${paddingTop}px`, padding: 0, border: 'none' }} /></tr>
+                    <tr><td colSpan={8} style={{ height: `${paddingTop}px`, padding: 0, border: 'none' }} /></tr>
                   )}
                   {virtualRows.map(virtualRow => {
                     const row = rows[virtualRow.index];
@@ -398,7 +425,7 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
                     );
                   })}
                   {paddingBottom > 0 && (
-                    <tr><td colSpan={7} style={{ height: `${paddingBottom}px`, padding: 0, border: 'none' }} /></tr>
+                    <tr><td colSpan={8} style={{ height: `${paddingBottom}px`, padding: 0, border: 'none' }} /></tr>
                   )}
                 </>
               )}
