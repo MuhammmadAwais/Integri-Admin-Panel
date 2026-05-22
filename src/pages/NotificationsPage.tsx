@@ -92,6 +92,7 @@ export default function NotificationsPage() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.refetchQueries({ queryKey: ['schedules'] });
     }
   });
 
@@ -132,6 +133,7 @@ export default function NotificationsPage() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.refetchQueries({ queryKey: ['schedules'] });
       setIsModalOpen(false);
     }
   });

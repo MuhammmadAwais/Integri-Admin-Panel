@@ -4,6 +4,7 @@ import axios, {
   AxiosError, 
   AxiosInstance, 
 } from 'axios';
+import { showToast } from 'components/EliteUI/EliteToastContainer';
 
 /**
  * Type Definitions for Intelligence Core
@@ -81,15 +82,143 @@ backendApi.interceptors.request.use(
 );
 
 /**
+ * Generates a clean, context-aware success message based on the API response.
+ */
+const getSuccessMessage = (response: AxiosResponse): string => {
+  const method = response.config.method?.toUpperCase() || 'GET';
+  const url = response.config.url || '';
+  
+  // Remove base URL if present, and query parameters
+  let cleanUrl = url.split('?')[0];
+  if (response.config.baseURL && cleanUrl.startsWith(response.config.baseURL)) {
+    cleanUrl = cleanUrl.slice(response.config.baseURL.length);
+  }
+  
+  const segments = cleanUrl.split('/').filter(Boolean);
+  
+  if (cleanUrl.includes('/prompts')) {
+    if (method === 'GET') return 'System prompts loaded successfully';
+    return 'System prompt updated successfully';
+  }
+  
+  if (cleanUrl.includes('/memory')) {
+    return 'User memory profile loaded';
+  }
+  
+  if (cleanUrl.includes('/notification-stats')) {
+    return 'Notification metrics loaded';
+  }
+  
+  if (cleanUrl.includes('/test-notification')) {
+    const countrySegment = segments[segments.length - 1] || 'target';
+    return `Test notification sent to ${decodeURIComponent(countrySegment)}`;
+  }
+  
+  if (cleanUrl.includes('/schedule')) {
+    if (method === 'GET') return 'Fetch schedules loaded';
+    if (method === 'DELETE') return 'Schedule entry removed';
+    return 'Schedule updated successfully';
+  }
+  
+  if (cleanUrl.includes('/languages')) {
+    if (method === 'GET') return 'Language configurations loaded';
+    return 'Language configuration updated';
+  }
+  
+  if (cleanUrl.includes('/topics')) {
+    if (method === 'GET') return 'Topic configurations loaded';
+    return 'Topic configuration updated';
+  }
+  
+  if (cleanUrl.includes('/articles')) {
+    if (method === 'GET') {
+      return cleanUrl.endsWith('/articles') ? 'Articles catalog loaded' : 'Article details loaded';
+    }
+    if (method === 'DELETE') return 'Article deleted successfully';
+    return 'Article action completed';
+  }
+  
+  if (cleanUrl.includes('/stats') || cleanUrl.includes('/usage')) {
+    return 'Usage analytics loaded';
+  }
+  
+  if (cleanUrl.includes('/models')) {
+    return 'AI models loaded successfully';
+  }
+
+  if (segments.length > 0) {
+    const last = segments[segments.length - 1];
+    const formattedName = last.charAt(0).toUpperCase() + last.slice(1).replace(/[-_]/g, ' ');
+    
+    if (method === 'GET') return `${formattedName} retrieved successfully`;
+    if (method === 'POST') return `${formattedName} created successfully`;
+    if (method === 'PUT') return `${formattedName} updated successfully`;
+    if (method === 'DELETE') return `${formattedName} deleted successfully`;
+  }
+  
+  return 'API request completed successfully';
+};
+
+/**
+ * Extracts a readable error message from Axios error response.
+ */
+const getErrorMessage = (error: AxiosError): string => {
+  if (error.response?.data) {
+    const data = error.response.data as any;
+    if (typeof data === 'string') return data;
+    if (data.message) return data.message;
+    if (data.error) {
+      if (typeof data.error === 'string') return data.error;
+      if (data.error.message) return data.error.message;
+    }
+  }
+  return error.message || 'An unexpected API error occurred';
+};
+
+/**
  * Response Interceptor
- * Guards against 401s, attempts silent token refresh.
+ * Guards against 401s, attempts silent token refresh, and triggers toast/console log side effects.
  */
 backendApi.interceptors.response.use(
-  (response: AxiosResponse) => response,
+  (response: AxiosResponse) => {
+    const customConfig = response.config as any;
+    // Show success toast unless skipToast is explicitly set
+    if (!customConfig?.skipToast) {
+      const successMessage = getSuccessMessage(response);
+      showToast(successMessage, 'success');
+    }
+    return response;
+  },
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean; skipToast?: boolean };
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Format readable error message
+    const errorMessage = getErrorMessage(error);
+
+    // Print error details in the console as requested by the user
+    console.error(`❌ [API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
+    console.error(`Error Message: ${errorMessage}`);
+    
+    if (error.response) {
+      console.error("Status Code:", error.response.status);
+      console.error("Response Data:", error.response.data);
+      console.error("Headers:", error.response.headers);
+    } else if (error.request) {
+      console.error("No response received. Request details:", error.request);
+    } else {
+      console.error("Error configuration:", error.message);
+    }
+    console.error("Full Error Object:", error);
+
+    // Silent 401 token refresh retry check
+    const is401Retry = error.response?.status === 401 && !originalRequest?._retry;
+
+    // Trigger error toast unless skipToast is set or this is a silent 401 token refresh
+    if (!originalRequest?.skipToast && !is401Retry) {
+      showToast(errorMessage, 'error');
+    }
+
+    if (error.response?.status === 401 && !originalRequest?._retry) {
       if (isRefreshing) {
         return new Promise(function(resolve, reject) {
           failedQueue.push({ resolve, reject });
@@ -516,7 +645,7 @@ export const NewsService = {
     try {
       const response = await backendApi.delete<{ deleted: boolean; news_id: string; collection: string }>(
         `/api/v1/news/admin/articles/${news_id}`,
-        { params: { collection } }
+        { params: { collection }, skipToast: true } as any
       );
       return response.data;
     } catch (e) {
@@ -555,7 +684,11 @@ export const NewsService = {
 
   sendTestNotification: async (country: string): Promise<TestNotificationResponse> => {
     try {
-      const response = await backendApi.post<TestNotificationResponse>(`/api/v1/news/admin/test-notification/${country}`);
+      const response = await backendApi.post<TestNotificationResponse>(
+        `/api/v1/news/admin/test-notification/${country}`,
+        null,
+        { skipToast: true } as any
+      );
       console.log("Successful......", response.data)
       return response.data;
     } catch (e) {
@@ -576,7 +709,10 @@ export const NewsService = {
 
   updateSchedule: async (country: string, entries: ScheduleEntry[]): Promise<UpdateScheduleResponse> => {
     try {
-      const sanitizedEntries = entries.map(({ entry_id, ...rest }) => rest);
+      const sanitizedEntries = entries.map(({ entry_id, ...rest }, index) => ({
+        ...rest,
+        slot: index + 1
+      }));
       console.log(`[NewsService] updateSchedule Request Sent for Country: ${country}`, { entries: sanitizedEntries });
       const response = await backendApi.put<UpdateScheduleResponse>(`/api/v1/news/admin/schedule/${country}`, { entries: sanitizedEntries });
       console.log(`[NewsService] updateSchedule Response successful for ${country}:`, response);
