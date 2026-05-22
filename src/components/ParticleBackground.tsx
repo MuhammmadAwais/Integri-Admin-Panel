@@ -1,11 +1,48 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 
 const ParticleBackground: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDark = useSelector((state: any) => state.theme?.isDark);
+  const [pathname, setPathname] = useState(window.location.pathname);
+
+  // Monitor location changes including React Router internal navigations
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setPathname(window.location.pathname);
+    };
+
+    const originalPush = window.history.pushState;
+    const originalReplace = window.history.replaceState;
+
+    window.history.pushState = function (...args) {
+      const result = originalPush.apply(this, args);
+      window.dispatchEvent(new Event("locationchange"));
+      return result;
+    };
+
+    window.history.replaceState = function (...args) {
+      const result = originalReplace.apply(this, args);
+      window.dispatchEvent(new Event("locationchange"));
+      return result;
+    };
+
+    window.addEventListener("popstate", handleLocationChange);
+    window.addEventListener("locationchange", handleLocationChange);
+
+    return () => {
+      window.history.pushState = originalPush;
+      window.history.replaceState = originalReplace;
+      window.removeEventListener("popstate", handleLocationChange);
+      window.removeEventListener("locationchange", handleLocationChange);
+    };
+  }, []);
+
+  const shouldDisable = pathname.includes('/blogs');
 
   useEffect(() => {
+    if (shouldDisable) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -176,7 +213,9 @@ const ParticleBackground: React.FC = () => {
       window.removeEventListener("mouseleave", handleMouseLeave);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isDark]);
+  }, [isDark, shouldDisable]);
+
+  if (shouldDisable) return null;
 
   return (
     <canvas

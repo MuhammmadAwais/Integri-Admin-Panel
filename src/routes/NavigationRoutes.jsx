@@ -15,6 +15,9 @@ const NewsPage              = Loadable(lazy(() => import('pages/NewsPage')));
 const NewsConfigurationPage = Loadable(lazy(() => import('pages/NewsConfiguration')));
 const NotificationsPage     = Loadable(lazy(() => import('pages/NotificationsPage')));
 
+const BlogsPage             = Loadable(lazy(() => import('pages/BlogsPage')));
+const BlogBuilderPage       = Loadable(lazy(() => import('pages/BlogBuilderPage')));
+
 const NewsDetailPage = Loadable(lazy(() => import('pages/NewsDetailPage')));
 const UsersPage      = Loadable(lazy(() => import('pages/UsersPage')));
 const UserDetailPage = Loadable(lazy(() => import('pages/UserDetailPage')));
@@ -36,6 +39,8 @@ const NavigationRoutes = {
         { path: '/news',           element: <NewsPage /> },
         { path: '/news/configuration', element: <NewsConfigurationPage /> },
         { path: '/news/notifications', element: <NotificationsPage /> },
+        { path: '/blogs',           element: <BlogsPage /> },
+        { path: '/blogs/builder',   element: <BlogBuilderPage /> },
 
         { path: '/news/preview/:id', element: <NewsDetailPage /> },
         { path: '/users',      element: <UsersPage /> },
