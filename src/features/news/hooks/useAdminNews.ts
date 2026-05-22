@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import {
   NewsService,
   type ArticleSummary,
@@ -65,18 +65,24 @@ export function useAdminNews(): UseAdminNewsReturn {
   const [committedDays, setCommittedDays] = useState(PERSISTENT_DAYS);
   const daysDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Countries list (cached globally by SWR) ──────────────────────────────
-  const { 
-    data: countriesData, 
-    isLoading: countriesLoading 
-  } = useSWR('admin-countries', () => NewsService.fetchAdminCountries(), {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    revalidateIfStale: false,
-    dedupingInterval: 3600000, // 1 hour
-  });
+  // ── Countries list (fetched via standard React lifecycle) ────────────────
+  const [countries, setCountries] = useState<Record<string, CountryDetails>>({});
+  const [countriesLoading, setCountriesLoading] = useState(true);
 
-  const countries = countriesData?.supported_countries || {};
+  useEffect(() => {
+    let cancelled = false;
+    NewsService.fetchAdminCountries()
+      .then((res) => {
+        if (!cancelled) setCountries(res.supported_countries || {});
+      })
+      .catch((err) => {
+        console.error('Failed to load admin countries:', err);
+      })
+      .finally(() => {
+        if (!cancelled) setCountriesLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   // ── Articles list (cached globally by SWR) ───────────────────────────────
   const cacheKey = ['admin-articles', country, committedDays];

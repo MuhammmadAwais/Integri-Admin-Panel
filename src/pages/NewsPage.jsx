@@ -294,7 +294,7 @@ export default function NewsPage() {
                       fontSize: '0.85rem', fontWeight: country === c ? 700 : 400,
                       cursor: 'pointer', fontFamily: 'inherit',
                     }}
-                    onMouseEnter={e => { if (country !== c) e.currentTarget.style.background = 'rgba(0,0,0,0.04)'; }}
+                    onMouseEnter={e => { if (country !== c) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
                     onMouseLeave={e => { if (country !== c) e.currentTarget.style.background = 'transparent'; }}
                   >
                     {c}
