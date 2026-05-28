@@ -74,28 +74,6 @@ export default defineConfig(({ mode }) => {
         input: {
           main: resolvePath("index.html"),
           legacy: resolvePath("index.html"),
-        },
-        output: {
-          manualChunks(id) {
-            if (id.includes('node_modules')) {
-              if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-                return 'vendor-react-core';
-              }
-              if (id.includes('firebase')) {
-                return 'vendor-firebase';
-              }
-              if (id.includes('apexcharts') || id.includes('recharts') || id.includes('chart')) {
-                return 'vendor-charts';
-              }
-              if (id.includes('gsap')) {
-                return 'vendor-gsap';
-              }
-              if (id.includes('bootstrap') || id.includes('react-bootstrap')) {
-                return 'vendor-bootstrap';
-              }
-              return 'vendor-libs';
-            }
-          }
         }
       },
     },
