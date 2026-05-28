@@ -1,36 +1,48 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { UserService, UserUsageRecord } from 'api/backendApi';
+import { UserService, NewsService, UserUsageRecord } from 'api/backendApi';
 import { useEnrichedProfiles } from 'features/users/hooks/useEnrichedProfiles';
 import {
   Activity, Cpu, Database, Server, Zap,
   Clock, UserCheck, LucideIcon, Search,
   ArrowUpDown, ArrowUp, ArrowDown, Filter,
   RefreshCw, User as UserIcon, ChevronLeft, ChevronRight, Globe,
+  WifiOff, AlertTriangle,
 } from 'lucide-react';
 import CountryFlag from 'components/CountryFlag';
 import 'features/news/styles/news.scss';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 25;
-const LIMIT_MIN = 50;
+const LIMIT_MIN = 1;
 const LIMIT_MAX = 200;
+const DEBOUNCE_MS = 350;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n: number) => (n || 0).toLocaleString();
 
-const TIER_RANK: Record<string, number> = { pro: 3, plus: 2, freemium: 1 };
+const TIER_RANK: Record<string, number> = { pro: 3, premium: 2, freemium: 1 };
 const tierRank = (t?: string) => TIER_RANK[t?.toLowerCase?.() ?? ''] ?? 0;
 
 function tierBadgeStyle(tier?: string): React.CSSProperties {
   const t = tier?.toLowerCase();
-  if (t === 'pro')      return { background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid #D4AF37' };
-  if (t === 'plus')     return { background: 'rgba(52,152,219,0.12)', color: '#3498db', border: '1px solid #3498db' };
-  if (t === 'freemium') return { background: 'rgba(46,204,113,0.08)', color: '#2ecc71', border: '1px solid rgba(46,204,113,0.4)' };
+  if (t === 'pro')      return { background: 'rgba(212,175,55,0.15)', color: '#D4AF37',  border: '1px solid #D4AF37' };
+  if (t === 'premium')  return { background: 'rgba(52,152,219,0.12)', color: '#3498db',  border: '1px solid #3498db' };
+  if (t === 'freemium') return { background: 'rgba(46,204,113,0.08)', color: '#2ecc71',  border: '1px solid rgba(46,204,113,0.4)' };
   return { background: 'rgba(255,255,255,0.05)', color: '#a0a0a0', border: '1px solid var(--news-glass-border)' };
+}
+
+// ─── Custom debounce hook ─────────────────────────────────────────────────────
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState<T>(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id);
+  }, [value, delay]);
+  return debounced;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -39,8 +51,11 @@ type SortDir = 'asc' | 'desc';
 interface SortConfig { key: SortKey; dir: SortDir }
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
-interface StatCardProps { title: string; value: string | number; icon: LucideIcon; color: string; detail?: string; isLoading?: boolean }
-const UsageStatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, color, detail, isLoading }) => (
+interface StatCardProps {
+  title: string; value: string | number;
+  icon: LucideIcon; color: string; detail?: string; isLoading?: boolean;
+}
+const UsageStatCard = React.memo<StatCardProps>(({ title, value, icon: Icon, color, detail, isLoading }) => (
   <div className="country-card" style={{ padding: '24px' }}>
     {isLoading
       ? <div className="nv-skeleton" style={{ height: 80 }} />
@@ -58,7 +73,21 @@ const UsageStatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, colo
         </>
     }
   </div>
-);
+));
+
+// ─── Error Banner ─────────────────────────────────────────────────────────────
+const ErrorBanner = React.memo(({ message, onRetry }: { message: string; onRetry: () => void }) => (
+  <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 6, padding: '14px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+    <WifiOff size={18} color="#ef4444" />
+    <span style={{ fontSize: '0.85rem', color: '#f87171', flex: 1 }}>{message}</span>
+    <button
+      onClick={onRetry}
+      style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.35)', color: '#f87171', padding: '5px 14px', borderRadius: 4, fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer', letterSpacing: '0.8px' }}
+    >
+      RETRY
+    </button>
+  </div>
+));
 
 // ─── Inline styles ────────────────────────────────────────────────────────────
 const PAGE_CSS = `
@@ -69,7 +98,7 @@ const PAGE_CSS = `
   display: flex; align-items: center; justify-content: center; gap: 20px;
   padding: 12px 24px; margin-top: 16px;
   background: var(--news-glass-bg);
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--news-glass-border); border-radius: 4px;
 }
 .pg-btn {
@@ -90,36 +119,62 @@ const PAGE_CSS = `
 .th-plain { padding: 14px 20px; font-weight: 900; color: #D4AF37 !important; text-transform: uppercase; letter-spacing: 1.5px; font-size: 0.68rem; white-space: nowrap; }
 .limit-input::-webkit-inner-spin-button, .limit-input::-webkit-outer-spin-button { opacity: 1; }
 .id-skel { display: inline-block; border-radius: 3px; animation: glowPulse 2s cubic-bezier(0.4,0,0.6,1) infinite; background: var(--news-table-header-bg); border: 1px solid var(--news-glass-border); }
+.pu-select { background: transparent; border: none; color: #D4AF37; font-weight: 800; font-size: 0.85rem; outline: none; cursor: pointer; }
+.pu-select option { background: #111; color: #fff; }
 `;
 
 // ─── Page Component ───────────────────────────────────────────────────────────
 export default function PlatformUsagePage() {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
+
+  // Filter state
+  const [searchInput, setSearchInput] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [fetchLimit, setFetchLimit] = useState(LIMIT_MAX);
   const [limitInput, setLimitInput] = useState(String(LIMIT_MAX));
+  const [userType, setUserType] = useState('all');
+  const [countryFilter, setCountryFilter] = useState('');
 
-  // 1. Fetch up to fetchLimit users from backend
-  const { data: usageData, isLoading: isLoadingUsage, isRefetching, refetch } = useQuery({
-    queryKey: ['usersUsageFull', fetchLimit],
-    queryFn: () => UserService.fetchUsersUsage(fetchLimit),
+  // Debounce search to avoid re-filtering on every keystroke
+  const searchTerm = useDebounce(searchInput, DEBOUNCE_MS);
+
+  // ── 1. Fetch countries list (long-lived cache — rarely changes) ────────────
+  const { data: countriesData } = useQuery({
+    queryKey: ['admin-countries'],
+    queryFn: () => NewsService.fetchAdminCountries(),
+    staleTime: 30 * 60 * 1000,   // 30 min — country list barely changes
+    gcTime: 60 * 60 * 1000,      // 1 hour in memory
+    retry: 2,
+  });
+  const countryList = useMemo(
+    () => Object.keys(countriesData?.supported_countries ?? {}).sort(),
+    [countriesData]
+  );
+
+  // ── 2. Fetch usage data ───────────────────────────────────────────────────
+  const { data: usageData, isLoading: isLoadingUsage, isRefetching, isError, refetch } = useQuery({
+    queryKey: ['usersUsageFull', fetchLimit, userType, countryFilter],
+    queryFn: () => UserService.fetchUsersUsage(fetchLimit, userType, countryFilter),
     staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000), // exp. back-off
+    refetchOnWindowFocus: false,
   });
   const raw: UserUsageRecord[] = usageData?.users ?? [];
 
-  // Commit limit on blur / Enter — clamp to [50, 200]
-  const commitLimit = () => {
+  // ── 3. Commit limit (blur / Enter) ────────────────────────────────────────
+  const commitLimit = useCallback(() => {
     const n = Math.max(LIMIT_MIN, Math.min(LIMIT_MAX, parseInt(limitInput) || LIMIT_MAX));
     setLimitInput(String(n));
     if (n !== fetchLimit) {
       setFetchLimit(n);
       setCurrentPage(1);
     }
-  };
+  }, [limitInput, fetchLimit]);
 
-  // 2. Filter → Global Sort → Paginate
+  // ── 4. Filter → Sort → Paginate (fully memoised) ─────────────────────────
   const sorted = useMemo(() => {
     let list = [...raw];
     if (searchTerm.trim()) {
@@ -132,18 +187,14 @@ export default function PlatformUsagePage() {
     if (sortConfig) {
       list.sort((a, b) => {
         if (sortConfig.key === 'tier') {
-          const av = tierRank(a.tier);
-          const bv = tierRank(b.tier);
-          // Always push unrecognised tiers (rank 0) to the very bottom
+          const av = tierRank(a.tier), bv = tierRank(b.tier);
           if (av === 0 && bv === 0) return 0;
           if (av === 0) return 1;
           if (bv === 0) return -1;
-          // desc = Pro first (3→1), asc = Freemium first (1→3)
           return sortConfig.dir === 'desc' ? bv - av : av - bv;
         }
         const av = (a[sortConfig.key] as number) || 0;
         const bv = (b[sortConfig.key] as number) || 0;
-        // desc = highest first, asc = lowest first
         return sortConfig.dir === 'desc' ? bv - av : av - bv;
       });
     }
@@ -151,7 +202,7 @@ export default function PlatformUsagePage() {
   }, [raw, searchTerm, sortConfig]);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const safePage = Math.min(currentPage, totalPages);
+  const safePage   = Math.min(currentPage, totalPages);
 
   const pageUsers = useMemo(() => {
     const start = (safePage - 1) * PAGE_SIZE;
@@ -160,46 +211,49 @@ export default function PlatformUsagePage() {
 
   const pageUids = useMemo(() => pageUsers.map(u => u.user_id), [pageUsers]);
 
-  // 3. Lazy Firebase enrichment — only current page's UIDs
+  // ── 5. Firebase enrichment (current page only) ────────────────────────────
   const { profileMap, isLoading: isEnriching } = useEnrichedProfiles(pageUids);
 
-  // 4. Merge API + Firebase
+  // ── 6. Merge API + Firebase ────────────────────────────────────────────────
   const rows = useMemo(() =>
     pageUsers.map(u => ({
       ...u,
       displayName: profileMap.get(u.user_id)?.name ?? null,
-      avatar: profileMap.get(u.user_id)?.avatar ?? null,
-      country: profileMap.get(u.user_id)?.country ?? null,
-      cleanUid: u.user_id?.replace('@firebase_placeholder', ''),
+      avatar:      profileMap.get(u.user_id)?.avatar ?? null,
+      country:     profileMap.get(u.user_id)?.country ?? null,
+      cleanUid:    u.user_id?.replace('@firebase_placeholder', ''),
     })),
     [pageUsers, profileMap]
   );
 
-  // 5. Aggregate stats (full raw list, not filtered)
-  const totalTokens  = raw.reduce((a, u) => a + (u.total_tokens_used   || 0), 0);
-  const totalReqs    = raw.reduce((a, u) => a + (u.total_api_requests  || 0), 0);
-  const avgTokens    = raw.length ? Math.round(totalTokens / raw.length) : 0;
-  const proUsers     = raw.filter(u => u.tier?.toLowerCase() === 'pro').length;
+  // ── 7. Aggregated stats (full raw list) ───────────────────────────────────
+  const { totalTokens, totalReqs, avgTokens, proUsers } = useMemo(() => ({
+    totalTokens: raw.reduce((a, u) => a + (u.total_tokens_used   || 0), 0),
+    totalReqs:   raw.reduce((a, u) => a + (u.total_api_requests  || 0), 0),
+    avgTokens:   raw.length ? Math.round(raw.reduce((a, u) => a + (u.total_tokens_used || 0), 0) / raw.length) : 0,
+    proUsers:    raw.filter(u => u.tier?.toLowerCase() === 'pro').length,
+  }), [raw]);
 
-  // 6. Sort handlers — three-state: none → desc (highest first) → asc → none
-  const handleSort = (key: SortKey) => {
+  // ── 8. Sort handler (three-state cycle) ───────────────────────────────────
+  const handleSort = useCallback((key: SortKey) => {
     setSortConfig(prev => {
-      if (!prev || prev.key !== key) return { key, dir: 'desc' }; // first click → desc (most useful)
-      if (prev.dir === 'desc')       return { key, dir: 'asc' };
-      return null; // third click → clear
+      if (!prev || prev.key !== key) return { key, dir: 'desc' };
+      if (prev.dir === 'desc')       return { key, dir: 'asc'  };
+      return null;
     });
     setCurrentPage(1);
-  };
+  }, []);
 
-  // Arrow convention: ↓ = desc (highest value at top), ↑ = asc (lowest value at top)
-  const sortIcon = (key: SortKey) => {
+  const sortIcon = useCallback((key: SortKey) => {
     if (!sortConfig || sortConfig.key !== key) return <ArrowUpDown size={12} style={{ opacity: 0.3 }} />;
     return sortConfig.dir === 'desc'
       ? <ArrowDown size={12} color="#D4AF37" />
-      : <ArrowUp size={12} color="#D4AF37" />;
-  };
+      : <ArrowUp   size={12} color="#D4AF37" />;
+  }, [sortConfig]);
 
-  const handleSearch = (v: string) => { setSearchTerm(v); setCurrentPage(1); };
+  const handleSearch  = useCallback((v: string) => { setSearchInput(v); setCurrentPage(1); }, []);
+  const handleRefetch = useCallback(() => refetch(), [refetch]);
+
   const isInitial = isLoadingUsage && raw.length === 0;
 
   return (
@@ -222,9 +276,9 @@ export default function PlatformUsagePage() {
       {/* Stat Cards */}
       <Row className="mb-4">
         {[
-          { title: 'Aggregated Tokens',  value: fmt(totalTokens), icon: Cpu,       color: '#D4AF37', detail: 'Total intelligence processing units consumed' },
-          { title: 'System Requests',    value: fmt(totalReqs),   icon: Zap,       color: '#2ecc71', detail: 'Successful API handshakes across all sectors' },
-          { title: 'Avg User Intensity', value: fmt(avgTokens),   icon: Activity,  color: '#3498db', detail: 'Tokens processed per individual identity' },
+          { title: 'Aggregated Tokens',  value: fmt(totalTokens), icon: Cpu,       color: '#D4AF37', detail: 'Total processing units consumed' },
+          { title: 'System Requests',    value: fmt(totalReqs),   icon: Zap,       color: '#2ecc71', detail: 'Successful API handshakes' },
+          { title: 'Avg User Intensity', value: fmt(avgTokens),   icon: Activity,  color: '#3498db', detail: 'Tokens per user (avg)' },
           { title: 'Elite Identities',   value: proUsers,         icon: UserCheck, color: '#9b59b6', detail: 'Accounts on Pro tier' },
         ].map(c => (
           <Col key={c.title} sm={6} xl={3} className="mb-3">
@@ -233,11 +287,19 @@ export default function PlatformUsagePage() {
         ))}
       </Row>
 
+      {/* Error Banner */}
+      {isError && (
+        <ErrorBanner
+          message="Could not load usage data. Check your connection and try again."
+          onRetry={handleRefetch}
+        />
+      )}
+
       {/* Control Bar */}
       <div style={{ background: 'var(--news-glass-bg)', border: '1px solid var(--news-glass-border)', borderRadius: 4, padding: '14px 20px', marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Filter size={15} color="#D4AF37" />
-          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#e0e0e0', textTransform: 'uppercase', letterSpacing: '1px' }}>Search</span>
+          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#e0e0e0', textTransform: 'uppercase', letterSpacing: '1px' }}>Filters</span>
         </div>
 
         {/* Search input */}
@@ -246,13 +308,52 @@ export default function PlatformUsagePage() {
           <input
             type="text"
             placeholder="Search by email or user ID…"
-            value={searchTerm}
+            value={searchInput}
             onChange={e => handleSearch(e.target.value)}
             style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--news-text-main)', fontSize: '0.85rem', outline: 'none' }}
           />
         </div>
 
-        {/* Dynamic limit input */}
+        {/* Plan filter — mutually exclusive with Country */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--news-input-bg)', padding: '5px 12px', borderRadius: 4, border: `1px solid ${userType !== 'all' ? '#D4AF37' : 'var(--news-glass-border)'}` }}>
+          <span style={{ fontSize: '0.62rem', color: 'var(--news-text-dim)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', whiteSpace: 'nowrap' }}>Plan</span>
+          <select
+            className="pu-select"
+            value={userType}
+            onChange={e => {
+              setUserType(e.target.value);
+              setCountryFilter('');
+              setCurrentPage(1);
+            }}
+          >
+            <option value="all">All Plans</option>
+            <option value="freemium">Freemium</option>
+            <option value="premium">Premium</option>
+            <option value="pro">Pro</option>
+          </select>
+        </div>
+
+        {/* Country filter dropdown (from API) — mutually exclusive with Plan */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--news-input-bg)', padding: '5px 12px', borderRadius: 4, border: `1px solid ${countryFilter ? '#D4AF37' : 'var(--news-glass-border)'}` }}>
+          <Globe size={13} color={countryFilter ? '#D4AF37' : 'var(--news-text-dim)'} />
+          <span style={{ fontSize: '0.62rem', color: 'var(--news-text-dim)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', whiteSpace: 'nowrap' }}>Country</span>
+          <select
+            className="pu-select"
+            value={countryFilter}
+            onChange={e => {
+              setCountryFilter(e.target.value);
+              setUserType('all');
+              setCurrentPage(1);
+            }}
+          >
+            <option value="">All Countries</option>
+            {countryList.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Limit input */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--news-input-bg)', padding: '5px 12px', borderRadius: 4, border: '1px solid var(--news-glass-border)' }}>
           <span style={{ fontSize: '0.62rem', color: 'var(--news-text-dim)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', whiteSpace: 'nowrap' }}>Limit</span>
           <input
@@ -266,18 +367,19 @@ export default function PlatformUsagePage() {
             onKeyDown={e => e.key === 'Enter' && commitLimit()}
             style={{ width: 52, background: 'transparent', border: 'none', color: '#D4AF37', fontWeight: 800, fontSize: '0.85rem', outline: 'none', textAlign: 'center' }}
           />
-          <span style={{ fontSize: '0.58rem', color: 'var(--news-text-dim)', whiteSpace: 'nowrap' }}>50–200</span>
+          <span style={{ fontSize: '0.58rem', color: 'var(--news-text-dim)', whiteSpace: 'nowrap' }}>1–200</span>
         </div>
 
+        {/* Refresh button */}
         <button
-          onClick={() => refetch()}
+          onClick={handleRefetch}
           disabled={isRefetching}
           style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(212,175,55,0.1)', border: '1px solid #D4AF37', color: '#D4AF37', padding: '7px 16px', borderRadius: 4, fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', letterSpacing: '0.8px' }}
           onMouseOver={e => (e.currentTarget.style.background = 'rgba(212,175,55,0.2)')}
-          onMouseOut={e => (e.currentTarget.style.background = 'rgba(212,175,55,0.1)')}
+          onMouseOut={e  => (e.currentTarget.style.background = 'rgba(212,175,55,0.1)')}
         >
           <RefreshCw size={13} className={isRefetching ? 'spin-anim' : ''} />
-          {isRefetching ? 'SYNCING…' : 'EXECUTE FETCH'}
+          {isRefetching ? 'SYNCING…' : 'REFRESH'}
         </button>
 
         {!isLoadingUsage && (
@@ -294,7 +396,7 @@ export default function PlatformUsagePage() {
           {isRefetching && <span style={{ fontSize: '0.62rem', color: 'var(--news-text-dim)', marginLeft: 6 }}>SYNCING…</span>}
         </h3>
 
-        <div style={{ background: 'var(--news-glass-bg)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid var(--news-glass-border)', borderRadius: 4, overflow: 'hidden', boxShadow: 'var(--news-card-shadow)' }}>
+        <div style={{ background: 'var(--news-glass-bg)', border: '1px solid var(--news-glass-border)', borderRadius: 4, overflow: 'hidden', boxShadow: 'var(--news-card-shadow)' }}>
           <div className="table-responsive">
             <table className="table table-hover mb-0" style={{ borderCollapse: 'collapse', minWidth: 680 }}>
               <thead style={{ background: 'var(--news-table-header-bg)', borderBottom: '2px solid var(--news-glass-border)' }}>
@@ -326,6 +428,7 @@ export default function PlatformUsagePage() {
                 ) : rows.length === 0 ? (
                   <tr>
                     <td colSpan={7} style={{ padding: '48px', textAlign: 'center', color: 'var(--news-text-dim)', fontStyle: 'italic' }}>
+                      <AlertTriangle size={18} style={{ marginRight: 8, opacity: 0.5, verticalAlign: 'middle' }} />
                       No usage data found for this query.
                     </td>
                   </tr>
@@ -346,10 +449,9 @@ export default function PlatformUsagePage() {
                           {rowNum}
                         </td>
 
-                        {/* Identity cell — skeleton only here while enriching */}
+                        {/* Identity */}
                         <td style={{ padding: '14px 20px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            {/* Avatar */}
                             {isEnriching
                               ? <span className="id-skel" style={{ width: 34, height: 34, borderRadius: '50%' }} />
                               : u.avatar
@@ -358,7 +460,6 @@ export default function PlatformUsagePage() {
                                     <UserIcon size={15} color="#D4AF37" />
                                   </div>
                             }
-                            {/* Name + email + UID */}
                             <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                               {isEnriching
                                 ? <span className="id-skel" style={{ width: 110, height: 14, marginBottom: 5 }} />
@@ -399,7 +500,7 @@ export default function PlatformUsagePage() {
                           </div>
                         </td>
 
-                        {/* Joined — hidden on mobile */}
+                        {/* Joined */}
                         <td className="col-joined" style={{ padding: '14px 20px', textAlign: 'right', color: 'var(--news-text-muted)', fontSize: '0.8rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 5 }}>
                             <Clock size={13} style={{ opacity: 0.6 }} />
@@ -407,7 +508,7 @@ export default function PlatformUsagePage() {
                           </div>
                         </td>
 
-                        {/* Country flag */}
+                        {/* Origin flag */}
                         <td style={{ padding: '14px 20px', textAlign: 'center' }}>
                           <div style={{ display: 'flex', justifyContent: 'center' }}>
                             {isEnriching
@@ -427,7 +528,7 @@ export default function PlatformUsagePage() {
           </div>
         </div>
 
-        {/* Pagination Bar */}
+        {/* Pagination */}
         {!isInitial && totalPages > 1 && (
           <div className="usage-pg-bar">
             <button
@@ -438,14 +539,12 @@ export default function PlatformUsagePage() {
             >
               <ChevronLeft size={16} />
             </button>
-
             <span className="pg-label">
               Page {safePage} of {totalPages}
               <span style={{ display: 'block', fontSize: '0.62rem', color: 'var(--news-text-dim)', marginTop: 2 }}>
                 {sorted.length} total users
               </span>
             </span>
-
             <button
               className="pg-btn"
               disabled={safePage >= totalPages}

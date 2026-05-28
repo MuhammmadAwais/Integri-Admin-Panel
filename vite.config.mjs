@@ -5,6 +5,10 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import path from "path";
 const resolvePath = (str) => path.resolve(__dirname, str);
 
+// ─── Dev API proxy target ────────────────────────────────────────────────────
+// Change this if your backend URL ever changes. Only used during `npm start`.
+const BACKEND_TARGET = 'https://integri.cloud';
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const API_URL = env.VITE_APP_BASE_NAME || "/";
@@ -17,6 +21,18 @@ export default defineConfig(({ mode }) => {
       // this sets a default port to 3000
       port: PORT,
       host: true,
+      proxy: {
+        // Forward ALL /api requests to the real backend.
+        // The Vite dev server makes this request server-to-server,
+        // so browser CORS restrictions never apply.
+        '/api': {
+          target: BACKEND_TARGET,
+          changeOrigin: true,   // rewrites Host header to match the target
+          secure: true,         // validate SSL certificate
+          // Optionally log proxied requests in the terminal:
+          // configure: (proxy) => { proxy.on('proxyReq', (r) => console.log('[proxy]', r.path)); },
+        },
+      },
     },
     preview: {
       open: true,

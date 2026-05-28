@@ -14,7 +14,12 @@ interface FailedRequest {
   reject: (error: any) => void;
 }
 
-const BASE_URL = import.meta.env.VITE_APP_BACKEND_API_BASE_URL.replace(/\/$/, '');
+// In development: use an empty baseURL so Axios calls /api/... which the Vite
+// dev proxy forwards to the real backend (server-to-server → no CORS).
+// In production (Vercel/etc.): use the full backend URL from the env var.
+const BASE_URL = import.meta.env.DEV
+  ? ''   // Vite proxy handles /api/* → https://integri.cloud/api/*
+  : import.meta.env.VITE_APP_BACKEND_API_BASE_URL.replace(/\/$/, '');
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 const ADMIN_UID = import.meta.env.VITE_ADMIN_UID;
 
@@ -875,10 +880,20 @@ export const UserService = {
     }
   },
 
-  fetchUsersUsage: async (limit: number = 200): Promise<UsersUsageResponse> => {
+  fetchUsersUsage: async (
+    limit: number = 200,
+    user_type?: string,
+    country?: string
+  ): Promise<UsersUsageResponse> => {
     try {
+      const params: Record<string, any> = { limit };
+      if (user_type && user_type !== 'all') {
+        params.user_type = user_type;
+      } else if (country && country.trim() !== '') {
+        params.country = country.trim();
+      }
       const response = await backendApi.get<UsersUsageResponse>('/api/v1/users/usage', {
-        params: { limit }
+        params
       });
       return response.data;
     } catch (e) {
