@@ -1,0 +1,377 @@
+// Scoped SCSS for Tier Limits Configuration Admin Page
+// Aligned with the application's Gold-to-Red-to-Black design system
+
+.tier-config-container {
+  background-color: #060606 !important; // Blackish base
+  color: #fafafa !important;
+  min-height: calc(100vh - 100px);
+  padding: 2.25rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  .header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.15); // Gold-tinted border
+    padding-bottom: 1.75rem;
+    margin-bottom: 2.25rem;
+
+    .title-group {
+      h1 {
+        font-size: 1.85rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin: 0;
+        color: #D4AF37; // Premium Gold
+      }
+      .subtitle {
+        font-size: 0.875rem;
+        color: #a8956b; // Muted gold/bronze
+        margin-top: 0.35rem;
+      }
+    }
+
+    .action-group {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+
+      .last-saved-badge {
+        font-size: 0.75rem;
+        color: #8c7e60; // Muted gold label
+        margin-right: 0.5rem;
+      }
+    }
+  }
+
+  // 3-Column Responsive Grid
+  .tiers-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1.75rem;
+    margin-bottom: 2.25rem;
+
+    @media (min-width: 768px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @media (min-width: 1200px) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  // Tier Card Style
+  .tier-card {
+    background-color: #111111; // Solid deep blackish-charcoal card
+    border: 1px solid rgba(212, 175, 55, 0.12) !important; // Gold-infused border
+    border-radius: 8px;
+    padding: 1.75rem;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    box-shadow: none !important;
+
+    &:hover {
+      border-color: rgba(212, 175, 55, 0.35) !important; // Brighten gold border on hover
+      transform: translateY(-2px);
+    }
+
+    .tier-badge-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .tier-badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.32rem 0.68rem;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+
+      &.tier-freemium {
+        background-color: rgba(255, 255, 255, 0.04); // Blackish-grey
+        color: #a1a1aa;
+        border-color: rgba(255, 255, 255, 0.1);
+      }
+      &.tier-premium {
+        background-color: rgba(212, 175, 55, 0.08); // Gold
+        color: #D4AF37;
+        border-color: rgba(212, 175, 55, 0.25);
+      }
+      &.tier-pro {
+        background-color: rgba(239, 68, 68, 0.08); // Red
+        color: #f87171;
+        border-color: rgba(239, 68, 68, 0.25);
+      }
+    }
+
+    .tier-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #fafafa;
+      margin: 0 0 0.4rem 0;
+      letter-spacing: -0.01em;
+    }
+
+    .tier-desc {
+      font-size: 0.85rem;
+      color: #8a8a8f; // Clear grey for readable copy
+      margin-bottom: 1.75rem;
+      line-height: 1.45;
+    }
+
+    .fields-divider {
+      height: 1px;
+      background-color: rgba(212, 175, 55, 0.08); // Gold-tinted line
+      margin: 1.25rem 0;
+    }
+
+    .form-group-custom {
+      margin-bottom: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+
+      &:last-of-type {
+        margin-bottom: 0;
+      }
+
+      label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #a8956b; // Gold label
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+
+        input, select {
+          width: 100%;
+          background-color: #060606 !important; // Pitch dark inside input
+          border: 1px solid rgba(212, 175, 55, 0.15) !important; // Gold-tinted border
+          border-radius: 6px;
+          color: #fafafa !important;
+          padding: 0.65rem 0.875rem;
+          font-size: 0.875rem;
+          font-family: inherit;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+          appearance: none;
+          
+          &:focus {
+            outline: none !important;
+            border-color: #D4AF37 !important; // Gold focus border
+            box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.12) !important; // Gold glow ring
+          }
+
+          &::placeholder {
+            color: #525256 !important;
+          }
+
+          &.input-error {
+            border-color: #ef4444 !important; // Red error border
+            &:focus {
+              box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18) !important;
+            }
+          }
+
+          &:disabled {
+            background-color: #0d0d0d !important;
+            color: #525256 !important;
+            border-color: rgba(212, 175, 55, 0.05) !important;
+            cursor: not-allowed;
+          }
+        }
+
+        select {
+          padding-right: 2.25rem;
+          cursor: pointer;
+        }
+
+        .select-arrow {
+          position: absolute;
+          right: 0.875rem;
+          pointer-events: none;
+          color: #a8956b;
+          display: flex;
+          align-items: center;
+        }
+      }
+
+      .error-text {
+        font-size: 0.72rem;
+        color: #ef4444; // Red
+        margin-top: 0.25rem;
+      }
+    }
+  }
+
+  // Gold & Dark Buttons
+  .zinc-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.6rem 1.15rem;
+    border-radius: 6px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    border: 1px solid transparent;
+    text-decoration: none;
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    &.zinc-btn-primary {
+      background-color: #D4AF37 !important; // Pure Gold
+      color: #060606 !important; // Pitch Black
+      
+      &:hover:not(:disabled) {
+        background-color: #b48a04 !important; // Darker Gold
+      }
+      
+      &:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px #060606, 0 0 0 4px #D4AF37 !important;
+      }
+    }
+
+    &.zinc-btn-secondary {
+      background-color: transparent !important;
+      border: 1px solid rgba(212, 175, 55, 0.25) !important;
+      color: #D4AF37 !important; // Gold Text
+
+      &:hover:not(:disabled) {
+        background-color: rgba(212, 175, 55, 0.06) !important;
+        border-color: rgba(212, 175, 55, 0.45) !important;
+      }
+
+      &:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px #060606, 0 0 0 4px rgba(212, 175, 55, 0.3) !important;
+      }
+    }
+  }
+
+  // Loader & Alert states
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 420px;
+    color: #a8956b;
+
+    .spinner {
+      border: 2px solid rgba(212, 175, 55, 0.08);
+      border-top-color: #D4AF37; // Gold
+      border-radius: 50%;
+      width: 1.75rem;
+      height: 1.75rem;
+      animation: spin 0.75s linear infinite;
+      margin-bottom: 1.25rem;
+    }
+
+    p {
+      font-size: 0.875rem;
+      letter-spacing: 0.025em;
+    }
+  }
+
+  .alert-banner {
+    background-color: rgba(239, 68, 68, 0.04); // Reddish highlight
+    border: 1px solid rgba(239, 68, 68, 0.18);
+    color: #f87171;
+    padding: 0.875rem 1.25rem;
+    border-radius: 6px;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  &.light-mode {
+    background-color: #fcfcfc !important;
+    color: #1a1a1a !important;
+
+    .header-section {
+      border-bottom-color: rgba(212, 175, 55, 0.3);
+    }
+
+    .tier-card {
+      background-color: #ffffff !important;
+      border-color: rgba(212, 175, 55, 0.3) !important;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+      
+      &:hover {
+        border-color: rgba(212, 175, 55, 0.6) !important;
+      }
+
+      .tier-title {
+        color: #111111;
+      }
+
+      .tier-desc {
+        color: #4a4a4a;
+      }
+
+      .form-group-custom {
+        .input-wrapper {
+          input, select {
+            background-color: #ffffff !important;
+            color: #1a1a1a !important;
+            border-color: rgba(212, 175, 55, 0.3) !important;
+
+            &::placeholder {
+              color: #a0a0a0 !important;
+            }
+
+            &:focus {
+              box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.25) !important;
+            }
+          }
+        }
+      }
+    }
+
+    .policy-card {
+      background-color: #ffffff !important;
+      border-color: rgba(212, 175, 55, 0.3) !important;
+      color: #1a1a1a;
+      
+      .text-light {
+        color: #111111 !important;
+      }
+      .text-white-50 {
+        color: #4a4a4a !important;
+      }
+    }
+  }
+}
+
+// Custom Policy Card
+.policy-card {
+  background-color: #111111 !important;
+  border: 1px solid rgba(212, 175, 55, 0.12) !important;
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

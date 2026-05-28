@@ -25,6 +25,7 @@ const PromptsPage    = Loadable(lazy(() => import('pages/PromptsPage')));
 const ProfilePage    = Loadable(lazy(() => import('pages/ProfilePage')));
 const ModelsPage        = Loadable(lazy(() => import('pages/ModelsPage')));
 const PlatformUsagePage = Loadable(lazy(() => import('pages/PlatformUsagePage')));
+const TierConfigurationPage = Loadable(lazy(() => import('pages/TierConfigurationPage')));
 
 // ==============================|| INTEGRI APP — NAVIGATION ROUTES ||============================== //
 
@@ -47,6 +48,7 @@ const NavigationRoutes = {
         { path: '/prompts',    element: <PromptsPage /> },
         { path: '/system/models', element: <ModelsPage /> },
         { path: '/system/usage',  element: <PlatformUsagePage /> },
+        { path: '/system/tiers',  element: <TierConfigurationPage /> },
         { path: '/users/:id',  element: <UserDetailPage /> },
         { path: '/profile',    element: <ProfilePage /> }
       ]

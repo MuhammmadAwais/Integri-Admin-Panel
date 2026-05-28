@@ -903,3 +903,45 @@ export const ModelsService = {
     }
   }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  📊 TIER LIMITS — Types & Services
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface TierLimitsConfig {
+  daily_messages: number;
+  voice_minutes: number;
+  image_generation: number;
+  file_input_token_cap: number;
+  default_model_on_limit: string;
+}
+
+export type TierName = 'freemium' | 'premium' | 'pro';
+
+export interface TierLimitsResponse {
+  source: string;
+  limits: Record<TierName, TierLimitsConfig>;
+}
+
+export const TierLimitsService = {
+  fetchTierLimits: async (): Promise<TierLimitsResponse> => {
+    try {
+      const response = await backendApi.get<TierLimitsResponse>('/api/v1/admin/tier-limits');
+      return response.data;
+    } catch (e) {
+      console.error('❌ [TierLimitsService] fetchTierLimits error:', e);
+      throw e;
+    }
+  },
+
+  updateTierLimits: async (payload: Partial<Record<TierName, Partial<TierLimitsConfig>>>): Promise<any> => {
+    try {
+      const response = await backendApi.put<any>('/api/v1/admin/tier-limits', payload);
+      return response.data;
+    } catch (e) {
+      console.error('❌ [TierLimitsService] updateTierLimits error:', e);
+      throw e;
+    }
+  }
+};
+

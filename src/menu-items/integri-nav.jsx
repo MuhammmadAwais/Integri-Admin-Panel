@@ -1,4 +1,4 @@
-import { LayoutDashboard, Newspaper, BookOpen, Users, LogOut, Cpu, Settings, Bell, Layers, Activity } from 'lucide-react';
+import { LayoutDashboard, Newspaper, BookOpen, Users, LogOut, Cpu, Settings, Bell, Layers, Activity, SlidersHorizontal } from 'lucide-react';
 
 // ==============================|| INTEGRI APP — NAVIGATION MENU ||============================== //
 
@@ -67,6 +67,13 @@ const integriNav = {
       type: 'item',
       icon: Layers,
       url: '/system/models'
+    },
+    {
+      id: 'tier-limits',
+      title: 'Tier Limits',
+      type: 'item',
+      icon: SlidersHorizontal,
+      url: '/system/tiers'
     },
 
     {
