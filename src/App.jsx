@@ -6,8 +6,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import router from 'routes';
 import { getBackendToken } from 'api/backendApi';
 import { AuthProvider } from 'contexts/AuthContext';
-
-import ParticleBackground from 'components/ParticleBackground';
 import EliteToastContainer from 'components/EliteUI/EliteToastContainer';
 
 // ==============================|| APP - THEME, ROUTER, LOCAL ||============================== //
@@ -41,7 +39,6 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ParticleBackground />
         <EliteToastContainer />
         <RouterProvider router={router} />
       </AuthProvider>
