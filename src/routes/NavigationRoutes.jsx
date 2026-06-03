@@ -14,6 +14,7 @@ const HomePage = Loadable(lazy(() => import('pages/Home')));
 const NewsPage              = Loadable(lazy(() => import('pages/NewsPage')));
 const NewsConfigurationPage = Loadable(lazy(() => import('pages/NewsConfiguration')));
 const NotificationsPage     = Loadable(lazy(() => import('pages/NotificationsPage')));
+const ManualNewsPage        = Loadable(lazy(() => import('pages/ManualNewsPage')));
 
 const BlogsPage             = Loadable(lazy(() => import('pages/BlogsPage')));
 const BlogBuilderPage       = Loadable(lazy(() => import('pages/BlogBuilderPage')));
@@ -40,6 +41,7 @@ const NavigationRoutes = {
         { path: '/news',           element: <NewsPage /> },
         { path: '/news/configuration', element: <NewsConfigurationPage /> },
         { path: '/news/notifications', element: <NotificationsPage /> },
+        { path: '/news/manual',        element: <ManualNewsPage /> },
         { path: '/blogs',           element: <BlogsPage /> },
         { path: '/blogs/builder',   element: <BlogBuilderPage /> },
 

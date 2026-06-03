@@ -1,4 +1,4 @@
-import { LayoutDashboard, Newspaper, BookOpen, Users, LogOut, Cpu, Settings, Bell, Layers, Activity, SlidersHorizontal } from 'lucide-react';
+import { LayoutDashboard, Newspaper, BookOpen, Users, LogOut, Cpu, Settings, Bell, Layers, Activity, SlidersHorizontal, FilePlus } from 'lucide-react';
 
 // ==============================|| INTEGRI APP — NAVIGATION MENU ||============================== //
 
@@ -25,6 +25,13 @@ const integriNav = {
       type: 'item',
       icon: Newspaper,
       url: '/news'
+    },
+    {
+      id: 'manual-news',
+      title: 'Manual Article',
+      type: 'item',
+      icon: FilePlus,
+      url: '/news/manual'
     },
     {
       id: 'blogs',

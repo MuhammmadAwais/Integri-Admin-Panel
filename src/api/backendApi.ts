@@ -59,11 +59,13 @@ export const getBackendToken = async (): Promise<string | null> => {
       email: ADMIN_EMAIL,
       user_type: 'freemium'
     });
-    
+    console.log(response)
     if (response.data && response.data.access_token) {
+      console.log('🟢 [API] Backend token generated successfully');
       localStorage.setItem('integri_jwt', response.data.access_token);
       return response.data.access_token;
     }
+    console.log("❌ [API] Failed to generate backend token:", response.data);
     return null;
   } catch (error) {
     console.error("❌ [API] Failed to generate backend token:", error);
@@ -819,7 +821,54 @@ export const NewsService = {
       throw e;
     }
   },
+
+  /**
+   * Queue a manually composed article for delivery to a country's next slot.
+   * POST /api/v1/news/admin/manual-article
+   * Returns 202 Accepted with a `detail` string confirming the queue placement.
+   */
+  postManualArticle: async (payload: ManualArticleRequest): Promise<ManualArticleResponse> => {
+    try {
+      const response = await backendApi.post<ManualArticleResponse>(
+        '/api/v1/news/admin/manual-article',
+        payload,
+        { skipToast: true } as any
+      );
+      return response.data;
+    } catch (e) {
+      console.error('❌ [NewsService] postManualArticle error:', e);
+      throw e;
+    }
+  },
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  📰 MANUAL ARTICLE — Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ManualArticleSource {
+  title: string;
+  image: string;
+  source: string;
+  url: string;
+}
+
+export interface ManualArticleRequest {
+  country: string;
+  headline: string;
+  body: string;
+  topic?: string;
+  article_type?: string;
+  extract_learning_aids?: boolean;
+  image_url?: string;
+  sources?: ManualArticleSource[];
+  mark_as_trending?: boolean;
+}
+
+export interface ManualArticleResponse {
+  detail: string;
+  [key: string]: unknown;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  🧑‍💻 USER ADMIN — Types & Services
@@ -895,6 +944,7 @@ export const UserService = {
       const response = await backendApi.get<UsersUsageResponse>('/api/v1/users/usage', {
         params
       });
+      console.log(response)
       return response.data;
     } catch (e) {
       console.error('❌ [UserService] fetchUsersUsage error:', e);
