@@ -105,15 +105,15 @@
       .search-input-sharp {
         width: 100%;
         padding: 11px 16px 11px 42px;
-        background: #000;
-        border: 1px solid #27272a;
+        background: var(--news-input-bg);
+        border: 1px solid var(--news-card-border);
         border-radius: 4px;
-        color: #e4e4e7;
+        color: var(--news-text-main);
         font-family: inherit;
         font-size: 0.9rem;
         transition: all 0.25s ease;
 
-        &::placeholder { color: #52525b; }
+        &::placeholder { color: var(--news-text-dim); }
 
         &:focus {
           border-color: #D4AF37;
@@ -144,8 +144,8 @@
 
     .nav-link {
       background: transparent !important;
-      border: 1px solid #27272a !important;
-      color: #71717a !important;
+      border: 1px solid var(--news-card-border) !important;
+      color: var(--news-text-muted) !important;
       padding: 7px 20px;
       border-radius: 100px;
       font-weight: 600;
@@ -162,9 +162,9 @@
       }
 
       &:hover:not(.active) {
-        border-color: #3f3f46 !important;
-        color: #e4e4e7 !important;
-        background: rgba(255, 255, 255, 0.03) !important;
+        border-color: var(--news-text-dim) !important;
+        color: var(--news-text-main) !important;
+        background: var(--news-table-header-bg) !important;
       }
     }
   }
@@ -181,10 +181,10 @@
 
 /* ── Delete Modal ───────────────────────────────────────────────────────────── */
 .news-delete-modal-content {
-  background: #09090b !important;
-  border: 1px solid #27272a !important;
+  background: var(--news-modal-bg) !important;
+  border: 1px solid var(--news-card-border) !important;
   border-radius: 4px !important;
-  color: #fff !important;
+  color: var(--news-text-main) !important;
 }
 
 /* ── Live Indicator ─────────────────────────────────────────────────────────── */
@@ -267,4 +267,40 @@
   0%   { opacity: 0.3; }
   50%  { opacity: 0.7; }
   100% { opacity: 0.3; }
+}
+
+/* ── ManualNewsPage light-mode hardening ─────────────────────────────────────
+   The global [data-pc-theme='light'] rule overrides button.btn with a white
+   background & black text — our themed buttons use plain <button> elements
+   (no .btn class) but fieldset/legend/select elements can still be affected.
+   These rules ensure ManualNewsPage stays correct in both themes.
+─────────────────────────────────────────────────────────────────────────────── */
+
+/* Protect gold submit button from global light-mode button.btn reset */
+[data-pc-theme='light'] .mn-submit-btn {
+  background: #D4AF37 !important;
+  color: #000 !important;
+  border: none !important;
+}
+
+/* Accordion header adapts to light mode */
+[data-pc-theme='light'] .mn-accordion-header {
+  background: var(--news-panel-bg) !important;
+  color: var(--news-text-muted) !important;
+  border-color: var(--news-card-border) !important;
+}
+[data-pc-theme='light'] .mn-accordion-header:hover {
+  color: var(--news-text-main) !important;
+  border-color: var(--news-text-muted) !important;
+}
+
+/* Ensure fieldset panels render correctly in light mode */
+[data-pc-theme='light'] .news-glass-archive fieldset {
+  background: var(--news-panel-bg) !important;
+  border-color: var(--news-card-border) !important;
+}
+
+/* Country dropdown items in light mode */
+[data-pc-theme='light'] .mn-country-item:hover {
+  background: var(--news-table-header-bg) !important;
 }

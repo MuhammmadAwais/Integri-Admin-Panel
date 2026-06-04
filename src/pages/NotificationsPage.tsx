@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { NewsService, ScheduleEntry } from 'api/backendApi';
-import { Bell, Activity, Send, CheckCircle, XCircle, Clock, Plus, Trash2, X, ChevronRight, Save, Globe } from 'lucide-react';
+import { Bell, Activity, Send, Clock, Plus, Trash2, X, Save, Globe, BarChart2 } from 'lucide-react';
 import CountryFlag from 'components/CountryFlag';
 import 'features/news/styles/news.scss';
+import NotificationAnalyticsPage from './NotificationAnalyticsPage';
 
 // --- Types for local component state ---
 type Toast = { message: string; type: 'success' | 'error' } | null;
@@ -13,6 +14,7 @@ export default function NotificationsPage() {
   const queryClient = useQueryClient();
   const [testCountry, setTestCountry] = useState<string>('');
   const [toast, setToast] = useState<Toast>(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -187,6 +189,11 @@ export default function NotificationsPage() {
   const schedules = schedulesData?.schedules || [];
   const countries = countriesData?.supported_countries ? Object.keys(countriesData.supported_countries) : [];
 
+  // Render analytics sub-module
+  if (showAnalytics) {
+    return <NotificationAnalyticsPage onBack={() => setShowAnalytics(false)} />;
+  }
+
   return (
     <div className="news-glass-archive" style={{ position: 'relative', minHeight: '100vh', paddingBottom: 100 }}>
       {/* Toast Notification */}
@@ -213,12 +220,47 @@ export default function NotificationsPage() {
         <div>
           <h2 className="news-title-sharp">
             <Bell size={24} color="#D4AF37" style={{ marginRight: 12, verticalAlign: 'text-bottom' }} /> 
-            Notifications & Pipeline Control
+            Notifications &amp; Pipeline Control
           </h2>
           <p style={{ color: 'var(--news-text-muted)', margin: 0, fontSize: '0.88rem', fontWeight: 500, marginTop: 4 }}>
             Monitor delivery analytics, verify connectivity with test pushes, and manage automated fetch schedules.
           </p>
         </div>
+
+        {/* ── Notification Analysis anchor button ── */}
+        <button
+          id="notification-analysis-btn"
+          onClick={() => setShowAnalytics(true)}
+          style={{
+            background: 'transparent',
+            border: '1px solid var(--news-glass-border)',
+            borderRadius: 6,
+            padding: '9px 18px',
+            color: 'var(--news-text-muted)',
+            fontWeight: 700,
+            fontSize: '0.82rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            transition: 'all 0.2s',
+            letterSpacing: '0.3px',
+            whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.borderColor = '#D4AF37';
+            e.currentTarget.style.color = '#D4AF37';
+            e.currentTarget.style.background = 'rgba(212,175,55,0.06)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.borderColor = 'var(--news-glass-border)';
+            e.currentTarget.style.color = 'var(--news-text-muted)';
+            e.currentTarget.style.background = 'transparent';
+          }}
+        >
+          <BarChart2 size={15} />
+          Notification Analysis
+        </button>
       </div>
 
       {/* SECTION A: Overview & Test Push */}

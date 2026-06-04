@@ -546,6 +546,53 @@ export interface TestNotificationResponse {
   note: string;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  📊 NOTIFICATION OPENS / ANALYTICS — Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface NotificationOpensParams {
+  country?: string;
+  date?: string;
+  news_id?: string;
+  limit?: number;
+}
+
+export interface TopArticleOpens {
+  news_id: string;
+  headline_en: string;
+  unique_opens: number;
+  total_taps: number;
+}
+
+export interface NotificationOpensSummary {
+  total_runs: number;
+  total_sent: number;
+  total_unique_opens: number;
+  total_taps: number;
+  overall_open_rate: number;
+  clicks_by_country: Record<string, number>;
+  top_articles: TopArticleOpens[];
+}
+
+export interface NotificationOpensArticle {
+  news_id: string;
+  headline_en: string;
+  country: string;
+  article_type: string | null;
+  slot: number | null;
+  notified_at: string;
+  sent: number;
+  unique_opens: number;
+  total_taps: number;
+  open_rate: number;
+  by_country: Record<string, number>;
+}
+
+export interface NotificationOpensResponse {
+  summary: NotificationOpensSummary;
+  articles: NotificationOpensArticle[];
+}
+
 
 
 export const PromptsService = {
@@ -737,6 +784,28 @@ export const NewsService = {
       return response.data;
     } catch (e) {
       console.error(`❌ [NewsService] deleteScheduleEntry error for ${country} - ${entry_id}:`, e);
+      throw e;
+    }
+  },
+
+  /**
+   * Fetch notification open/click analytics per article & per country.
+   * GET /api/v1/news/admin/notification-opens
+   */
+  fetchNotificationOpens: async (params: NotificationOpensParams): Promise<NotificationOpensResponse> => {
+    try {
+      const cleanParams: Record<string, string | number> = {};
+      if (params.country) cleanParams.country = params.country;
+      if (params.date) cleanParams.date = params.date;
+      if (params.news_id) cleanParams.news_id = params.news_id;
+      if (params.limit !== undefined) cleanParams.limit = params.limit;
+      const response = await backendApi.get<NotificationOpensResponse>(
+        '/api/v1/news/admin/notification-opens',
+        { params: cleanParams, skipToast: true } as any
+      );
+      return response.data;
+    } catch (e) {
+      console.error('❌ [NewsService] fetchNotificationOpens error:', e);
       throw e;
     }
   },

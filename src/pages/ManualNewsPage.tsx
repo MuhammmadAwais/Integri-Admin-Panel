@@ -193,6 +193,174 @@ const SourceRow = memo(({ index, source, onChange, onRemove }: SourceRowProps) =
   </fieldset>
 ));
 
+// ── CountryDropdown ─────────────────────────────────────────────────────────
+// Self-contained so its internal `countrySearch` state never re-renders the
+// parent ManualNewsPage — keeping headline/body inputs completely lag-free.
+
+interface CountryDropdownProps {
+  country: string;
+  countries: Record<string, unknown>;
+  countriesLoading: boolean;
+  hasError: boolean;
+  onSelect: (country: string) => void;
+}
+
+const CountryDropdown = memo(({ country, countries, countriesLoading, hasError, onSelect }: CountryDropdownProps) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const dropRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const filtered = Object.keys(countries)
+    .filter(c => c.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => a.localeCompare(b));
+
+  return (
+    <div ref={dropRef} style={{ position: 'relative' }}>
+      <button
+        id="mn-country"
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%',
+          padding: '10px 13px',
+          background: 'var(--news-input-bg)',
+          border: `1px solid ${hasError ? '#DC143C' : open ? '#D4AF37' : 'var(--news-card-border)'}`,
+          borderRadius: 3,
+          color: country ? 'var(--news-text-main)' : 'var(--news-text-muted)',
+          fontSize: '0.88rem',
+          fontWeight: country ? 700 : 500,
+          fontFamily: 'inherit',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+          transition: 'border-color 0.18s ease',
+          textAlign: 'left',
+          boxSizing: 'border-box',
+        }}
+      >
+        <span>{country || (countriesLoading ? 'Loading countries…' : 'Select a country…')}</span>
+        <ChevronDown
+          size={14}
+          style={{
+            color: 'var(--news-text-muted)',
+            transition: 'transform 0.2s ease',
+            transform: open ? 'rotate(180deg)' : 'none',
+            flexShrink: 0,
+          }}
+        />
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          aria-label="Select delivery country"
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 5px)',
+            left: 0,
+            right: 0,
+            zIndex: 300,
+            background: 'var(--news-dropdown-bg)',
+            border: '1px solid var(--news-card-border)',
+            borderRadius: 3,
+            boxShadow: 'var(--news-card-shadow)',
+            maxHeight: 280,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: 8,
+              borderBottom: '1px solid var(--news-card-border)',
+              background: 'var(--news-dropdown-bg)',
+              zIndex: 1,
+            }}
+          >
+            <input
+              type="text"
+              placeholder="Search country…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onClick={e => e.stopPropagation()}
+              autoFocus
+              style={{
+                width: '100%',
+                padding: '7px 10px',
+                background: 'var(--news-input-bg)',
+                border: '1px solid var(--news-card-border)',
+                borderRadius: 3,
+                color: 'var(--news-text-main)',
+                fontSize: '0.84rem',
+                outline: 'none',
+                fontFamily: 'inherit',
+                boxSizing: 'border-box',
+              }}
+              className="mn-input"
+            />
+          </div>
+          <div style={{ overflowY: 'auto', padding: 4, scrollbarWidth: 'thin', scrollbarColor: 'var(--news-card-border) var(--news-dropdown-bg)' }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding: '12px', color: 'var(--news-text-muted)', fontSize: '0.82rem', textAlign: 'center' }}>
+                No countries match
+              </div>
+            ) : (
+              filtered.map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  role="option"
+                  aria-selected={country === c}
+                  className="mn-country-item"
+                  onClick={() => {
+                    onSelect(c);
+                    setOpen(false);
+                    setSearch('');
+                  }}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '9px 12px',
+                    background: country === c ? 'rgba(212,175,55,0.1)' : 'transparent',
+                    border: 'none',
+                    borderRadius: 2,
+                    color: country === c ? '#D4AF37' : 'var(--news-text-main)',
+                    fontSize: '0.85rem',
+                    fontWeight: country === c ? 700 : 400,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    transition: 'background 0.12s ease',
+                  }}
+                >
+                  {c}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
 // ── Success Modal Helper & Component ─────────────────────────────────────────
 
 interface SuccessMetaItem {
@@ -505,21 +673,25 @@ export default function ManualNewsPage() {
 
   // ── Form state ─────────────────────────────────────────────────────────────
   const [country, setCountry] = useState('');
-  const [headline, setHeadline] = useState('');
-  const [body, setBody] = useState('');
   const [topic, setTopic] = useState('general');
   const [articleType, setArticleType] = useState('spotlight');
-  const [extractLearningAids, setExtractLearningAids] = useState(false);
+  const [extractLearningAids, setExtractLearningAids] = useState(true);
   const [markAsTrending, setMarkAsTrending] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [sources, setSources] = useState<ManualArticleSource[]>([]);
 
-  // ── Country dropdown state ────────────────────────────────────────────────
+  // ── Refs for lag-free text inputs ─────────────────────────────────────────
+  // Using uncontrolled refs for heavy-text fields to avoid React re-render lag
+  // on every keystroke. State is only read at submit time.
+  const headlineRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  // Track error state separately so we can clear on input without re-render lag
+  const [headlineError, setHeadlineError] = useState<string | undefined>();
+  const [bodyError, setBodyError] = useState<string | undefined>();
+
+  // ── Country data (open/search state lives inside CountryDropdown) ──────────
   const [countries, setCountries] = useState<Record<string, unknown>>({});
   const [countriesLoading, setCountriesLoading] = useState(true);
-  const [countryOpen, setCountryOpen] = useState(false);
-  const [countrySearch, setCountrySearch] = useState('');
-  const countryDropRef = useRef<HTMLDivElement>(null);
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [submitting, setSubmitting] = useState(false);
@@ -545,22 +717,11 @@ export default function ManualNewsPage() {
     return () => { cancelled = true; };
   }, []);
 
-  // ── Close country dropdown on outside click ───────────────────────────────
-  useEffect(() => {
-    if (!countryOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (countryDropRef.current && !countryDropRef.current.contains(e.target as Node)) {
-        setCountryOpen(false);
-        setCountrySearch('');
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [countryOpen]);
-
-  const filteredCountries = Object.keys(countries)
-    .filter(c => c.toLowerCase().includes(countrySearch.toLowerCase()))
-    .sort((a, b) => a.localeCompare(b));
+  // ── Country select handler (stable — does not re-create CountryDropdown) ──
+  const handleCountrySelect = useCallback((c: string) => {
+    setCountry(c);
+    setFieldErrors(prev => ({ ...prev, country: undefined }));
+  }, []);
 
   // ── Sources CRUD ──────────────────────────────────────────────────────────
   const addSource = useCallback(() => setSources(prev => [...prev, blankSource()]), []);
@@ -576,14 +737,18 @@ export default function ManualNewsPage() {
 
   // ── Validation ────────────────────────────────────────────────────────────
   const validate = (): boolean => {
+    const headlineVal = headlineRef.current?.value?.trim() ?? '';
+    const bodyVal = bodyRef.current?.value?.trim() ?? '';
     const errors: FieldErrors = {};
     if (!country) errors.country = 'Country is required.';
-    if (!headline.trim()) errors.headline = 'Headline is required.';
-    else if (headline.trim().length < 10) errors.headline = 'Headline must be at least 10 characters.';
-    if (!body.trim()) errors.body = 'Article body is required.';
-    else if (body.trim().length < 50) errors.body = 'Body must be at least 50 characters.';
+    if (!headlineVal) errors.headline = 'Headline is required.';
+    else if (headlineVal.length < 10) errors.headline = 'Headline must be at least 10 characters.';
+    if (!bodyVal) errors.body = 'Article body is required.';
+    else if (bodyVal.length < 50) errors.body = 'Body must be at least 50 characters.';
     if (imageUrl && !/^https?:\/\/.+/.test(imageUrl.trim()))
       errors.image_url = 'Must be a valid URL starting with http:// or https://';
+    setHeadlineError(errors.headline);
+    setBodyError(errors.body);
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -596,10 +761,13 @@ export default function ManualNewsPage() {
       return;
     }
 
+    const headlineVal = headlineRef.current?.value?.trim() ?? '';
+    const bodyVal = bodyRef.current?.value?.trim() ?? '';
+
     const payload: ManualArticleRequest = {
       country,
-      headline: headline.trim(),
-      body: body.trim(),
+      headline: headlineVal,
+      body: bodyVal,
       topic,
       article_type: articleType,
       extract_learning_aids: extractLearningAids,
@@ -656,24 +824,28 @@ export default function ManualNewsPage() {
       setSubmitting(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [country, headline, body, topic, articleType, extractLearningAids, markAsTrending, imageUrl, sources]);
+  }, [country, topic, articleType, extractLearningAids, markAsTrending, imageUrl, sources]);
 
   const handleSuccessClose = useCallback(() => {
     setSuccessDetail(null);
-    // Optionally reset form
-    setHeadline('');
-    setBody('');
+    // Reset uncontrolled refs
+    if (headlineRef.current) headlineRef.current.value = '';
+    if (bodyRef.current) bodyRef.current.value = '';
     setImageUrl('');
     setSources([]);
     setTopic('general');
     setArticleType('spotlight');
-    setExtractLearningAids(false);
+    setExtractLearningAids(true);
     setMarkAsTrending(false);
     setCountry('');
+    setHeadlineError(undefined);
+    setBodyError(undefined);
   }, []);
 
   // ── Shared input style ────────────────────────────────────────────────────
-  const inputStyle: React.CSSProperties = {
+  // Memoised — same object reference across renders, prevents DOM style patches
+  // on every parent re-render (e.g. when country/imageUrl state changes).
+  const inputStyle = React.useMemo<React.CSSProperties>(() => ({
     width: '100%',
     padding: '10px 13px',
     background: 'var(--news-input-bg)',
@@ -685,7 +857,7 @@ export default function ManualNewsPage() {
     fontFamily: 'inherit',
     transition: 'border-color 0.18s ease',
     boxSizing: 'border-box',
-  };
+  }), []);
 
   return (
     <>
@@ -820,127 +992,13 @@ export default function ManualNewsPage() {
                 </p>
 
                 <FieldLabel htmlFor="mn-country" required>Delivery Country</FieldLabel>
-                <div ref={countryDropRef} style={{ position: 'relative' }}>
-                  <button
-                    id="mn-country"
-                    type="button"
-                    aria-haspopup="listbox"
-                    aria-expanded={countryOpen}
-                    onClick={() => setCountryOpen(o => !o)}
-                    style={{
-                      width: '100%',
-                      padding: '10px 13px',
-                      background: 'var(--news-input-bg)',
-                      border: `1px solid ${fieldErrors.country ? '#DC143C' : countryOpen ? '#D4AF37' : 'var(--news-card-border)'}`,
-                      borderRadius: 3,
-                      color: country ? 'var(--news-text-main)' : 'var(--news-text-muted)',
-                      fontSize: '0.88rem',
-                      fontWeight: country ? 700 : 500,
-                      fontFamily: 'inherit',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 8,
-                      transition: 'border-color 0.18s ease',
-                      textAlign: 'left',
-                    }}
-                  >
-                    <span>{country || (countriesLoading ? 'Loading countries…' : 'Select a country…')}</span>
-                    <ChevronDown
-                      size={14}
-                      style={{
-                        color: 'var(--news-text-muted)',
-                        transition: 'transform 0.2s ease',
-                        transform: countryOpen ? 'rotate(180deg)' : 'none',
-                        flexShrink: 0,
-                      }}
-                    />
-                  </button>
-
-                  {countryOpen && (
-                    <div
-                      role="listbox"
-                      aria-label="Select delivery country"
-                      style={{
-                        position: 'absolute',
-                        top: 'calc(100% + 5px)',
-                        left: 0,
-                        right: 0,
-                        zIndex: 300,
-                        background: 'var(--news-dropdown-bg)',
-                        border: '1px solid var(--news-card-border)',
-                        borderRadius: 3,
-                        boxShadow: 'var(--news-card-shadow)',
-                        maxHeight: 280,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <div
-                        style={{
-                          padding: 8,
-                          borderBottom: '1px solid var(--news-card-border)',
-                          position: 'sticky',
-                          top: 0,
-                          background: 'var(--news-dropdown-bg)',
-                          zIndex: 1,
-                        }}
-                      >
-                        <input
-                          type="text"
-                          placeholder="Search country…"
-                          value={countrySearch}
-                          onChange={e => setCountrySearch(e.target.value)}
-                          onClick={e => e.stopPropagation()}
-                          autoFocus
-                          style={{ ...inputStyle, padding: '7px 10px', fontSize: '0.84rem' }}
-                          className="mn-input"
-                        />
-                      </div>
-                      <div style={{ overflowY: 'auto', padding: 4, scrollbarWidth: 'thin', scrollbarColor: 'var(--news-card-border) var(--news-dropdown-bg)' }}>
-                        {filteredCountries.length === 0 ? (
-                          <div style={{ padding: '12px', color: 'var(--news-text-muted)', fontSize: '0.82rem', textAlign: 'center' }}>
-                            No countries match
-                          </div>
-                        ) : (
-                          filteredCountries.map(c => (
-                            <button
-                              key={c}
-                              type="button"
-                              role="option"
-                              aria-selected={country === c}
-                              className="mn-country-item"
-                              onClick={() => {
-                                setCountry(c);
-                                setCountryOpen(false);
-                                setCountrySearch('');
-                                setFieldErrors(prev => ({ ...prev, country: undefined }));
-                              }}
-                              style={{
-                                width: '100%',
-                                textAlign: 'left',
-                                padding: '9px 12px',
-                                background: country === c ? 'rgba(212,175,55,0.1)' : 'transparent',
-                                border: 'none',
-                                borderRadius: 2,
-                                color: country === c ? '#D4AF37' : 'var(--news-text-main)',
-                                fontSize: '0.85rem',
-                                fontWeight: country === c ? 700 : 400,
-                                cursor: 'pointer',
-                                fontFamily: 'inherit',
-                                transition: 'background 0.12s ease',
-                              }}
-                            >
-                              {c}
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <CountryDropdown
+                  country={country}
+                  countries={countries}
+                  countriesLoading={countriesLoading}
+                  hasError={!!fieldErrors.country}
+                  onSelect={handleCountrySelect}
+                />
                 <FieldError message={fieldErrors.country} />
                 <p style={{ margin: '5px 0 0', fontSize: '0.72rem', color: 'var(--news-text-muted)' }}>
                   The backend will schedule delivery to this country's next open slot.
@@ -957,18 +1015,14 @@ export default function ManualNewsPage() {
                 <input
                   id="mn-headline"
                   type="text"
-                  className={`mn-input${fieldErrors.headline ? ' has-error' : ''}`}
+                  ref={headlineRef}
+                  className={`mn-input${headlineError ? ' has-error' : ''}`}
                   style={inputStyle}
-                  value={headline}
-                  onChange={e => {
-                    setHeadline(e.target.value);
-                    if (fieldErrors.headline) setFieldErrors(prev => ({ ...prev, headline: undefined }));
-                  }}
+                  defaultValue=""
                   placeholder="Enter a clear, engaging headline…"
                   maxLength={300}
-                  aria-describedby={fieldErrors.headline ? 'mn-headline-err' : undefined}
                 />
-                <FieldError message={fieldErrors.headline} />
+                <FieldError message={headlineError} />
               </div>
 
               {/* Body */}
@@ -976,20 +1030,17 @@ export default function ManualNewsPage() {
                 <FieldLabel htmlFor="mn-body" required>Article Body</FieldLabel>
                 <textarea
                   id="mn-body"
-                  className={`mn-input${fieldErrors.body ? ' has-error' : ''}`}
+                  ref={bodyRef}
+                  className={`mn-input${bodyError ? ' has-error' : ''}`}
                   style={{ ...inputStyle, resize: 'vertical', minHeight: 260, lineHeight: 1.65 }}
-                  value={body}
-                  onChange={e => {
-                    setBody(e.target.value);
-                    if (fieldErrors.body) setFieldErrors(prev => ({ ...prev, body: undefined }));
-                  }}
+                  defaultValue=""
                   placeholder="Write your article body here…"
                   aria-describedby="mn-body-hint"
                 />
-                <FieldError message={fieldErrors.body} />
+                <FieldError message={bodyError} />
                 <p
                   id="mn-body-hint"
-                  style={{ margin: '5px 0 0', fontSize: '0.72rem', color: '#52525b', lineHeight: 1.4 }}
+                  style={{ margin: '5px 0 0', fontSize: '0.72rem', color: 'var(--news-text-dim)', lineHeight: 1.4 }}
                 >
                   💡 Separate paragraphs with a blank line to create distinct content blocks.
                 </p>
@@ -1002,7 +1053,7 @@ export default function ManualNewsPage() {
                   alignItems: 'center',
                   gap: 14,
                   paddingTop: 4,
-                  borderTop: '1px solid #1c1c1f',
+                  borderTop: '1px solid var(--news-card-border)',
                 }}
               >
                 <button
