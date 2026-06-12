@@ -1307,7 +1307,7 @@ export const ThresholdsService = {
     try {
       const response = await backendApi.put<CountryThresholdsConfig>(
         `/api/v1/news/admin/personalization/thresholds/${encodeURIComponent(country)}`,
-        { thresholds }
+        thresholds
       );
       return response.data;
     } catch (e) {
