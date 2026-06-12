@@ -1,4 +1,4 @@
-import { LayoutDashboard, Newspaper, BookOpen, Users, LogOut, Cpu, Settings, Bell, Layers, Activity, SlidersHorizontal, FilePlus } from 'lucide-react';
+import { LayoutDashboard, Newspaper, BookOpen, Users, LogOut, Cpu, Settings, Bell, Layers, Activity, SlidersHorizontal, FilePlus, Tags, Gauge, FlaskConical } from 'lucide-react';
 
 // ==============================|| INTEGRI APP — NAVIGATION MENU ||============================== //
 
@@ -81,6 +81,29 @@ const integriNav = {
       type: 'item',
       icon: SlidersHorizontal,
       url: '/system/tiers'
+    },
+
+    // ── Personalization Group ──
+    {
+      id: 'personalization-taxonomy',
+      title: 'Taxonomy',
+      type: 'item',
+      icon: Tags,
+      url: '/personalization/taxonomy'
+    },
+    {
+      id: 'personalization-thresholds',
+      title: 'Thresholds',
+      type: 'item',
+      icon: Gauge,
+      url: '/personalization/thresholds'
+    },
+    {
+      id: 'personalization-calibration',
+      title: 'Calibration',
+      type: 'item',
+      icon: FlaskConical,
+      url: '/personalization/calibration'
     },
 
     {

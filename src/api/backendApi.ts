@@ -159,6 +159,24 @@ const getSuccessMessage = (response: AxiosResponse): string => {
     return 'Custom GPT action completed';
   }
 
+  if (cleanUrl.includes('/calibration')) {
+    return 'Calibration analysis loaded';
+  }
+
+  if (cleanUrl.includes('/personalization/thresholds')) {
+    if (method === 'GET') return 'Personalization thresholds loaded';
+    if (method === 'PUT') return 'Thresholds updated successfully';
+    if (method === 'DELETE') return 'Thresholds reset to global defaults';
+    return 'Thresholds action completed';
+  }
+
+  if (cleanUrl.includes('/taxonomy')) {
+    if (method === 'GET') return 'Taxonomy configuration loaded';
+    if (method === 'PUT') return 'Taxonomy updated successfully';
+    if (method === 'DELETE') return 'Taxonomy reset to global defaults';
+    return 'Taxonomy action completed';
+  }
+
   if (segments.length > 0) {
     const last = segments[segments.length - 1];
     const formattedName = last.charAt(0).toUpperCase() + last.slice(1).replace(/[-_]/g, ' ');
@@ -1143,3 +1161,212 @@ export const CustomGptService = {
   }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  🏷️  PERSONALIZATION — TAXONOMY — Types & Services
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CountryTaxonomyConfig {
+  country: string;
+  dimensions: string[];
+  dimension_count: number;
+  is_default: boolean;
+  target_count: number;
+  updated_at?: string;
+}
+
+export interface AllTaxonomyResponse {
+  configs: CountryTaxonomyConfig[];
+  default_dimensions: string[];
+  total: number;
+}
+
+export interface TaxonomyResetResponse {
+  country: string;
+  reset: boolean;
+  dimensions: string[];
+  is_default: boolean;
+  note?: string;
+}
+
+export const TaxonomyService = {
+  /** GET /api/v1/news/admin/taxonomy */
+  fetchAll: async (): Promise<AllTaxonomyResponse> => {
+    try {
+      const response = await backendApi.get<AllTaxonomyResponse>('/api/v1/news/admin/taxonomy');
+      return response.data;
+    } catch (e) {
+      console.error('❌ [TaxonomyService] fetchAll error:', e);
+      throw e;
+    }
+  },
+
+  /** GET /api/v1/news/admin/taxonomy/{country} */
+  fetchCountry: async (country: string): Promise<CountryTaxonomyConfig> => {
+    try {
+      const response = await backendApi.get<CountryTaxonomyConfig>(
+        `/api/v1/news/admin/taxonomy/${encodeURIComponent(country)}`
+      );
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [TaxonomyService] fetchCountry error for ${country}:`, e);
+      throw e;
+    }
+  },
+
+  /** PUT /api/v1/news/admin/taxonomy/{country} - ⚠️ Full replace, invalidates user vectors */
+  updateCountry: async (country: string, dimensions: string[]): Promise<CountryTaxonomyConfig> => {
+    try {
+      const response = await backendApi.put<CountryTaxonomyConfig>(
+        `/api/v1/news/admin/taxonomy/${encodeURIComponent(country)}`,
+        { dimensions }
+      );
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [TaxonomyService] updateCountry error for ${country}:`, e);
+      throw e;
+    }
+  },
+
+  /** DELETE /api/v1/news/admin/taxonomy/{country} - Reset to global default */
+  resetCountry: async (country: string): Promise<TaxonomyResetResponse> => {
+    try {
+      const response = await backendApi.delete<TaxonomyResetResponse>(
+        `/api/v1/news/admin/taxonomy/${encodeURIComponent(country)}`
+      );
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [TaxonomyService] resetCountry error for ${country}:`, e);
+      throw e;
+    }
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  🎚️  PERSONALIZATION — THRESHOLDS — Types & Services
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface TierThresholds {
+  active: number;
+  dormant: number;
+  premium: number;
+}
+
+export interface CountryThresholdsConfig {
+  country: string;
+  thresholds: TierThresholds;
+  is_default: boolean;
+  updated_at?: string;
+}
+
+export interface AllThresholdsResponse {
+  configs: CountryThresholdsConfig[];
+  default_thresholds: TierThresholds;
+  total: number;
+}
+
+export interface ThresholdsResetResponse {
+  country: string;
+  reset: boolean;
+  thresholds: TierThresholds;
+  is_default: boolean;
+  note?: string;
+}
+
+export const ThresholdsService = {
+  /** GET /api/v1/news/admin/personalization/thresholds */
+  fetchAll: async (): Promise<AllThresholdsResponse> => {
+    try {
+      const response = await backendApi.get<AllThresholdsResponse>(
+        '/api/v1/news/admin/personalization/thresholds'
+      );
+      return response.data;
+    } catch (e) {
+      console.error('❌ [ThresholdsService] fetchAll error:', e);
+      throw e;
+    }
+  },
+
+  /** GET /api/v1/news/admin/personalization/thresholds/{country} */
+  fetchCountry: async (country: string): Promise<CountryThresholdsConfig> => {
+    try {
+      const response = await backendApi.get<CountryThresholdsConfig>(
+        `/api/v1/news/admin/personalization/thresholds/${encodeURIComponent(country)}`
+      );
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [ThresholdsService] fetchCountry error for ${country}:`, e);
+      throw e;
+    }
+  },
+
+  /** PUT /api/v1/news/admin/personalization/thresholds/{country} */
+  updateCountry: async (
+    country: string,
+    thresholds: Partial<TierThresholds>
+  ): Promise<CountryThresholdsConfig> => {
+    try {
+      const response = await backendApi.put<CountryThresholdsConfig>(
+        `/api/v1/news/admin/personalization/thresholds/${encodeURIComponent(country)}`,
+        { thresholds }
+      );
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [ThresholdsService] updateCountry error for ${country}:`, e);
+      throw e;
+    }
+  },
+
+  /** DELETE /api/v1/news/admin/personalization/thresholds/{country} */
+  resetCountry: async (country: string): Promise<ThresholdsResetResponse> => {
+    try {
+      const response = await backendApi.delete<ThresholdsResetResponse>(
+        `/api/v1/news/admin/personalization/thresholds/${encodeURIComponent(country)}`
+      );
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [ThresholdsService] resetCountry error for ${country}:`, e);
+      throw e;
+    }
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  📊 PERSONALIZATION — CALIBRATION — Types & Services
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CalibrationBin {
+  lo: number;
+  hi: number;
+  sent: number;
+  opened: number;
+  open_rate: number;
+}
+
+export interface CalibrationResponse {
+  country: string;
+  window_days: number;
+  total_sent: number;
+  total_opened: number;
+  overall_open_rate: number;
+  bins: CalibrationBin[];
+  inflection_cosine: number | null;
+  current_thresholds: TierThresholds;
+  suggested_thresholds: TierThresholds | null;
+  note: string;
+}
+
+export const CalibrationService = {
+  /** GET /api/v1/news/admin/personalization/calibration/{country}?days=N */
+  fetchCalibration: async (country: string, days: number = 30): Promise<CalibrationResponse> => {
+    try {
+      const response = await backendApi.get<CalibrationResponse>(
+        `/api/v1/news/admin/personalization/calibration/${encodeURIComponent(country)}`,
+        { params: { days }, skipToast: true } as any
+      );
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [CalibrationService] fetchCalibration error for ${country}:`, e);
+      throw e;
+    }
+  },
+};

@@ -28,6 +28,11 @@ const ModelsPage        = Loadable(lazy(() => import('pages/ModelsPage')));
 const PlatformUsagePage = Loadable(lazy(() => import('pages/PlatformUsagePage')));
 const TierConfigurationPage = Loadable(lazy(() => import('pages/TierConfigurationPage')));
 
+// ── Personalization Pages ──
+const PersonalizationTaxonomyPage    = Loadable(lazy(() => import('pages/PersonalizationTaxonomyPage')));
+const PersonalizationThresholdsPage  = Loadable(lazy(() => import('pages/PersonalizationThresholdsPage')));
+const PersonalizationCalibrationPage = Loadable(lazy(() => import('pages/PersonalizationCalibrationPage')));
+
 // ==============================|| INTEGRI APP — NAVIGATION ROUTES ||============================== //
 
 const NavigationRoutes = {
@@ -52,7 +57,12 @@ const NavigationRoutes = {
         { path: '/system/usage',  element: <PlatformUsagePage /> },
         { path: '/system/tiers',  element: <TierConfigurationPage /> },
         { path: '/users/:id',  element: <UserDetailPage /> },
-        { path: '/profile',    element: <ProfilePage /> }
+        { path: '/profile',    element: <ProfilePage /> },
+
+        // ── Personalization ──
+        { path: '/personalization/taxonomy',    element: <PersonalizationTaxonomyPage /> },
+        { path: '/personalization/thresholds',  element: <PersonalizationThresholdsPage /> },
+        { path: '/personalization/calibration', element: <PersonalizationCalibrationPage /> },
       ]
     }
   ]
