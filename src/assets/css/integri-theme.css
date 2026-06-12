@@ -73,9 +73,9 @@ body {
 .integri-logo-container {
   display: flex !important;
   align-items: center !important;
-  justify-content: center !important;
+  justify-content: flex-start !important;
   width: auto !important;
-  height: 42px !important;
+  height: auto !important;
 }
 
 .integri-logo-container img {
