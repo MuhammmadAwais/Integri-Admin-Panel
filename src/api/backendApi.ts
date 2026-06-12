@@ -153,6 +153,12 @@ const getSuccessMessage = (response: AxiosResponse): string => {
     return 'AI models loaded successfully';
   }
 
+  if (cleanUrl.includes('/custom-gpts')) {
+    if (method === 'GET') return 'Public GPTs loaded successfully';
+    if (method === 'PATCH') return 'GPT publicity updated successfully';
+    return 'Custom GPT action completed';
+  }
+
   if (segments.length > 0) {
     const last = segments[segments.length - 1];
     const formattedName = last.charAt(0).toUpperCase() + last.slice(1).replace(/[-_]/g, ' ');
@@ -1074,6 +1080,64 @@ export const TierLimitsService = {
       return response.data;
     } catch (e) {
       console.error('❌ [TierLimitsService] updateTierLimits error:', e);
+      throw e;
+    }
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  🤖 CUSTOM GPTs — Types & Services
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CustomGpt {
+  gpt_id: string;
+  name: string;
+  description: string;
+  instructions: string;
+  conversation_starters: string[];
+  is_public: boolean;
+  knowledge_base_status: string;
+  document_count: number;
+  total_chunks: number;
+  recommended_model: string;
+  recommended_provider: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const CustomGptService = {
+  /**
+   * Fetch all GPTs that admin has marked as public.
+   * GET /api/v1/custom-gpts/public
+   */
+  fetchPublicGpts: async (limit: number = 50): Promise<CustomGpt[]> => {
+    try {
+      const response = await backendApi.get<CustomGpt[]>('/api/v1/custom-gpts/public', {
+        params: { limit },
+        skipToast: true
+      } as any);
+      return response.data;
+    } catch (e) {
+      console.error('❌ [CustomGptService] fetchPublicGpts error:', e);
+      throw e;
+    }
+  },
+
+  /**
+   * Toggle publicity of a custom GPT (Admin only).
+   * PATCH /api/v1/admin/custom-gpts/{gpt_id}/publicity
+   */
+  toggleGptPublicity: async (gpt_id: string, is_public: boolean): Promise<CustomGpt> => {
+    try {
+      const response = await backendApi.patch<CustomGpt>(
+        `/api/v1/admin/custom-gpts/${gpt_id}/publicity`,
+        { is_public },
+        { skipToast: true } as any
+      );
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [CustomGptService] toggleGptPublicity error for ${gpt_id}:`, e);
       throw e;
     }
   }

@@ -589,6 +589,8 @@ export default function NotificationAnalyticsPage({ onBack }: Props) {
           padding: '22px 24px',
           marginBottom: 28,
           boxShadow: 'var(--news-card-shadow)',
+          position: 'relative',
+          zIndex: 10,
         }}
       >
         <div style={{ color: 'var(--news-text-dim)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.4px', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}>

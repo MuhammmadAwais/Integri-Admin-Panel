@@ -70,7 +70,7 @@ const integriNav = {
     },
     {
       id: 'ai-models',
-      title: 'AI Models',
+      title: 'Models & GPTs',
       type: 'item',
       icon: Layers,
       url: '/system/models'
