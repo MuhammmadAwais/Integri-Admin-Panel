@@ -827,6 +827,7 @@ export const NewsService = {
         '/api/v1/news/admin/notification-opens',
         { params: cleanParams, skipToast: true } as any
       );
+      console.log("Response data: ", response.data)
       return response.data;
     } catch (e) {
       console.error('❌ [NewsService] fetchNotificationOpens error:', e);

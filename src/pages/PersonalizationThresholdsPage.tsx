@@ -137,7 +137,7 @@ export default function PersonalizationThresholdsPage() {
   const [allData, setAllData] = useState<AllThresholdsResponse | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [currentConfig, setCurrentConfig] = useState<CountryThresholdsConfig | null>(null);
-  const [workingThresholds, setWorkingThresholds] = useState<TierThresholds>({ active: 0.5, dormant: 0.3, premium: 0.6 });
+  const [workingThresholds, setWorkingThresholds] = useState<TierThresholds>({ active: 0, dormant: 0, premium: 0 });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
