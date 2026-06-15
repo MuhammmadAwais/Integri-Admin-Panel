@@ -154,8 +154,9 @@ const getSuccessMessage = (response: AxiosResponse): string => {
   }
 
   if (cleanUrl.includes('/custom-gpts')) {
-    if (method === 'GET') return 'Public GPTs loaded successfully';
-    if (method === 'PATCH') return 'GPT publicity updated successfully';
+    if (method === 'GET') return 'Custom GPTs loaded successfully';
+    if (method === 'POST') return 'Agent created successfully';
+    if (method === 'PATCH') return 'GPT publicity updated';
     return 'Custom GPT action completed';
   }
 
@@ -1157,6 +1158,38 @@ export const CustomGptService = {
       return response.data;
     } catch (e) {
       console.error(`❌ [CustomGptService] toggleGptPublicity error for ${gpt_id}:`, e);
+      throw e;
+    }
+  },
+
+  /**
+   * Create a new custom GPT / Agent.
+   * POST /api/v1/custom-gpts
+   */
+  createAgent: async (agentData: {
+    name: string;
+    description: string;
+    instructions: string;
+    conversation_starters?: string[];
+    recommended_model: string;
+    recommended_provider: string;
+  }): Promise<CustomGpt> => {
+    try {
+      const payload = {
+        name: agentData.name,
+        description: agentData.description,
+        instructions: agentData.instructions,
+        conversation_starters:
+          agentData.conversation_starters?.length
+            ? agentData.conversation_starters
+            : [agentData.name],
+        recommended_model: agentData.recommended_model,
+        recommended_provider: agentData.recommended_provider,
+      };
+      const response = await backendApi.post<CustomGpt>('/api/v1/custom-gpts', payload);
+      return response.data;
+    } catch (e) {
+      console.error('❌ [CustomGptService] createAgent error:', e);
       throw e;
     }
   }
