@@ -57,7 +57,7 @@ export const getBackendToken = async (): Promise<string | null> => {
     const response = await axios.post(`${BASE_URL}/api/v1/auth/token`, {
       user_id: ADMIN_UID,
       email: ADMIN_EMAIL,
-      user_type: 'freemium'
+      user_type: 'pro'
     });
     console.log(response)
     if (response.data && response.data.access_token) {

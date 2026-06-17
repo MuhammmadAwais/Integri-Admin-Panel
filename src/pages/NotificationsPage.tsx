@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { NewsService, ScheduleEntry } from 'api/backendApi';
 import { Bell, Activity, Send, Clock, Plus, Trash2, X, Save, Globe, BarChart2 } from 'lucide-react';
 import CountryFlag from 'components/CountryFlag';
 import 'features/news/styles/news.scss';
-import NotificationAnalyticsPage from './NotificationAnalyticsPage';
 
 // --- Types for local component state ---
 type Toast = { message: string; type: 'success' | 'error' } | null;
 
 export default function NotificationsPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [testCountry, setTestCountry] = useState<string>('');
   const [toast, setToast] = useState<Toast>(null);
-  const [showAnalytics, setShowAnalytics] = useState(false);
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -189,11 +189,6 @@ export default function NotificationsPage() {
   const schedules = schedulesData?.schedules || [];
   const countries = countriesData?.supported_countries ? Object.keys(countriesData.supported_countries) : [];
 
-  // Render analytics sub-module
-  if (showAnalytics) {
-    return <NotificationAnalyticsPage onBack={() => setShowAnalytics(false)} />;
-  }
-
   return (
     <div className="news-glass-archive" style={{ position: 'relative', minHeight: '100vh', paddingBottom: 100 }}>
       {/* Toast Notification */}
@@ -230,7 +225,7 @@ export default function NotificationsPage() {
         {/* ── Notification Analysis anchor button ── */}
         <button
           id="notification-analysis-btn"
-          onClick={() => setShowAnalytics(true)}
+          onClick={() => navigate('/news/analytics')}
           style={{
             background: 'transparent',
             border: '1px solid var(--news-glass-border)',

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Newspaper, BookOpen, Users, LogOut, Cpu, Settings, Bell, Layers, Activity, SlidersHorizontal, FilePlus, Tags, Gauge, FlaskConical } from 'lucide-react';
+import { LayoutDashboard, Newspaper, BookOpen, Users, LogOut, Cpu, Settings, Bell, Layers, Activity, SlidersHorizontal, FilePlus, Tags, Gauge, FlaskConical, BarChart2 } from 'lucide-react';
 
 // ==============================|| INTEGRI APP — NAVIGATION MENU ||============================== //
 
@@ -46,6 +46,13 @@ const integriNav = {
       type: 'item',
       icon: Bell,
       url: '/news/notifications'
+    },
+    {
+      id: 'analytics',
+      title: 'Analytics',
+      type: 'item',
+      icon: BarChart2,
+      url: '/news/analytics'
     },
     {
       id: 'users',
