@@ -50,6 +50,68 @@ type SortKey = 'total_tokens_used' | 'total_api_requests' | 'tier';
 type SortDir = 'asc' | 'desc';
 interface SortConfig { key: SortKey; dir: SortDir }
 
+// ─── Stat Card Skeletons ──────────────────────────────────────────────────────
+const StatCardSkeleton = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '70%' }}>
+        <div className="nv-skeleton" style={{ width: '80%', height: 10 }} />
+        <div className="nv-skeleton" style={{ width: '100%', height: 28 }} />
+      </div>
+      <div className="nv-skeleton" style={{ width: 42, height: 42, borderRadius: '8px' }} />
+    </div>
+    <div className="nv-skeleton" style={{ width: '60%', height: 10, marginTop: 4 }} />
+  </div>
+);
+
+export const TableRowSkeleton = () => (
+  <tr style={{ borderBottom: '1px solid var(--news-glass-border)' }}>
+    {/* Row number */}
+    <td style={{ padding: '14px 8px 14px 20px', width: 44 }}>
+      <div className="nv-skeleton" style={{ width: 16, height: 14 }} />
+    </td>
+    {/* Identity */}
+    <td style={{ padding: '14px 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="nv-skeleton" style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0 }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', minWidth: 160 }}>
+          <div className="nv-skeleton" style={{ width: 110, height: 14 }} />
+          <div className="nv-skeleton" style={{ width: 150, height: 10 }} />
+          <div className="nv-skeleton" style={{ width: 80, height: 10, marginTop: 2 }} />
+        </div>
+      </div>
+    </td>
+    {/* Tier */}
+    <td style={{ padding: '14px 20px' }}>
+      <div className="nv-skeleton" style={{ width: 70, height: 20, borderRadius: 3 }} />
+    </td>
+    {/* Tokens */}
+    <td style={{ padding: '14px 20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div className="nv-skeleton" style={{ width: 80, height: 14 }} />
+      </div>
+    </td>
+    {/* Requests */}
+    <td style={{ padding: '14px 20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div className="nv-skeleton" style={{ width: 60, height: 14 }} />
+      </div>
+    </td>
+    {/* Joined */}
+    <td className="col-joined" style={{ padding: '14px 20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div className="nv-skeleton" style={{ width: 80, height: 14 }} />
+      </div>
+    </td>
+    {/* Origin */}
+    <td style={{ padding: '14px 20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <div className="nv-skeleton" style={{ width: 26, height: 20, borderRadius: 2 }} />
+      </div>
+    </td>
+  </tr>
+);
+
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 interface StatCardProps {
   title: string; value: string | number;
@@ -58,7 +120,7 @@ interface StatCardProps {
 const UsageStatCard = React.memo<StatCardProps>(({ title, value, icon: Icon, color, detail, isLoading }) => (
   <div className="country-card" style={{ padding: '24px' }}>
     {isLoading
-      ? <div className="nv-skeleton" style={{ height: 80 }} />
+      ? <StatCardSkeleton />
       : <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
@@ -118,7 +180,40 @@ const PAGE_CSS = `
 .th-sort:hover { background: rgba(212,175,55,0.05); }
 .th-plain { padding: 14px 20px; font-weight: 900; color: #D4AF37 !important; text-transform: uppercase; letter-spacing: 1.5px; font-size: 0.68rem; white-space: nowrap; }
 .limit-input::-webkit-inner-spin-button, .limit-input::-webkit-outer-spin-button { opacity: 1; }
-.id-skel { display: inline-block; border-radius: 3px; animation: glowPulse 2s cubic-bezier(0.4,0,0.6,1) infinite; background: var(--news-table-header-bg); border: 1px solid var(--news-glass-border); }
+.id-skel {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--news-glass-border);
+  border-radius: 3px;
+}
+.id-skel::after {
+  content: "";
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.05) 20%,
+    rgba(255, 255, 255, 0.12) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer-anim 1.6s infinite linear;
+}
+[data-pc-theme='light'] .id-skel {
+  background: rgba(0, 0, 0, 0.03);
+}
+[data-pc-theme='light'] .id-skel::after {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.04) 20%,
+    rgba(0, 0, 0, 0.08) 60%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
 .pu-select { background: transparent; border: none; color: #D4AF37; font-weight: 800; font-size: 0.85rem; outline: none; cursor: pointer; }
 .pu-select option { background: #111; color: #fff; }
 `;
@@ -212,7 +307,7 @@ export default function PlatformUsagePage() {
   const pageUids = useMemo(() => pageUsers.map(u => u.user_id), [pageUsers]);
 
   // ── 5. Firebase enrichment (current page only) ────────────────────────────
-  const { profileMap, isLoading: isEnriching } = useEnrichedProfiles(pageUids);
+  const { profileMap, isLoading: isEnriching, loadingMap } = useEnrichedProfiles(pageUids);
 
   // ── 6. Merge API + Firebase ────────────────────────────────────────────────
   const rows = useMemo(() =>
@@ -419,11 +514,7 @@ export default function PlatformUsagePage() {
               <tbody>
                 {isInitial ? (
                   [...Array(10)].map((_, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid var(--news-glass-border)' }}>
-                      <td colSpan={7} style={{ padding: '14px 20px' }}>
-                        <div className="nv-skeleton" style={{ height: 40 }} />
-                      </td>
-                    </tr>
+                    <TableRowSkeleton key={i} />
                   ))
                 ) : rows.length === 0 ? (
                   <tr>
@@ -436,6 +527,7 @@ export default function PlatformUsagePage() {
                   rows.map((u, idx) => {
                     const rowNum = (safePage - 1) * PAGE_SIZE + idx + 1;
                     const ts = tierBadgeStyle(u.tier);
+                    const isUserLoading = loadingMap.get(u.user_id) ?? false;
                     return (
                       <tr
                         key={u.user_id}
@@ -452,7 +544,7 @@ export default function PlatformUsagePage() {
                         {/* Identity */}
                         <td style={{ padding: '14px 20px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            {isEnriching
+                            {isUserLoading
                               ? <span className="id-skel" style={{ width: 34, height: 34, borderRadius: '50%' }} />
                               : u.avatar
                                 ? <img src={u.avatar} alt="" style={{ width: 34, height: 34, borderRadius: '50%', border: '1px solid #D4AF37', objectFit: 'cover', flexShrink: 0 }} />
@@ -461,7 +553,7 @@ export default function PlatformUsagePage() {
                                   </div>
                             }
                             <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                              {isEnriching
+                              {isUserLoading
                                 ? <span className="id-skel" style={{ width: 110, height: 14, marginBottom: 5 }} />
                                 : <span style={{ fontWeight: 800, color: '#D4AF37', fontSize: '0.92rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {u.displayName || 'Guest'}
@@ -511,7 +603,7 @@ export default function PlatformUsagePage() {
                         {/* Origin flag */}
                         <td style={{ padding: '14px 20px', textAlign: 'center' }}>
                           <div style={{ display: 'flex', justifyContent: 'center' }}>
-                            {isEnriching
+                            {isUserLoading
                               ? <span className="id-skel" style={{ width: 26, height: 20, borderRadius: 2 }} />
                               : u.country && u.country !== 'Unknown'
                                 ? <CountryFlag country={u.country} size={26} />

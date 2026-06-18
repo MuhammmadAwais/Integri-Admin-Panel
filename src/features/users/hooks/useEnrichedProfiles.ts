@@ -9,7 +9,7 @@
  * returned to prevent XSS from malicious Firestore content.
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useQueries } from '@tanstack/react-query';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from 'lib/firebase/firebase';
 import DOMPurify from 'dompurify';
@@ -48,58 +48,75 @@ const resolveAvatar = (data: Record<string, unknown>): string | null => {
 
 // ─── Core fetcher (called by React Query) ───────────────────────────────────
 
-async function fetchFirebaseProfiles(
-  uids: string[]
-): Promise<Map<string, FirebaseProfile>> {
-  const settled = await Promise.allSettled(
-    uids.map((uid) => getDoc(doc(db, 'Users', uid)))
-  );
-
-  const map = new Map<string, FirebaseProfile>();
-
-  settled.forEach((result, i) => {
-    if (result.status !== 'fulfilled') return;
-    const snap = result.value;
-    if (!snap.exists()) return;
+async function fetchFirebaseProfile(
+  uid: string
+): Promise<FirebaseProfile | null> {
+  if (!uid || uid.includes('@firebase_placeholder')) return null;
+  try {
+    const snap = await getDoc(doc(db, 'Users', uid));
+    if (!snap.exists()) return null;
 
     const data = snap.data() as Record<string, unknown>;
-    map.set(uids[i], {
-      id: uids[i],
+    return {
+      id: uid,
       name: safe(data.name) || 'Guest',
       avatar: resolveAvatar(data),
       country: safe(data.country) || 'Unknown',
-    });
-  });
-
-  return map;
+    };
+  } catch (error) {
+    console.error(`❌ [useEnrichedProfiles] Error fetching Firestore profile for ${uid}:`, error);
+    return null;
+  }
 }
 
 // ─── Hook ───────────────────────────────────────────────────────────────────
 
 /**
- * Accepts the 25 UIDs on the current page.
- * Returns a stable Map of uid → FirebaseProfile and an isLoading flag.
- *
- * Cache key is derived from the SORTED uid list so that the same set of
- * users always hits the same cache entry regardless of row order.
+ * Accepts the UIDs on the current page.
+ * Returns a stable Map of uid → FirebaseProfile, an isLoading flag,
+ * and a loadingMap for fine-grained row loading states.
  */
 export function useEnrichedProfiles(uids: string[]): {
   profileMap: Map<string, FirebaseProfile>;
   isLoading: boolean;
+  loadingMap: Map<string, boolean>;
 } {
-  // Sort UIDs for a stable, order-independent cache key
-  const cacheKey = [...uids].sort().join('|');
+  const results = useQueries({
+    queries: uids.map((uid) => ({
+      queryKey: ['fbProfile', uid],
+      queryFn: () => fetchFirebaseProfile(uid),
+      enabled: !!uid && !uid.includes('@firebase_placeholder'),
+      staleTime: 10 * 60 * 1000,  // 10 min — profiles rarely change
+      gcTime: 30 * 60 * 1000,     // keep in memory 30 min after unmount
+    })),
+  });
 
-  const { data, isLoading } = useQuery<Map<string, FirebaseProfile>>({
-    queryKey: ['fbProfiles', cacheKey],
-    queryFn: () => fetchFirebaseProfiles(uids),
-    enabled: uids.length > 0,
-    staleTime: 10 * 60 * 1000,  // 10 min — profiles rarely change
-    gcTime: 30 * 60 * 1000,     // keep in memory 30 min after unmount
+  const profileMap = new Map<string, FirebaseProfile>();
+  const loadingMap = new Map<string, boolean>();
+  let isLoading = false;
+
+  results.forEach((res, idx) => {
+    const uid = uids[idx];
+    if (!uid) return;
+
+    const isSearchable = !uid.includes('@firebase_placeholder');
+    const isUidLoading = isSearchable && res.isLoading;
+
+    if (isUidLoading) {
+      isLoading = true;
+      loadingMap.set(uid, true);
+    } else {
+      loadingMap.set(uid, false);
+    }
+
+    if (res.data) {
+      profileMap.set(uid, res.data);
+    }
   });
 
   return {
-    profileMap: data ?? new Map<string, FirebaseProfile>(),
-    isLoading: uids.length > 0 ? isLoading : false,
+    profileMap,
+    isLoading,
+    loadingMap,
   };
 }

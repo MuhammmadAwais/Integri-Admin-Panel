@@ -1036,6 +1036,7 @@ export const UserService = {
       } else if (country && country.trim() !== '') {
         params.country = country.trim();
       }
+      console.log("Callign Api")
       const response = await backendApi.get<UsersUsageResponse>('/api/v1/users/usage', {
         params
       });
