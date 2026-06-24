@@ -8,7 +8,7 @@ import {
   Bot, Eye, EyeOff, CheckCircle, XCircle, RefreshCw, Hash,
   Check, X, AlertTriangle, Loader2, Sparkles, Users, Calendar,
   BookOpen, ChevronRight, ToggleRight, Plus, Trash2,
-  ChevronDown, Search, Wand2
+  ChevronDown, Search, Wand2, Save
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { gsap } from 'gsap';
@@ -878,226 +878,502 @@ const FieldBlock: React.FC<{
   </div>
 );
 
-// ─── GPT Publicity Toggle Modal ──────────────────────────────────────────────
+// ─── GPT Detail & Management Slide-Over ─────────────────────────────────────
 
-interface GptModalProps {
-  gpt: CustomGpt | null;
+interface GptDetailModalProps {
+  gptId: string;
   isDark: boolean;
+  models: string[];
   onClose: () => void;
-  onConfirm: (gptId: string, newPublicState: boolean) => Promise<void>;
-  isLoading: boolean;
+  onUpdated: () => void;
 }
 
-const GptPublicityModal: React.FC<GptModalProps> = ({ gpt, isDark, onClose, onConfirm, isLoading }) => {
+const GptDetailModal: React.FC<GptDetailModalProps> = ({ gptId, isDark, models, onClose, onUpdated }) => {
   const overlayRef = useRef<HTMLDivElement>(null);
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  const isPublic = gpt?.is_public ?? false;
-  const newState = !isPublic;
-
-  useEffect(() => {
-    if (gpt) {
-      document.body.style.overflow = 'hidden';
-      const tl = gsap.timeline();
-      tl.fromTo(overlayRef.current, { opacity: 0 }, { opacity: 1, duration: 0.25, ease: 'power2.out' });
-      tl.fromTo(
-        modalRef.current,
-        { opacity: 0, scale: 0.88, y: 24 },
-        { opacity: 1, scale: 1, y: 0, duration: 0.38, ease: 'back.out(1.6)' },
-        '-=0.12'
-      );
-    }
-    return () => {
-      document.body.style.overflow = 'auto';
-    };
-  }, [gpt]);
-
-  const handleClose = useCallback(() => {
-    if (isLoading) return;
-    const tl = gsap.timeline({ onComplete: onClose });
-    tl.to(modalRef.current, { opacity: 0, scale: 0.88, y: 24, duration: 0.22, ease: 'power2.in' });
-    tl.to(overlayRef.current, { opacity: 0, duration: 0.18, ease: 'power2.in' }, '-=0.08');
-  }, [onClose, isLoading]);
-
-  if (!gpt) return null;
-
-  const accentColor = newState ? '#10b981' : '#ef4444';
-  const accentBg = newState ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
+  const panelRef = useRef<HTMLDivElement>(null);
   const gold = '#D4AF37';
+  const textPrimary = isDark ? '#f4f4f5' : '#111827';
+  const textMuted = isDark ? '#71717a' : '#9ca3af';
+
+  const [details, setDetails] = useState<CustomGpt | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    instructions: '',
+    starters: [''],
+    model: '',
+  });
+
+  // Mount animation
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    const tl = gsap.timeline();
+    tl.fromTo(overlayRef.current, { opacity: 0 }, { opacity: 1, duration: 0.25, ease: 'power2.out' });
+    tl.fromTo(
+      panelRef.current,
+      { x: '100%', opacity: 0 },
+      { x: '0%', opacity: 1, duration: 0.38, ease: 'power3.out' },
+      '-=0.12'
+    );
+    return () => { document.body.style.overflow = 'auto'; };
+  }, []);
+
+  // Fetch Details
+  useEffect(() => {
+    const fetchDetails = async () => {
+      setLoadingDetails(true);
+      try {
+        const data = await CustomGptService.getGptDetails(gptId);
+        setDetails(data);
+        setEditForm({
+          name: data.name || '',
+          description: data.description || '',
+          instructions: data.instructions || '',
+          starters: data.conversation_starters && data.conversation_starters.length ? [...data.conversation_starters] : [''],
+          model: data.recommended_model || models[0] || '',
+        });
+      } catch (err) {
+        showToast('Failed to load GPT details', 'error');
+        handleClose(false);
+      } finally {
+        setLoadingDetails(false);
+      }
+    };
+    fetchDetails();
+  }, [gptId]);
+
+  const handleClose = useCallback((animated = true) => {
+    if (isSaving || isDeleting) return;
+    if (!animated) { onClose(); return; }
+    const tl = gsap.timeline({ onComplete: onClose });
+    tl.to(panelRef.current, { x: '100%', opacity: 0, duration: 0.28, ease: 'power3.in' });
+    tl.to(overlayRef.current, { opacity: 0, duration: 0.18 }, '-=0.1');
+  }, [onClose, isSaving, isDeleting]);
+
+  const handleTogglePublicity = async () => {
+    if (!details) return;
+    setIsSaving(true);
+    const targetState = !details.is_public;
+    try {
+      const updated = await CustomGptService.toggleGptPublicity(gptId, targetState);
+      setDetails(updated);
+      showToast(`"${details.name}" is now ${targetState ? 'public' : 'private'}`, 'success');
+      onUpdated();
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || 'Failed to update visibility', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!editForm.name.trim()) {
+      showToast('Name is required', 'error');
+      return;
+    }
+    if (!editForm.instructions.trim()) {
+      showToast('Instructions are required', 'error');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const cleanStarters = editForm.starters.map(s => s.trim()).filter(Boolean);
+      const updated = await CustomGptService.updateGpt(gptId, {
+        name: editForm.name.trim(),
+        description: editForm.description.trim(),
+        instructions: editForm.instructions.trim(),
+        conversation_starters: cleanStarters,
+        recommended_model: editForm.model,
+        recommended_provider: deriveProvider(editForm.model),
+      });
+      setDetails(updated);
+      setIsEditing(false);
+      showToast(`Agent "${updated.name}" updated successfully`, 'success');
+      onUpdated();
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || 'Failed to update agent', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await CustomGptService.deleteGpt(gptId);
+      showToast('Agent deleted successfully', 'success');
+      onUpdated();
+      handleClose(true);
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || 'Failed to delete agent', 'error');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const updateStarter = (i: number, v: string) => {
+    setEditForm(f => ({ ...f, starters: f.starters.map((s, idx) => idx === i ? v : s) }));
+  };
+  const addStarter = () => setEditForm(f => ({ ...f, starters: [...f.starters, ''] }));
+  const removeStarter = (i: number) => setEditForm(f => ({ ...f, starters: f.starters.filter((_, idx) => idx !== i) }));
 
   return (
     <ElitePortal>
       <div
         ref={overlayRef}
-        onClick={handleClose}
+        onClick={() => handleClose(true)}
         style={{
           position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-          background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(10px)',
-          zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '20px'
+          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)',
+          zIndex: 9998, display: 'flex', justifyContent: 'flex-end',
         }}
       >
         <div
-          ref={modalRef}
+          ref={panelRef}
           onClick={e => e.stopPropagation()}
           style={{
-            background: isDark ? 'rgba(10,10,14,0.98)' : 'rgba(255,255,255,0.98)',
-            border: `1px solid ${isDark ? 'rgba(212,175,55,0.2)' : 'rgba(212,175,55,0.4)'}`,
-            borderRadius: '16px',
             width: '100%',
-            maxWidth: '520px',
-            boxShadow: '0 32px 64px rgba(0,0,0,0.5)',
-            overflow: 'hidden'
+            maxWidth: '560px',
+            height: '100vh',
+            background: isDark ? '#0d0d11' : '#f8f8fb',
+            borderLeft: `1px solid ${isDark ? 'rgba(212,175,55,0.22)' : 'rgba(212,175,55,0.4)'}`,
+            boxShadow: '-24px 0 64px rgba(0,0,0,0.4)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
           }}
         >
           {/* Header */}
           <div style={{
-            padding: '20px 24px 16px',
-            borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+            padding: '22px 24px 18px',
+            borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)'}`,
+            background: isDark ? 'rgba(212,175,55,0.04)' : 'rgba(212,175,55,0.05)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
               <div style={{
-                width: 36, height: 36, borderRadius: 8,
-                background: accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                width: 40, height: 40, borderRadius: '10px',
+                background: 'linear-gradient(135deg, #D4AF37 0%, #a8832a 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 14px rgba(212,175,55,0.35)', flexShrink: 0
               }}>
-                {newState ? <Eye size={18} color={accentColor} /> : <EyeOff size={18} color={accentColor} />}
+                <Bot size={20} color="#000" />
               </div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: isDark ? gold : '#b48a04' }}>
-                {newState ? 'Make GPT Public' : 'Remove from Public'}
-              </h3>
+              <div style={{ minWidth: 0 }}>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: gold, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {loadingDetails ? 'Agent Settings' : details?.name}
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: textMuted }}>
+                  {isEditing ? 'Modify agent configurations' : 'Detailed configuration settings'}
+                </p>
+              </div>
             </div>
             <button
-              onClick={handleClose}
-              disabled={isLoading}
+              onClick={() => handleClose(true)}
+              disabled={isSaving || isDeleting}
               style={{
-                background: 'transparent', border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer',
-                color: isDark ? '#71717a' : '#a1a1aa', padding: '4px', borderRadius: '50%', display: 'flex',
-                transition: 'color 0.2s'
+                background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+                border: 'none', borderRadius: '8px', cursor: (isSaving || isDeleting) ? 'not-allowed' : 'pointer',
+                color: textMuted, padding: '6px', display: 'flex', transition: 'all 0.18s',
               }}
-              onMouseEnter={e => (e.currentTarget.style.color = isDark ? '#fff' : '#000')}
-              onMouseLeave={e => (e.currentTarget.style.color = isDark ? '#71717a' : '#a1a1aa')}
             >
-              <X size={20} />
+              <X size={18} />
             </button>
           </div>
 
           {/* Body */}
-          <div style={{ padding: '24px' }}>
-            <div style={{
-              background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
-              border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
-              borderRadius: '10px', padding: '16px', marginBottom: '20px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                <div style={{
-                  width: 44, height: 44, borderRadius: 10, flexShrink: 0,
-                  background: `linear-gradient(135deg, #D4AF37 0%, #c09b2f 100%)`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <Bot size={22} color="#000" />
+          <div style={{ flex: 1, overflowY: 'auto', padding: '24px', position: 'relative' }}>
+            {loadingDetails ? (
+              <div className="d-flex flex-column justify-content-center align-items-center" style={{ height: '70%' }}>
+                <Loader2 size={36} color={gold} style={{ animation: 'spin 1s linear infinite' }} />
+                <span style={{ marginTop: '12px', color: textMuted, fontSize: '0.875rem' }}>Loading agent specifications…</span>
+              </div>
+            ) : showDeleteConfirm ? (
+              <div className="d-flex flex-column justify-content-center align-items-center text-center" style={{ height: '70%', padding: '20px' }}>
+                <AlertTriangle size={48} color="#ef4444" style={{ marginBottom: '16px' }} />
+                <h4 style={{ color: textPrimary, fontWeight: 700, marginBottom: '8px' }}>Are you absolutely sure?</h4>
+                <p style={{ color: textMuted, fontSize: '0.875rem', maxWidth: '360px', lineHeight: 1.5, marginBottom: '24px' }}>
+                  This will permanently delete the agent <strong>"{details?.name}"</strong>. This action is irreversible.
+                </p>
+                <div className="d-flex gap-3">
+                  <button
+                    className="btn"
+                    disabled={isDeleting}
+                    style={{ border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`, color: textMuted }}
+                    onClick={() => setShowDeleteConfirm(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="btn d-flex align-items-center gap-2"
+                    disabled={isDeleting}
+                    style={{ background: '#ef4444', color: '#fff' }}
+                    onClick={handleDelete}
+                  >
+                    {isDeleting ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />} Delete Agent
+                  </button>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontWeight: 700, fontSize: '0.95rem',
-                    color: isDark ? '#fff' : '#111',
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-                  }}>
-                    {gpt.name}
+              </div>
+            ) : isEditing ? (
+              /* Edit Form Mode */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Name */}
+                <FieldBlock label="Agent Name" required isDark={isDark} gold={gold} textMuted={textMuted}>
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g. Research Assistant"
+                    maxLength={80}
+                    style={{
+                      width: '100%',
+                      background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                      border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.14)'}`,
+                      borderRadius: '10px', padding: '10px 14px',
+                      fontSize: '0.875rem', color: textPrimary,
+                      outline: 'none', fontFamily: 'inherit',
+                    }}
+                  />
+                </FieldBlock>
+
+                {/* Description */}
+                <FieldBlock label="Description" isDark={isDark} gold={gold} textMuted={textMuted}>
+                  <AutoTextarea
+                    value={editForm.description}
+                    onChange={v => setEditForm(prev => ({ ...prev, description: v }))}
+                    placeholder="Brief description of the agent's functionality…"
+                    minRows={2} maxRows={4}
+                    isDark={isDark} gold={gold} textPrimary={textPrimary}
+                  />
+                </FieldBlock>
+
+                {/* Instructions */}
+                <FieldBlock label="Instructions" required isDark={isDark} gold={gold} textMuted={textMuted}>
+                  <AutoTextarea
+                    value={editForm.instructions}
+                    onChange={v => setEditForm(prev => ({ ...prev, instructions: v }))}
+                    placeholder="Define the behavior, rules, and logic for this custom agent…"
+                    minRows={4} maxRows={8}
+                    isDark={isDark} gold={gold} textPrimary={textPrimary}
+                  />
+                </FieldBlock>
+
+                {/* Model */}
+                <FieldBlock label="Recommended Model" required isDark={isDark} gold={gold} textMuted={textMuted}>
+                  <ModelPicker
+                    models={models || []}
+                    value={editForm.model}
+                    onChange={v => setEditForm(prev => ({ ...prev, model: v }))}
+                    isDark={isDark} gold={gold} textPrimary={textPrimary} textMuted={textMuted}
+                  />
+                </FieldBlock>
+
+                {/* Conversation Starters */}
+                <FieldBlock label="Conversation Starters" isDark={isDark} gold={gold} textMuted={textMuted}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {editForm.starters.map((s, i) => (
+                      <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          value={s}
+                          onChange={e => updateStarter(i, e.target.value)}
+                          placeholder={`Starter ${i + 1}…`}
+                          maxLength={120}
+                          style={{
+                            flex: 1,
+                            background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                            border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)'}`,
+                            borderRadius: '8px', padding: '8px 12px',
+                            fontSize: '0.84rem', color: textPrimary,
+                            outline: 'none',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeStarter(i)}
+                          disabled={editForm.starters.length === 1}
+                          style={{
+                            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+                            borderRadius: '7px', padding: '7px', cursor: editForm.starters.length === 1 ? 'not-allowed' : 'pointer',
+                            color: '#ef4444', display: 'flex', opacity: editForm.starters.length === 1 ? 0.35 : 1,
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    {editForm.starters.length < 6 && (
+                      <button
+                        type="button"
+                        onClick={addStarter}
+                        style={{
+                          background: 'transparent',
+                          border: `1px dashed ${isDark ? 'rgba(212,175,55,0.3)' : 'rgba(212,175,55,0.5)'}`,
+                          borderRadius: '8px', padding: '7px 12px',
+                          color: gold, fontSize: '0.8rem', fontWeight: 600,
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                        }}
+                      >
+                        <Plus size={13} /> Add starter
+                      </button>
+                    )}
                   </div>
+                </FieldBlock>
+              </div>
+            ) : (
+              /* View Details Mode */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+                {/* Details Section */}
+                <div style={{
+                  background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+                  borderRadius: '12px', padding: '16px'
+                }}>
+                  <ConfirmRow label="Agent Name" value={details?.name || ''} isDark={isDark} gold={gold} textPrimary={textPrimary} textMuted={textMuted} />
+                  <div style={{ height: '8px' }} />
+                  <ConfirmRow label="Description" value={details?.description || '(none)'} isDark={isDark} gold={gold} textPrimary={textPrimary} textMuted={textMuted} />
+                  <div style={{ height: '8px' }} />
+                  <ConfirmRow label="Model" value={details?.recommended_model || ''} isDark={isDark} gold={gold} textPrimary={textPrimary} textMuted={textMuted} />
+                  <div style={{ height: '8px' }} />
+                  <ConfirmRow label="Provider" value={details?.recommended_provider || ''} isDark={isDark} gold={gold} textPrimary={textPrimary} textMuted={textMuted} />
+                  <div style={{ height: '8px' }} />
+                  <ConfirmRow label="GPT ID" value={details?.gpt_id || ''} isDark={isDark} gold={gold} textPrimary={textPrimary} textMuted={textMuted} />
+                  <div style={{ height: '8px' }} />
+                  <ConfirmRow label="Publicity" value={details?.is_public ? '● Public (Visible to all users)' : '● Private (Admin only)'} isDark={isDark} gold={gold} textPrimary={details?.is_public ? '#10b981' : '#ef4444'} textMuted={textMuted} />
+                </div>
+
+                {/* Instructions Box */}
+                <div>
+                  <h5 style={{ fontSize: '0.75rem', fontWeight: 700, color: textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                    System Instructions
+                  </h5>
                   <div style={{
-                    fontSize: '0.8rem', color: isDark ? '#71717a' : '#6b7280',
-                    marginTop: '3px', lineHeight: 1.4,
-                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                    background: isDark ? '#08080b' : '#f0f0f4',
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)'}`,
+                    borderRadius: '10px', padding: '16px',
+                    fontSize: '0.85rem', color: textPrimary, fontFamily: 'monospace',
+                    lineHeight: 1.5, whiteSpace: 'pre-wrap', maxHeight: '200px', overflowY: 'auto'
                   }}>
-                    {gpt.description || 'No description provided'}
+                    {details?.instructions}
                   </div>
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
-                    <span style={{
-                      fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: 4,
-                      background: isPublic ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.12)',
-                      color: isPublic ? '#10b981' : '#ef4444',
-                      border: `1px solid ${isPublic ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.25)'}`,
-                      textTransform: 'uppercase', letterSpacing: '0.4px'
-                    }}>
-                      {isPublic ? '● Public' : '● Private'}
-                    </span>
-                    <span style={{
-                      fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: 4,
-                      background: isDark ? 'rgba(212,175,55,0.1)' : 'rgba(212,175,55,0.12)',
-                      color: gold, border: '1px solid rgba(212,175,55,0.25)',
-                      textTransform: 'uppercase', letterSpacing: '0.4px'
-                    }}>
-                      {gpt.recommended_provider}
-                    </span>
+                </div>
+
+                {/* Starters Box */}
+                {details?.conversation_starters && details.conversation_starters.length > 0 && (
+                  <div>
+                    <h5 style={{ fontSize: '0.75rem', fontWeight: 700, color: textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                      Conversation Starters
+                    </h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {details.conversation_starters.map((starter, i) => (
+                        <div key={i} style={{
+                          background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+                          border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+                          borderRadius: '8px', padding: '8px 14px',
+                          fontSize: '0.82rem', color: isDark ? '#a1a1aa' : '#4b5563', fontStyle: 'italic'
+                        }}>
+                          "{starter}"
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Document Database stats */}
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px',
+                  background: isDark ? 'rgba(212,175,55,0.03)' : 'rgba(212,175,55,0.05)',
+                  border: `1px solid ${isDark ? 'rgba(212,175,55,0.15)' : 'rgba(212,175,55,0.3)'}`,
+                  borderRadius: '10px', padding: '12px 16px'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.65rem', color: textMuted, fontWeight: 600, textTransform: 'uppercase' }}>Documents Indexed</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: gold }}>{details?.document_count}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.65rem', color: textMuted, fontWeight: 600, textTransform: 'uppercase' }}>Total Text Chunks</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: gold }}>{details?.total_chunks}</div>
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div style={{
-              background: accentBg, border: `1px solid ${accentColor}40`,
-              borderRadius: '8px', padding: '12px 16px',
-              display: 'flex', gap: '10px', alignItems: 'flex-start'
-            }}>
-              <AlertTriangle size={16} color={accentColor} style={{ flexShrink: 0, marginTop: '1px' }} />
-              <p style={{ margin: 0, fontSize: '0.875rem', color: isDark ? '#e4e4e7' : '#374151', lineHeight: 1.5 }}>
-                {newState
-                  ? 'This GPT will become visible to all authenticated users on the platform and can be used in chat sessions.'
-                  : 'This GPT will be removed from the public listing. Existing chat sessions will remain private.'}
-              </p>
-            </div>
+            )}
           </div>
 
           {/* Footer */}
-          <div style={{
-            padding: '16px 24px',
-            background: isDark ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.04)',
-            display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px'
-          }}>
-            <button
-              onClick={handleClose}
-              disabled={isLoading}
-              style={{
-                background: 'transparent', cursor: isLoading ? 'not-allowed' : 'pointer',
-                border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                color: isDark ? '#a1a1aa' : '#6b7280',
-                padding: '9px 20px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600,
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={e => { if (!isLoading) e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => onConfirm(gpt.gpt_id, newState)}
-              disabled={isLoading}
-              style={{
-                background: accentBg, cursor: isLoading ? 'not-allowed' : 'pointer',
-                border: `1px solid ${accentColor}`,
-                color: accentColor,
-                padding: '9px 22px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 700,
-                display: 'flex', alignItems: 'center', gap: '7px',
-                transition: 'all 0.2s', opacity: isLoading ? 0.6 : 1
-              }}
-              onMouseEnter={e => {
-                if (!isLoading) {
-                  e.currentTarget.style.background = accentColor;
-                  e.currentTarget.style.color = '#fff';
-                }
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = accentBg;
-                e.currentTarget.style.color = accentColor;
-              }}
-            >
-              {isLoading
-                ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Updating…</>
-                : <>{newState ? <Eye size={15} /> : <EyeOff size={15} />} Confirm</>
-              }
-            </button>
-          </div>
+          {!loadingDetails && !showDeleteConfirm && (
+            <div style={{
+              padding: '16px 24px',
+              borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
+              background: isDark ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.8)',
+              display: 'flex', gap: '12px', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0,
+            }}>
+              {isEditing ? (
+                <>
+                  <button
+                    className="btn"
+                    disabled={isSaving}
+                    style={{ border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`, color: textMuted }}
+                    onClick={() => setIsEditing(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="btn d-flex align-items-center gap-2"
+                    disabled={isSaving}
+                    style={{ background: `linear-gradient(135deg, ${gold} 0%, #a8832a 100%)`, color: '#000', fontWeight: 700 }}
+                    onClick={handleSave}
+                  >
+                    {isSaving ? <Loader2 size={14} className="spin" /> : <Save size={14} />} Save Configuration
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="d-flex gap-2">
+                    <button
+                      className="btn"
+                      style={{ border: '1px solid rgba(239,68,68,0.4)', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      onClick={() => setShowDeleteConfirm(true)}
+                    >
+                      <Trash2 size={14} /> Delete
+                    </button>
+                    <button
+                      className="btn"
+                      style={{ border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`, color: textPrimary }}
+                      onClick={() => setIsEditing(true)}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                  <button
+                    className="btn d-flex align-items-center gap-2"
+                    disabled={isSaving}
+                    style={{
+                      background: details?.is_public ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)',
+                      border: `1px solid ${details?.is_public ? '#ef4444' : '#10b981'}`,
+                      color: details?.is_public ? '#ef4444' : '#10b981',
+                      fontWeight: 700
+                    }}
+                    onClick={handleTogglePublicity}
+                  >
+                    {isSaving ? (
+                      <Loader2 size={14} className="spin" />
+                    ) : details?.is_public ? (
+                      <><EyeOff size={14} /> Make Private</>
+                    ) : (
+                      <><Eye size={14} /> Make Public</>
+                    )}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </ElitePortal>
@@ -1428,20 +1704,38 @@ export default function ModelsPage() {
     queryFn: ModelsService.fetchModels,
   });
 
+  // ── Tab State ──
+  const [gptTab, setGptTab] = useState<'all' | 'public'>('all');
+
+  // ── All Admin GPTs ──
+  const {
+    data: allGpts,
+    isLoading: allGptsLoading,
+    isError: allGptsError,
+    refetch: refetchAllGpts
+  } = useQuery({
+    queryKey: ['allAdminGpts'],
+    queryFn: () => CustomGptService.fetchGpts(200),
+  });
+
   // ── Public GPTs ──
   const {
-    data: gpts,
-    isLoading: gptsLoading,
-    isError: gptsError,
-    refetch: refetchGpts
+    data: publicGpts,
+    isLoading: publicGptsLoading,
+    isError: publicGptsError,
+    refetch: refetchPublicGpts
   } = useQuery({
     queryKey: ['publicGpts'],
     queryFn: () => CustomGptService.fetchPublicGpts(200),
   });
 
+  const currentGpts = gptTab === 'all' ? allGpts : publicGpts;
+  const currentGptsLoading = gptTab === 'all' ? allGptsLoading : publicGptsLoading;
+  const currentGptsError = gptTab === 'all' ? allGptsError : publicGptsError;
+  const refetchCurrentGpts = gptTab === 'all' ? refetchAllGpts : refetchPublicGpts;
+
   // ── Modal state ──
-  const [selectedGpt, setSelectedGpt] = useState<CustomGpt | null>(null);
-  const [modalLoading, setModalLoading] = useState(false);
+  const [selectedGptId, setSelectedGptId] = useState<string | null>(null);
 
   // ── Manual GPT ID toggle ──
   const [manualGptId, setManualGptId] = useState('');
@@ -1456,10 +1750,10 @@ export default function ModelsPage() {
   const createBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (!gptsLoading && gptsHeaderRef.current) {
+    if (!currentGptsLoading && gptsHeaderRef.current) {
       gsap.fromTo(gptsHeaderRef.current, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power2.out' });
     }
-  }, [gptsLoading]);
+  }, [currentGptsLoading]);
 
   // Pulse the create button on first render
   useEffect(() => {
@@ -1536,21 +1830,7 @@ export default function ModelsPage() {
   // ── Handlers ──
 
   const handleGptCardClick = (gpt: CustomGpt) => {
-    setSelectedGpt(gpt);
-  };
-
-  const handleGptModalConfirm = async (gptId: string, newPublicState: boolean) => {
-    setModalLoading(true);
-    try {
-      await CustomGptService.toggleGptPublicity(gptId, newPublicState);
-      showToast(`"${selectedGpt?.name}" is now ${newPublicState ? 'public' : 'private'}`, 'success');
-      queryClient.invalidateQueries({ queryKey: ['publicGpts'] });
-      setSelectedGpt(null);
-    } catch (err: any) {
-      showToast(err?.response?.data?.message || 'Failed to update GPT visibility', 'error');
-    } finally {
-      setModalLoading(false);
-    }
+    setSelectedGptId(gpt.gpt_id);
   };
 
   const handleManualToggleConfirm = async () => {
@@ -1560,6 +1840,7 @@ export default function ModelsPage() {
       await CustomGptService.toggleGptPublicity(trimmedId, true);
       showToast(`GPT ${trimmedId} visibility toggled`, 'success');
       queryClient.invalidateQueries({ queryKey: ['publicGpts'] });
+      queryClient.invalidateQueries({ queryKey: ['allAdminGpts'] });
       setManualGptId('');
       setManualConfirmOpen(false);
     } catch (err: any) {
@@ -1781,14 +2062,69 @@ export default function ModelsPage() {
                         Custom Agents & GPTs
                       </h4>
                       <p style={{ color: isDark ? '#a8956b' : '#6b7280', margin: '6px 0 0', fontSize: '0.9rem', fontWeight: 500 }}>
-                        Public custom agents on the platform. Click a card to toggle its visibility, or create a new one.
+                        Manage custom agents on the platform. Toggle visibility to public/private, edit settings, or create a new one.
                       </p>
+
+                      {/* Tab Selector */}
+                      <div style={{
+                        display: 'inline-flex',
+                        background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)',
+                        padding: '3px',
+                        borderRadius: '8px',
+                        border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)'}`,
+                        marginTop: '14px'
+                      }}>
+                        <button
+                          type="button"
+                          onClick={() => setGptTab('all')}
+                          style={{
+                            background: gptTab === 'all' ? (isDark ? 'rgba(212,175,55,0.18)' : 'rgba(212,175,55,0.22)') : 'transparent',
+                            border: 'none',
+                            outline: 'none',
+                            color: gptTab === 'all' ? gold : textMuted,
+                            padding: '6px 16px',
+                            borderRadius: '6px',
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            transition: 'all 0.18s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <Layers size={13} />
+                          All Agents ({allGpts?.length || 0})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setGptTab('public')}
+                          style={{
+                            background: gptTab === 'public' ? (isDark ? 'rgba(212,175,55,0.18)' : 'rgba(212,175,55,0.22)') : 'transparent',
+                            border: 'none',
+                            outline: 'none',
+                            color: gptTab === 'public' ? gold : textMuted,
+                            padding: '6px 16px',
+                            borderRadius: '6px',
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            transition: 'all 0.18s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <Globe size={13} />
+                          Public List ({publicGpts?.length || 0})
+                        </button>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                       {/* Refresh */}
                       <button
-                        onClick={() => refetchGpts()}
-                        disabled={gptsLoading}
+                        onClick={() => refetchCurrentGpts()}
+                        disabled={currentGptsLoading}
                         style={{
                           background: 'transparent', border: `1px solid ${isDark ? 'rgba(212,175,55,0.3)' : 'rgba(212,175,55,0.5)'}`,
                           color: gold, padding: '7px 14px', borderRadius: '7px', fontSize: '0.8rem', fontWeight: 600,
@@ -1798,7 +2134,7 @@ export default function ModelsPage() {
                         onMouseEnter={e => { e.currentTarget.style.background = 'rgba(212,175,55,0.12)'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
                       >
-                        <RefreshCw size={14} style={{ animation: gptsLoading ? 'spin 1s linear infinite' : 'none' }} />
+                        <RefreshCw size={14} style={{ animation: currentGptsLoading ? 'spin 1s linear infinite' : 'none' }} />
                         Refresh
                       </button>
 
@@ -1865,7 +2201,7 @@ export default function ModelsPage() {
         </Row>
 
         {/* GPTs Grid */}
-        {gptsLoading ? (
+        {currentGptsLoading ? (
           <Row className="g-4">
             {[1, 2, 3, 4, 5, 6].map(n => (
               <Col xl={3} lg={4} md={6} sm={12} key={n}>
@@ -1892,20 +2228,22 @@ export default function ModelsPage() {
               </Col>
             ))}
           </Row>
-        ) : gptsError ? (
+        ) : currentGptsError ? (
           <div className="gpt-empty-state">
             <XCircle size={48} color="#ef4444" style={{ marginBottom: '12px', opacity: 0.7 }} />
             <p style={{ color: '#ef4444', fontWeight: 600, margin: 0 }}>Couldn't load agents</p>
             <p style={{ color: textMuted, fontSize: '0.85rem', marginTop: '6px' }}>Check your connection or hit Refresh above</p>
           </div>
-        ) : !gpts || gpts.length === 0 ? (
+        ) : !currentGpts || currentGpts.length === 0 ? (
           <div className="gpt-empty-state">
             <Bot size={52} color={isDark ? '#3f3f46' : '#d1d5db'} style={{ marginBottom: '14px' }} />
             <p style={{ color: isDark ? '#52525b' : '#9ca3af', fontWeight: 700, fontSize: '1.05rem', margin: '0 0 6px' }}>
-              No Public Agents Yet
+              {gptTab === 'public' ? 'No Public Agents Yet' : 'No Agents Found'}
             </p>
             <p style={{ color: textMuted, fontSize: '0.85rem', maxWidth: '360px', margin: '0 auto 20px', lineHeight: 1.5 }}>
-              No agents are marked as public. Create one with the button above or toggle an existing ID below.
+              {gptTab === 'public' 
+                ? "No custom agents are currently marked as public. Select 'All Agents' to view private ones, or click a private agent's card to toggle its publicity."
+                : "You haven't created any agents yet. Get started by clicking the button below."}
             </p>
             <button
               onClick={() => setCreateOpen(true)}
@@ -1922,7 +2260,7 @@ export default function ModelsPage() {
           </div>
         ) : (
           <Row className="g-4">
-            {gpts.map((gpt, index) => (
+            {currentGpts.map((gpt, index) => (
               <Col xl={3} lg={4} md={6} sm={12} key={gpt.gpt_id}>
                 <GptCard gpt={gpt} isDark={isDark} onClick={handleGptCardClick} index={index} />
               </Col>
@@ -1931,12 +2269,12 @@ export default function ModelsPage() {
         )}
 
         {/* GPT count footer */}
-        {gpts && gpts.length > 0 && (
+        {currentGpts && currentGpts.length > 0 && (
           <div style={{
             marginTop: '24px', textAlign: 'center',
             fontSize: '0.8rem', color: textMuted, fontWeight: 600
           }}>
-            Showing {gpts.length} public agent{gpts.length !== 1 ? 's' : ''}
+            Showing {currentGpts.length} {gptTab === 'public' ? 'public' : 'total'} agent{currentGpts.length !== 1 ? 's' : ''}
           </div>
         )}
       </div>
@@ -1946,13 +2284,16 @@ export default function ModelsPage() {
       ═══════════════════════════════════════════════════ */}
 
       {/* GPT card-click modal */}
-      {selectedGpt && (
-        <GptPublicityModal
-          gpt={selectedGpt}
+      {selectedGptId && (
+        <GptDetailModal
+          gptId={selectedGptId}
           isDark={isDark}
-          onClose={() => { if (!modalLoading) setSelectedGpt(null); }}
-          onConfirm={handleGptModalConfirm}
-          isLoading={modalLoading}
+          models={models ?? []}
+          onClose={() => setSelectedGptId(null)}
+          onUpdated={() => {
+            queryClient.invalidateQueries({ queryKey: ['publicGpts'] });
+            queryClient.invalidateQueries({ queryKey: ['allAdminGpts'] });
+          }}
         />
       )}
 
@@ -1975,7 +2316,7 @@ export default function ModelsPage() {
           onClose={() => setCreateOpen(false)}
           onCreated={() => {
             queryClient.invalidateQueries({ queryKey: ['publicGpts'] });
-            refetchGpts();
+            queryClient.invalidateQueries({ queryKey: ['allAdminGpts'] });
           }}
         />
       )}

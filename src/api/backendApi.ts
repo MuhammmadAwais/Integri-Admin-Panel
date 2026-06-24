@@ -1220,6 +1220,79 @@ export const CustomGptService = {
       console.error('❌ [CustomGptService] createAgent error:', e);
       throw e;
     }
+  },
+
+  /**
+   * Fetch all custom GPTs.
+   * GET /api/v1/custom-gpts
+   */
+  fetchGpts: async (limit: number = 200): Promise<CustomGpt[]> => {
+    try {
+      const response = await backendApi.get<CustomGpt[]>('/api/v1/custom-gpts', {
+        params: { limit },
+        skipToast: true
+      } as any);
+      return response.data;
+    } catch (e) {
+      console.error('❌ [CustomGptService] fetchGpts error:', e);
+      throw e;
+    }
+  },
+
+  /**
+   * Fetch custom GPT details.
+   * GET /api/v1/custom-gpts/{gpt_id}
+   */
+  getGptDetails: async (gpt_id: string): Promise<CustomGpt> => {
+    try {
+      const response = await backendApi.get<CustomGpt>(`/api/v1/custom-gpts/${gpt_id}`, {
+        skipToast: true
+      } as any);
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [CustomGptService] getGptDetails error for ${gpt_id}:`, e);
+      throw e;
+    }
+  },
+
+  /**
+   * Update custom GPT.
+   * PATCH /api/v1/custom-gpts/{gpt_id}
+   */
+  updateGpt: async (
+    gpt_id: string,
+    agentData: Partial<{
+      name: string;
+      description: string;
+      instructions: string;
+      conversation_starters: string[];
+      recommended_model: string;
+      recommended_provider: string;
+    }>
+  ): Promise<CustomGpt> => {
+    try {
+      const response = await backendApi.patch<CustomGpt>(
+        `/api/v1/custom-gpts/${gpt_id}`,
+        agentData
+      );
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [CustomGptService] updateGpt error for ${gpt_id}:`, e);
+      throw e;
+    }
+  },
+
+  /**
+   * Delete custom GPT.
+   * DELETE /api/v1/custom-gpts/{gpt_id}
+   */
+  deleteGpt: async (gpt_id: string): Promise<void> => {
+    try {
+      await backendApi.delete(`/api/v1/custom-gpts/${gpt_id}`);
+    } catch (e) {
+      console.error(`❌ [CustomGptService] deleteGpt error for ${gpt_id}:`, e);
+      throw e;
+    }
   }
 };
 
