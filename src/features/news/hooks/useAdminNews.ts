@@ -101,6 +101,13 @@ export function useAdminNews(): UseAdminNewsReturn {
   const total = articlesData?.total || 0;
   const error = swrError ? (swrError.message || 'Failed to fetch articles') : null;
 
+  // ── Prune SWR memory cache on unmount to prevent background memory bloat ──
+  useEffect(() => {
+    return () => {
+      mutate(cacheKey, undefined, { revalidate: false });
+    };
+  }, [cacheKey]);
+
   // ── Setters ───────────────────────────────────────────────────────────────
 
   const setDays = useCallback((v: number) => {

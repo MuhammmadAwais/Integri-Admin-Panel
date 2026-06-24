@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { PromptsService } from 'api/backendApi';
+import { PromptsService, NewsService } from 'api/backendApi';
 import { gsap } from 'gsap';
-import { Cpu, Save, TerminalSquare, AlertCircle, Loader } from 'lucide-react';
+import { Cpu, Save, TerminalSquare, AlertCircle, Loader, Globe } from 'lucide-react';
 import MainCard from 'components/MainCard';
 
 export default function PromptsPage() {
@@ -13,15 +13,25 @@ export default function PromptsPage() {
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
 
+  // Country Prompts State
+  const [countries, setCountries] = useState([]);
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [countryPrompt, setCountryPrompt] = useState('');
+  const [countryLoading, setCountryLoading] = useState(false);
+  const [countryEditing, setCountryEditing] = useState(false);
+  const [countryEditValue, setCountryEditValue] = useState('');
+  const [countrySaving, setCountrySaving] = useState(false);
+
   const containerRef = useRef(null);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [defaultData, othersData, voiceData] = await Promise.all([
+        const [defaultData, othersData, voiceData, countriesData] = await Promise.all([
           PromptsService.getDefaultPrompt().catch(() => null),
           PromptsService.getOthersPrompt().catch(() => null),
-          PromptsService.getVoicePrompt().catch(() => null)
+          PromptsService.getVoicePrompt().catch(() => null),
+          NewsService.fetchAdminCountries().catch(() => null)
         ]);
         
         const arr = [];
@@ -30,6 +40,26 @@ export default function PromptsPage() {
         if (voiceData) arr.push({ id: 'voice', name: 'Voice Engine Prompt', ...voiceData });
 
         setPrompts(arr);
+
+        if (countriesData && countriesData.supported_countries) {
+          const sortedCountries = Object.keys(countriesData.supported_countries).sort();
+          setCountries(sortedCountries);
+          if (sortedCountries.length > 0) {
+            const initialCountry = sortedCountries[0];
+            setSelectedCountry(initialCountry);
+            setCountryLoading(true);
+            try {
+              const cp = await PromptsService.getCountrySummaryPrompt(initialCountry);
+              const text = typeof cp === 'string' ? cp : (cp?.prompt || '');
+              setCountryPrompt(text);
+            } catch (err) {
+              console.error("Failed to load country summary prompt for initial country:", err);
+            } finally {
+              setCountryLoading(false);
+            }
+          }
+        }
+        
         setLoading(false);
       } catch (err) {
         setError('Failed to securely access Prompts Intelligence.');
@@ -70,6 +100,41 @@ export default function PromptsPage() {
       console.error("Failed to commit prompt update");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCountryChange = async (country) => {
+    setSelectedCountry(country);
+    setCountryLoading(true);
+    setCountryEditing(false);
+    try {
+      const cp = await PromptsService.getCountrySummaryPrompt(country);
+      const text = typeof cp === 'string' ? cp : (cp?.prompt || '');
+      setCountryPrompt(text);
+    } catch (err) {
+      console.error("Failed to load country summary prompt:", err);
+      setCountryPrompt('');
+    } finally {
+      setCountryLoading(false);
+    }
+  };
+
+  const handleCountryEdit = () => {
+    setCountryEditing(true);
+    setCountryEditValue(countryPrompt);
+  };
+
+  const handleCountrySave = async () => {
+    setCountrySaving(true);
+    try {
+      await PromptsService.updateCountrySummaryPrompt(selectedCountry, countryEditValue);
+      // Optimistic update
+      setCountryPrompt(countryEditValue);
+      setCountryEditing(false);
+    } catch (err) {
+      console.error("Failed to save country summary prompt:", err);
+    } finally {
+      setCountrySaving(false);
     }
   };
 
@@ -189,6 +254,116 @@ export default function PromptsPage() {
           </div>
         )}
       </div>
+
+      {/* Country Summary Prompt Section (Without GSAP, Lag-free, Instant, No Toasts) */}
+      {countries.length > 0 && (
+        <div className="row mt-2">
+          <div className="col-12 mb-4">
+            <div 
+              className="card h-100" 
+              style={{ 
+                background: 'rgba(5,5,5,0.75)', 
+                backdropFilter: 'blur(12px)', 
+                border: '0.5px solid rgba(212,175,55,0.4)', 
+                borderRadius: '8px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
+              }}
+            >
+              <div className="card-header d-flex justify-content-between align-items-center" style={{ borderBottom: '1px solid rgba(212,175,55,0.1)' }}>
+                <div className="d-flex align-items-center gap-2">
+                  <Globe size={16} color="#a8956b" />
+                  <strong style={{ color: '#D4AF37', letterSpacing: '0.05em' }}>COUNTRY SUMMARY PROMPT</strong>
+                </div>
+                <div className="d-flex align-items-center gap-2">
+                  <span style={{ color: '#a8956b', fontSize: '0.8rem', fontWeight: 600 }}>COUNTRY:</span>
+                  <select 
+                    value={selectedCountry}
+                    onChange={(e) => handleCountryChange(e.target.value)}
+                    style={{ 
+                      background: '#0a0a0a', 
+                      color: '#e0d5b8', 
+                      border: '1px solid rgba(212,175,55,0.3)', 
+                      borderRadius: '4px',
+                      padding: '4px 28px 4px 8px',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      outline: 'none',
+                      appearance: 'none',
+                      backgroundImage: `url("data:image/svg+xml;utf8,<svg fill='%23a8956b' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>")`,
+                      backgroundPosition: 'right 4px center',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundSize: '16px',
+                    }}
+                  >
+                    {countries.map(c => (
+                      <option key={c} value={c} style={{ background: '#0a0a0a', color: '#e0d5b8' }}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="card-body">
+                {countryLoading ? (
+                  <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '120px' }}>
+                    <Loader className="spin" size={24} color="#D4AF37" style={{ animation: 'spin 2s linear infinite' }} />
+                  </div>
+                ) : countryEditing ? (
+                  <div>
+                    <div className="form-group mb-3">
+                      <label style={{ color: '#a8956b', fontSize: '0.8rem', marginBottom: '8px' }}>COUNTRY PROMPT INSTRUCTIONS ({selectedCountry})</label>
+                      <textarea 
+                        className="form-control" 
+                        value={countryEditValue} 
+                        onChange={(e) => setCountryEditValue(e.target.value)}
+                        style={{ background: '#0a0a0a', color: '#e0d5b8', border: '1px solid rgba(212,175,55,0.3)', minHeight: '120px' }}
+                      />
+                    </div>
+                    <div className="d-flex justify-content-end gap-2">
+                      <button className="btn btn-sm" style={{ color: '#e0d5b8', cursor: 'pointer' }} onClick={() => setCountryEditing(false)}>Cancel</button>
+                      <button 
+                        className="btn btn-sm d-flex align-items-center gap-2" 
+                        style={{ background: 'rgba(212,175,55,0.2)', color: '#D4AF37', border: '1px solid #D4AF37', cursor: 'pointer' }}
+                        onClick={handleCountrySave}
+                        disabled={countrySaving}
+                      >
+                        <Save size={14} /> {countrySaving ? 'Committing...' : 'Commit Protocol'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div 
+                      style={{ 
+                        color: '#e0d5b8', 
+                        fontSize: '0.9rem', 
+                        fontFamily: 'monospace', 
+                        background: '#0a0a0a', 
+                        padding: '12px', 
+                        borderRadius: '4px',
+                        border: '1px solid rgba(212,175,55,0.1)',
+                        minHeight: '80px',
+                        whiteSpace: 'pre-wrap'
+                      }}
+                    >
+                      {countryPrompt || 'No implicit instructions defined.'}
+                    </div>
+                    <div className="d-flex justify-content-end mt-3">
+                      <button 
+                        className="btn btn-sm" 
+                        style={{ color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', background: 'transparent', cursor: 'pointer' }}
+                        onClick={handleCountryEdit}
+                      >
+                        Configure Logic
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

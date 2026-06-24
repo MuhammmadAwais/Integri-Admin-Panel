@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { UserService, NewsService, UserUsageRecord } from 'api/backendApi';
 import { useEnrichedProfiles } from 'features/users/hooks/useEnrichedProfiles';
@@ -221,6 +221,7 @@ const PAGE_CSS = `
 // ─── Page Component ───────────────────────────────────────────────────────────
 export default function PlatformUsagePage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Filter state
   const [searchInput, setSearchInput] = useState('');
@@ -233,6 +234,13 @@ export default function PlatformUsagePage() {
 
   // Debounce search to avoid re-filtering on every keystroke
   const searchTerm = useDebounce(searchInput, DEBOUNCE_MS);
+
+  // Clear query cache on unmount to release browser memory
+  useEffect(() => {
+    return () => {
+      queryClient.removeQueries({ queryKey: ['usersUsageFull'] });
+    };
+  }, [queryClient]);
 
   // ── 1. Fetch countries list (long-lived cache — rarely changes) ────────────
   const { data: countriesData } = useQuery({

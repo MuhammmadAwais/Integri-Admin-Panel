@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from 'lib/firebase/firebase';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { UserMemoryService, UserService } from 'api/backendApi';
 import { ArrowLeft, Clock, MapPin, Mail, Shield, Zap, User as UserIcon, Search as SearchIcon, Copy, Check, Activity, Fingerprint, History } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -269,8 +269,11 @@ export default function UserDetailPage() {
   const [loading, setLoading] = useState(true);
   const pageRef = useRef(null);
 
+  const queryClient = useQueryClient();
+
   useEffect(() => {
     let unsubTokens = null;
+    let cancelled = false;
 
     async function fetchUser() {
       try {
@@ -278,6 +281,8 @@ export default function UserDetailPage() {
         const docRef = doc(db, 'Users', id);
         const docSnap = await getDoc(docRef);
         
+        if (cancelled) return;
+
         if (docSnap.exists()) {
           const data = docSnap.data();
           const mappedUser = {
@@ -297,7 +302,9 @@ export default function UserDetailPage() {
 
           try {
             const memory = await UserMemoryService.getUserMemory(id);
-            setMemoryData(memory);
+            if (!cancelled) {
+              setMemoryData(memory);
+            }
           } catch (e) {
             console.warn("User data connection not established.");
           }
@@ -305,42 +312,52 @@ export default function UserDetailPage() {
           const tokensRef = collection(db, 'Users', id, 'generatedTokens');
           const tokensQuery = query(tokensRef, orderBy('createdAt', 'desc'));
           
-          unsubTokens = onSnapshot(tokensQuery, (tokensSnap) => {
-            const history = [];
-            const logs = [];
-            
-            tokensSnap.forEach((tDoc) => {
-              const tData = tDoc.data();
-              const dateObj = tData.createdAt?.toDate ? tData.createdAt.toDate() : new Date();
+          if (!cancelled) {
+            unsubTokens = onSnapshot(tokensQuery, (tokensSnap) => {
+              if (cancelled) return;
+              const history = [];
+              const logs = [];
               
-              history.unshift({
-                name: dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-                tokens: tData.tokens || tData.amount || 0
-              });
+              tokensSnap.forEach((tDoc) => {
+                const tData = tDoc.data();
+                const dateObj = tData.createdAt?.toDate ? tData.createdAt.toDate() : new Date();
+                
+                history.unshift({
+                  name: dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+                  tokens: tData.tokens || tData.amount || 0
+                });
 
-              logs.push({
-                time: dateObj.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                event: `Generated ${tData.tokens || tData.amount || 0} tokens`,
-                status: 'Success'
+                logs.push({
+                  time: dateObj.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                  event: `Generated ${tData.tokens || tData.amount || 0} tokens`,
+                  status: 'Success'
+                });
               });
+              
+              setRawLogs(logs);
+              setTokenHistory(history);
             });
-            
-            setRawLogs(logs);
-            setTokenHistory(history);
-          });
+          }
         }
       } catch (error) {
         console.error("User Detail Error:", error);
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
     fetchUser();
 
     return () => {
-      if (unsubTokens) unsubTokens();
+      cancelled = true;
+      if (unsubTokens) {
+        unsubTokens();
+      }
+      // Clean up React Query cache for this user's stats on unmount
+      queryClient.removeQueries({ queryKey: ['userStats', id] });
     };
-  }, [id]);
+  }, [id, queryClient]);
 
   useEffect(() => {
     if (pageRef.current && !loading) {

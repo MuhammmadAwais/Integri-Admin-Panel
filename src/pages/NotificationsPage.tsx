@@ -23,6 +23,14 @@ export default function NotificationsPage() {
   const [newMinute, setNewMinute] = useState('0');
   const [newType, setNewType] = useState('spotlight');
 
+  // Clear query cache on unmount to release browser memory
+  useEffect(() => {
+    return () => {
+      queryClient.removeQueries({ queryKey: ['notification-stats'] });
+      queryClient.removeQueries({ queryKey: ['schedules'] });
+    };
+  }, [queryClient]);
+
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);

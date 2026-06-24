@@ -100,98 +100,133 @@ interface SourceRowProps {
   onRemove: (index: number) => void;
 }
 
-const SourceRow = memo(({ index, source, onChange, onRemove }: SourceRowProps) => (
-  <fieldset
-    style={{
-      border: '1px solid var(--news-card-border)',
-      borderRadius: 4,
-      padding: '14px 16px',
-      marginBottom: 10,
-      background: 'var(--news-panel-bg)',
-    }}
-    aria-label={`Source ${index + 1}`}
-  >
-    <legend
+const SourceRow = memo(({ index, source, onChange, onRemove }: SourceRowProps) => {
+  const [localTitle, setLocalTitle] = useState(source.title);
+  const [localSource, setLocalSource] = useState(source.source);
+  const [localUrl, setLocalUrl] = useState(source.url);
+  const [localImage, setLocalImage] = useState(source.image);
+
+  // Sync with parent state if it resets or changes from outside
+  useEffect(() => {
+    setLocalTitle(source.title);
+    setLocalSource(source.source);
+    setLocalUrl(source.url);
+    setLocalImage(source.image);
+  }, [source]);
+
+  const handleBlur = (field: keyof ManualArticleSource, value: string) => {
+    onChange(index, field, value);
+  };
+
+  const getLocalValue = (field: keyof ManualArticleSource) => {
+    if (field === 'title') return localTitle;
+    if (field === 'source') return localSource;
+    if (field === 'url') return localUrl;
+    if (field === 'image') return localImage;
+    return '';
+  };
+
+  const setLocalValue = (field: keyof ManualArticleSource, val: string) => {
+    if (field === 'title') setLocalTitle(val);
+    if (field === 'source') setLocalSource(val);
+    if (field === 'url') setLocalUrl(val);
+    if (field === 'image') setLocalImage(val);
+  };
+
+  return (
+    <fieldset
       style={{
-        fontSize: '0.68rem',
-        fontWeight: 700,
-        textTransform: 'uppercase',
-        letterSpacing: '0.8px',
-        color: 'var(--news-text-muted)',
-        padding: '0 6px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
+        border: '1px solid var(--news-card-border)',
+        borderRadius: 4,
+        padding: '14px 16px',
+        marginBottom: 10,
+        background: 'var(--news-panel-bg)',
       }}
+      aria-label={`Source ${index + 1}`}
     >
-      <Link size={10} style={{ color: '#D4AF37' }} />
-      Source {index + 1}
-      <button
-        type="button"
-        onClick={() => onRemove(index)}
-        aria-label={`Remove source ${index + 1}`}
+      <legend
         style={{
-          background: 'transparent',
-          border: '1px solid var(--news-card-border)',
-          borderRadius: 3,
-          padding: '2px 6px',
+          fontSize: '0.68rem',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.8px',
           color: 'var(--news-text-muted)',
-          cursor: 'pointer',
-          display: 'inline-flex',
+          padding: '0 6px',
+          display: 'flex',
           alignItems: 'center',
-          gap: 3,
-          transition: 'all 0.15s ease',
-        }}
-        onMouseEnter={e => {
-          (e.currentTarget as HTMLButtonElement).style.borderColor = '#DC143C';
-          (e.currentTarget as HTMLButtonElement).style.color = '#DC143C';
-        }}
-        onMouseLeave={e => {
-          (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--news-card-border)';
-          (e.currentTarget as HTMLButtonElement).style.color = 'var(--news-text-muted)';
+          gap: 8,
         }}
       >
-        <Trash2 size={10} /> Remove
-      </button>
-    </legend>
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 14px' }}>
-      {(['title', 'source', 'url', 'image'] as (keyof ManualArticleSource)[]).map(field => (
-        <div key={field} style={field === 'url' || field === 'image' ? { gridColumn: '1 / -1' } : {}}>
-          <FieldLabel htmlFor={`src-${index}-${field}`}>
-            {field === 'image' ? 'Image URL' : field.charAt(0).toUpperCase() + field.slice(1)}
-          </FieldLabel>
-          <input
-            id={`src-${index}-${field}`}
-            type="text"
-            value={source[field]}
-            onChange={e => onChange(index, field, e.target.value)}
-            placeholder={
-              field === 'url' ? 'https://source-article.com/…'
-              : field === 'image' ? 'https://cdn.example.com/logo.png'
-              : field === 'source' ? 'Publisher name'
-              : 'Article title'
-            }
-            style={{
-              width: '100%',
-              padding: '8px 11px',
-              background: 'var(--news-input-bg)',
-              border: '1px solid var(--news-card-border)',
-              borderRadius: 3,
-              color: 'var(--news-text-main)',
-              fontSize: '0.84rem',
-              outline: 'none',
-              fontFamily: 'inherit',
-              transition: 'border-color 0.18s ease',
-              boxSizing: 'border-box',
-            }}
-            onFocus={e => (e.currentTarget.style.borderColor = '#D4AF37')}
-            onBlur={e => (e.currentTarget.style.borderColor = 'var(--news-card-border)')}
-          />
-        </div>
-      ))}
-    </div>
-  </fieldset>
-));
+        <Link size={10} style={{ color: '#D4AF37' }} />
+        Source {index + 1}
+        <button
+          type="button"
+          onClick={() => onRemove(index)}
+          aria-label={`Remove source ${index + 1}`}
+          style={{
+            background: 'transparent',
+            border: '1px solid var(--news-card-border)',
+            borderRadius: 3,
+            padding: '2px 6px',
+            color: 'var(--news-text-muted)',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 3,
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.borderColor = '#DC143C';
+            (e.currentTarget as HTMLButtonElement).style.color = '#DC143C';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--news-card-border)';
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--news-text-muted)';
+          }}
+        >
+          <Trash2 size={10} /> Remove
+        </button>
+      </legend>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 14px' }}>
+        {(['title', 'source', 'url', 'image'] as (keyof ManualArticleSource)[]).map(field => (
+          <div key={field} style={field === 'url' || field === 'image' ? { gridColumn: '1 / -1' } : {}}>
+            <FieldLabel htmlFor={`src-${index}-${field}`}>
+              {field === 'image' ? 'Image URL' : field.charAt(0).toUpperCase() + field.slice(1)}
+            </FieldLabel>
+            <input
+              id={`src-${index}-${field}`}
+              type="text"
+              value={getLocalValue(field)}
+              onChange={e => setLocalValue(field, e.target.value)}
+              onBlur={e => handleBlur(field, e.target.value)}
+              placeholder={
+                field === 'url' ? 'https://source-article.com/…'
+                : field === 'image' ? 'https://cdn.example.com/logo.png'
+                : field === 'source' ? 'Publisher name'
+                : 'Article title'
+              }
+              style={{
+                width: '100%',
+                padding: '8px 11px',
+                background: 'var(--news-input-bg)',
+                border: '1px solid var(--news-card-border)',
+                borderRadius: 3,
+                color: 'var(--news-text-main)',
+                fontSize: '0.84rem',
+                outline: 'none',
+                fontFamily: 'inherit',
+                transition: 'border-color 0.18s ease',
+                boxSizing: 'border-box',
+              }}
+              onFocus={e => (e.currentTarget.style.borderColor = '#D4AF37')}
+              onBlurCapture={e => (e.currentTarget.style.borderColor = 'var(--news-card-border)')}
+            />
+          </div>
+        ))}
+      </div>
+    </fieldset>
+  );
+});
 
 // ── CountryDropdown ─────────────────────────────────────────────────────────
 // Self-contained so its internal `countrySearch` state never re-renders the
@@ -677,8 +712,8 @@ export default function ManualNewsPage() {
   const [articleType, setArticleType] = useState('spotlight');
   const [extractLearningAids, setExtractLearningAids] = useState(true);
   const [markAsTrending, setMarkAsTrending] = useState(false);
-  const [imageUrl, setImageUrl] = useState('');
   const [sources, setSources] = useState<ManualArticleSource[]>([]);
+  const imageUrlRef = useRef<HTMLInputElement>(null);
 
   // ── Refs for lag-free text inputs ─────────────────────────────────────────
   // Using uncontrolled refs for heavy-text fields to avoid React re-render lag
@@ -739,13 +774,14 @@ export default function ManualNewsPage() {
   const validate = (): boolean => {
     const headlineVal = headlineRef.current?.value?.trim() ?? '';
     const bodyVal = bodyRef.current?.value?.trim() ?? '';
+    const imageUrlVal = imageUrlRef.current?.value?.trim() ?? '';
     const errors: FieldErrors = {};
     if (!country) errors.country = 'Country is required.';
     if (!headlineVal) errors.headline = 'Headline is required.';
     else if (headlineVal.length < 10) errors.headline = 'Headline must be at least 10 characters.';
     if (!bodyVal) errors.body = 'Article body is required.';
     else if (bodyVal.length < 50) errors.body = 'Body must be at least 50 characters.';
-    if (imageUrl && !/^https?:\/\/.+/.test(imageUrl.trim()))
+    if (imageUrlVal && !/^https?:\/\/.+/.test(imageUrlVal))
       errors.image_url = 'Must be a valid URL starting with http:// or https://';
     setHeadlineError(errors.headline);
     setBodyError(errors.body);
@@ -763,6 +799,7 @@ export default function ManualNewsPage() {
 
     const headlineVal = headlineRef.current?.value?.trim() ?? '';
     const bodyVal = bodyRef.current?.value?.trim() ?? '';
+    const imageUrlVal = imageUrlRef.current?.value?.trim() ?? '';
 
     const payload: ManualArticleRequest = {
       country,
@@ -774,7 +811,7 @@ export default function ManualNewsPage() {
       mark_as_trending: markAsTrending,
     };
 
-    if (imageUrl.trim()) payload.image_url = imageUrl.trim();
+    if (imageUrlVal) payload.image_url = imageUrlVal;
     if (sources.length > 0) {
       const validSources = sources.filter(s => s.title || s.url || s.source);
       if (validSources.length > 0) payload.sources = validSources;
@@ -824,14 +861,14 @@ export default function ManualNewsPage() {
       setSubmitting(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [country, topic, articleType, extractLearningAids, markAsTrending, imageUrl, sources]);
+  }, [country, topic, articleType, extractLearningAids, markAsTrending, sources]);
 
   const handleSuccessClose = useCallback(() => {
     setSuccessDetail(null);
     // Reset uncontrolled refs
     if (headlineRef.current) headlineRef.current.value = '';
     if (bodyRef.current) bodyRef.current.value = '';
-    setImageUrl('');
+    if (imageUrlRef.current) imageUrlRef.current.value = '';
     setSources([]);
     setTopic('general');
     setArticleType('spotlight');
@@ -1158,11 +1195,11 @@ export default function ManualNewsPage() {
                     <input
                       id="mn-image-url"
                       type="url"
+                      ref={imageUrlRef}
                       className={`mn-input${fieldErrors.image_url ? ' has-error' : ''}`}
                       style={inputStyle}
-                      value={imageUrl}
-                      onChange={e => {
-                        setImageUrl(e.target.value);
+                      defaultValue=""
+                      onChange={() => {
                         if (fieldErrors.image_url) setFieldErrors(prev => ({ ...prev, image_url: undefined }));
                       }}
                       placeholder="https://cdn.example.com/image.jpg"

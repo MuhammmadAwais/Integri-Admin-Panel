@@ -214,8 +214,13 @@ const getErrorMessage = (error: AxiosError): string => {
 backendApi.interceptors.response.use(
   (response: AxiosResponse) => {
     const customConfig = response.config as any;
-    // Show success toast unless skipToast is explicitly set
-    if (!customConfig?.skipToast) {
+    const method = response.config.method?.toUpperCase() || 'GET';
+    
+    // Show success toast for mutations (POST, PUT, DELETE, PATCH) or when explicitly requested.
+    // Never show success toast if skipToast is explicitly set to true.
+    const shouldToast = !customConfig?.skipToast && (method !== 'GET' || customConfig?.showToast);
+    
+    if (shouldToast) {
       const successMessage = getSuccessMessage(response);
       showToast(successMessage, 'success');
     }
@@ -655,6 +660,28 @@ export const PromptsService = {
       return response.data;
     } catch (e) {
       console.error(`❌ [API] Failure updating prompt ${type}:`, e);
+      throw e;
+    }
+  },
+  getCountrySummaryPrompt: async (country: string): Promise<string> => {
+    try {
+      const response = await backendApi.get<string>(`/api/v1/news/admin/countries/${country}/summary-prompt`);
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [API] Failure getting summary prompt for ${country}:`, e);
+      throw e;
+    }
+  },
+  updateCountrySummaryPrompt: async (country: string, prompt: string): Promise<string> => {
+    try {
+      const response = await backendApi.put<string>(
+        `/api/v1/news/admin/countries/${country}/summary-prompt`,
+        { prompt },
+        { skipToast: true } as any
+      );
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [API] Failure updating summary prompt for ${country}:`, e);
       throw e;
     }
   }
