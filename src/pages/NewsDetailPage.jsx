@@ -29,7 +29,7 @@ export default function NewsDetailPage() {
   const contentRef = useRef(null);
 
   const [searchParams] = useSearchParams();
-  const collection = searchParams.get('collection');
+  const collection = searchParams.get('collection') || 'News';
 
   useEffect(() => {
     let cancelled = false;
