@@ -799,19 +799,41 @@ export const NewsService = {
 
   /**
    * Fetch full article detail (content, grammar, keywords).
-   * GET /api/v1/news/admin/articles/{news_id}?collection=News
+   * Tries collection=News first; if the API returns 404 automatically
+   * retries with collection=Articles as a fallback.
+   * GET /api/v1/news/admin/articles/{news_id}?collection=News|Articles
    */
   fetchArticleDetails: async (news_id: string): Promise<ArticleDetail> => {
-    try {
-      const response = await backendApi.get<ArticleDetail>(
-        `/api/v1/news/admin/articles/${news_id}`,
-        { params: { collection: 'News' } }
-      );
-      return response.data;
-    } catch (e) {
-      console.error(`❌ [NewsService] fetchArticleDetails error for ${news_id}:`, e);
-      throw e;
+    const COLLECTIONS = ['News', 'Articles'] as const;
+
+    for (let i = 0; i < COLLECTIONS.length; i++) {
+      const collection = COLLECTIONS[i];
+      try {
+        console.log(`🔍 [NewsService] fetchArticleDetails — trying collection="${collection}" for id: ${news_id}`);
+        const response = await backendApi.get<ArticleDetail>(
+          `/api/v1/news/admin/articles/${news_id}`,
+          { params: { collection } }
+        );
+        console.log(`✅ [NewsService] fetchArticleDetails — found in collection="${collection}"`);
+        return response.data;
+      } catch (e: any) {
+        const status = e?.response?.status;
+        if (status === 404 && i < COLLECTIONS.length - 1) {
+          // Not found in this collection — try the next one
+          console.warn(
+            `⚠️ [NewsService] fetchArticleDetails — article not found in collection="${collection}" (404). ` +
+            `Retrying with collection="${COLLECTIONS[i + 1]}"…`
+          );
+          continue;
+        }
+        // Either it's not a 404, or we've exhausted all collections
+        console.error(`❌ [NewsService] fetchArticleDetails — failed for ${news_id} in collection="${collection}":`, e);
+        throw e;
+      }
     }
+
+    // TypeScript requires an explicit throw here (unreachable at runtime)
+    throw new Error(`[NewsService] fetchArticleDetails — article ${news_id} not found in any collection.`);
   },
 
   /**
