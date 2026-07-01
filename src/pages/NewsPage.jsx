@@ -36,6 +36,7 @@ export default function NewsPage() {
   // ── Detail panel state ────────────────────────────────────────────────────
   const [panelOpen, setPanelOpen]       = useState(false);
   const [selectedId, setSelectedId]     = useState(null);
+  const [selectedCollection, setSelectedCollection] = useState(null);
   const [countryOpen, setCountryOpen]   = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
   const countryDropRef                  = useRef(null);
@@ -44,8 +45,9 @@ export default function NewsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget]           = useState(null);
 
-  const handleRowClick = (id) => {
+  const handleRowClick = (id, collection) => {
     setSelectedId(id);
+    setSelectedCollection(collection);
     setPanelOpen(true);
   };
 
@@ -404,6 +406,7 @@ export default function NewsPage() {
       <ArticleDetailPanel
         open={panelOpen}
         newsId={selectedId}
+        collection={selectedCollection}
         onClose={handleClosePanel}
       />
 

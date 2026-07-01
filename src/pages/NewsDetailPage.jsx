@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { gsap } from 'gsap';
 import Spinner from 'react-bootstrap/Spinner';
 import Logo from 'components/Logo';
@@ -28,11 +28,14 @@ export default function NewsDetailPage() {
   const headerRef = useRef(null);
   const contentRef = useRef(null);
 
+  const [searchParams] = useSearchParams();
+  const collection = searchParams.get('collection');
+
   useEffect(() => {
     let cancelled = false;
     const fetchArticle = async () => {
       try {
-        const data = await NewsService.fetchArticleDetails(id);
+        const data = await NewsService.fetchArticleDetails(id, collection || undefined);
         if (!cancelled) setArticle(data);
       } catch (e) {
         if (!cancelled) console.error('Failed to load article:', e);
@@ -42,7 +45,7 @@ export default function NewsDetailPage() {
     };
     fetchArticle();
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, collection]);
 
   // GSAP entrance
   useEffect(() => {

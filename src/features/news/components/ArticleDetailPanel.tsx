@@ -101,21 +101,22 @@ const ContentBlockRenderer = ({ block }: { block: ContentBlock }) => {
 interface Props {
   open: boolean;
   newsId: string | null;
+  collection: string | null;
   onClose: () => void;
 }
 
-const ArticleDetailPanel: React.FC<Props> = ({ open, newsId, onClose }) => {
+const ArticleDetailPanel: React.FC<Props> = ({ open, newsId, collection, onClose }) => {
   const [article, setArticle]   = useState<ArticleDetail | null>(null);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState<string | null>(null);
 
   // Fetch whenever newsId changes and panel is open
-  const loadDetail = useCallback(async (id: string) => {
+  const loadDetail = useCallback(async (id: string, coll: string | null) => {
     setLoading(true);
     setError(null);
     setArticle(null);
     try {
-      const data = await NewsService.fetchArticleDetails(id);
+      const data = await NewsService.fetchArticleDetails(id, coll || undefined);
       setArticle(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load article');
@@ -126,9 +127,9 @@ const ArticleDetailPanel: React.FC<Props> = ({ open, newsId, onClose }) => {
 
   useEffect(() => {
     if (open && newsId) {
-      loadDetail(newsId);
+      loadDetail(newsId, collection);
     }
-  }, [open, newsId, loadDetail]);
+  }, [open, newsId, collection, loadDetail]);
 
   // Close on Escape key
   useEffect(() => {
@@ -225,7 +226,7 @@ const ArticleDetailPanel: React.FC<Props> = ({ open, newsId, onClose }) => {
             <div style={{ padding: '40px 28px', textAlign: 'center' }}>
               <p style={{ color: '#DC143C', fontSize: '0.9rem', marginBottom: 12 }}>⚠ {error}</p>
               <button
-                onClick={() => newsId && loadDetail(newsId)}
+                onClick={() => newsId && loadDetail(newsId, collection)}
                 style={{ background: 'transparent', border: '1px solid #DC143C', color: '#DC143C', padding: '8px 20px', borderRadius: 2, cursor: 'pointer', fontSize: '0.83rem', fontWeight: 700 }}
               >
                 Retry

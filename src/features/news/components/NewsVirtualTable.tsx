@@ -112,7 +112,7 @@ interface Props {
   articles: ArticleSummary[];
   loading: boolean;
   total: number;
-  onRowClick: (id: string) => void;
+  onRowClick: (id: string, collection: string) => void;
   onDelete?: (id: string, collection: string) => void;
 }
 
@@ -249,7 +249,7 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
         return (
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <div 
-              onClick={(e) => { e.stopPropagation(); navigate(`/news/preview/${item.id}`); }}
+              onClick={(e) => { e.stopPropagation(); navigate(`/news/preview/${item.id}?collection=${item.collection || 'News'}`); }}
               style={{ 
                 cursor: 'pointer', 
                 color: 'var(--news-text-dim)', 
@@ -411,7 +411,7 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
                           opacity: loading ? 0.6 : 1,
                           transition: 'opacity 0.2s ease'
                         }}
-                        onClick={() => onRowClick(row.original.id)}
+                        onClick={() => onRowClick(row.original.id, row.original.collection || 'News')}
                       >
                         {row.getVisibleCells().map(cell => (
                           <td
