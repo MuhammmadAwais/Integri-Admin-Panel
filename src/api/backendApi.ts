@@ -49,15 +49,33 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
+/**
+ * In-flight token request promise.
+ * - Set when a token fetch starts.
+ * - Cleared ONLY after the fetch settles so concurrent callers all
+ *   await the same single request (no duplicate 401 races).
+ */
 let activeTokenPromise: Promise<string | null> | null = null;
 
 /**
  * Auth Token Generator
+ * Returns the existing in-flight promise when one is already running,
+ * otherwise starts a fresh request.
  */
 export const getBackendToken = async (): Promise<string | null> => {
+  // Return the in-flight promise so every concurrent caller shares one request.
   if (activeTokenPromise) {
+    console.log('🔗 [Token] Awaiting in-flight token request...');
     return activeTokenPromise;
   }
+
+  const existingToken = localStorage.getItem('integri_jwt');
+  if (existingToken) {
+    console.log('✅ [Token] Found existing token in localStorage.');
+    return Promise.resolve(existingToken);
+  }
+
+  console.log('🚀 [Token] No token found — starting fresh token generation...');
 
   activeTokenPromise = (async () => {
     try {
@@ -66,18 +84,19 @@ export const getBackendToken = async (): Promise<string | null> => {
         email: ADMIN_EMAIL,
         user_type: 'pro'
       });
-      console.log(response);
+      console.log('📦 [Token] Raw token response:', response.data);
       if (response.data && response.data.access_token) {
-        console.log('🟢 [API] Backend token generated successfully');
+        console.log('🟢 [Token] Backend token generated successfully and stored.');
         localStorage.setItem('integri_jwt', response.data.access_token);
-        return response.data.access_token;
+        return response.data.access_token as string;
       }
-      console.log("❌ [API] Failed to generate backend token:", response.data);
+      console.warn('⚠️ [Token] Response OK but no access_token field:', response.data);
       return null;
     } catch (error) {
-      console.error("❌ [API] Failed to generate backend token:", error);
+      console.error('❌ [Token] Failed to generate backend token:', error);
       throw error;
     } finally {
+      // Clear the promise slot so future calls (e.g. after token expiry) can retry.
       activeTokenPromise = null;
     }
   })();
@@ -86,25 +105,50 @@ export const getBackendToken = async (): Promise<string | null> => {
 };
 
 /**
+ * Module-level "token ready" promise.
+ * Starts fetching the token IMMEDIATELY when this module is first imported —
+ * before any React component mounts — so the token is ready (or nearly ready)
+ * by the time any data-fetching hook runs.
+ *
+ * Export this so consumers (App, hooks) can await it without triggering a
+ * second fetch.
+ */
+export const tokenReadyPromise: Promise<string | null> = ((): Promise<string | null> => {
+  const stored = localStorage.getItem('integri_jwt');
+  if (stored) {
+    console.log('🟢 [Token/Bootstrap] Token already in localStorage — skipping prefetch.');
+    return Promise.resolve(stored);
+  }
+  console.log('🚀 [Token/Bootstrap] Module loaded — pre-fetching backend token eagerly...');
+  return getBackendToken();
+})();
+
+/**
  * Request Interceptor (The "Sentinel")
  * Automatically attaches stored JWT token.
  */
 backendApi.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     let token = localStorage.getItem('integri_jwt');
-    
-    // Check if it's NOT an authentication request to avoid recursion
-    const isAuthTokenRequest = config.url && (config.url.endsWith('/api/v1/auth/token') || config.url.includes('/auth/token'));
-    
+
+    // Skip token injection for the token-generation endpoint itself (avoid recursion).
+    const isAuthTokenRequest =
+      config.url &&
+      (config.url.endsWith('/api/v1/auth/token') || config.url.includes('/auth/token'));
+
     if (!token && !isAuthTokenRequest) {
       try {
-        console.log('🔄 Request Interceptor: No token found. Fetching backend token...');
-        token = await getBackendToken();
+        console.log('🔄 [Interceptor] No token in storage — waiting for tokenReadyPromise...');
+        // Await the module-level promise; this is already in-flight from import time.
+        token = await tokenReadyPromise;
+        console.log(token
+          ? '✅ [Interceptor] Token obtained, attaching to request.'
+          : '⚠️ [Interceptor] tokenReadyPromise resolved with null — request will be sent without auth.');
       } catch (error) {
-        console.error('❌ Request Interceptor: Failed to fetch backend token', error);
+        console.error('❌ [Interceptor] Failed to obtain backend token:', error);
       }
     }
-    
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -745,6 +789,7 @@ export const NewsService = {
         '/api/v1/news/admin/articles',
         { params }
       );
+      console.log({ "response": response })
       return response.data;
     } catch (e) {
       console.error('❌ [NewsService] fetchAdminArticles error:', e);

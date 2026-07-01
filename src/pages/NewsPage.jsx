@@ -29,6 +29,7 @@ export default function NewsPage() {
     days, setDays,
     country, setCountry,
     countries, countriesLoading,
+    tokenStatus,
     refetch,
   } = useAdminNews();
 
@@ -117,7 +118,14 @@ export default function NewsPage() {
         <div>
           <h2 className="news-title-sharp">News Management</h2>
           <p style={{ color: 'var(--news-text-muted)', margin: 0, fontSize: '0.84rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
-            {loading ? (
+          {tokenStatus === 'waiting' ? (
+              <span style={{ color: '#D4AF37', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#D4AF37', animation: 'pulse-dot 1.2s ease-in-out infinite' }} />
+                Generating auth token…
+              </span>
+            ) : tokenStatus === 'failed' ? (
+              <span style={{ color: '#DC143C' }}>⚠ Auth token failed — requests may be unauthorized</span>
+            ) : loading ? (
               <span style={{ color: 'var(--news-text-dim)' }}>Fetching articles…</span>
             ) : error ? (
               <span style={{ color: '#DC143C' }}>⚠ {error}</span>
@@ -335,12 +343,53 @@ export default function NewsPage() {
         </div>
       </div>
 
-      {/* Spin animation for loading */}
+      {/* Spin animation for loading + token pulse */}
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse-dot {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(0.7); }
+        }
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
       `}</style>
+
+      {/* ── Token Status Banner (shown while awaiting token) ──────────────── */}
+      {tokenStatus === 'waiting' && (
+        <div style={{
+          marginBottom: 16,
+          padding: '10px 16px',
+          background: 'rgba(212,175,55,0.08)',
+          border: '1px solid rgba(212,175,55,0.25)',
+          borderRadius: 4,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          fontSize: '0.84rem',
+          color: '#D4AF37',
+          fontWeight: 500,
+        }}>
+          <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#D4AF37', animation: 'pulse-dot 1.2s ease-in-out infinite', flexShrink: 0 }} />
+          <span>⏳ Waiting for backend auth token… News data will load automatically once the token is ready.</span>
+        </div>
+      )}
+      {tokenStatus === 'failed' && (
+        <div style={{
+          marginBottom: 16,
+          padding: '10px 16px',
+          background: 'rgba(220,20,60,0.08)',
+          border: '1px solid rgba(220,20,60,0.3)',
+          borderRadius: 4,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          fontSize: '0.84rem',
+          color: '#DC143C',
+          fontWeight: 500,
+        }}>
+          ⚠ Failed to generate backend auth token. API requests may return 401 Unauthorized.
+        </div>
+      )}
 
       {/* ── Virtualized Table ────────────────────────────────────────────── */}
       <NewsVirtualTable

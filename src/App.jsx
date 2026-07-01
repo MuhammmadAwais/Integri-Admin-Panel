@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // project-imports
 import router from 'routes';
-import { getBackendToken } from 'api/backendApi';
+import { tokenReadyPromise } from 'api/backendApi';
 import { AuthProvider } from 'contexts/AuthContext';
 import EliteToastContainer from 'components/EliteUI/EliteToastContainer';
 
@@ -21,19 +21,20 @@ const queryClient = new QueryClient({
 
 function App() {
   useEffect(() => {
-    async function bootstrap() {
-      const token = localStorage.getItem('integri_jwt');
-      if (!token) {
-        try {
-          console.log('🔄 Bootstrap: No token found. Securing backend handshake...');
-          await getBackendToken();
-          console.log('✅ Bootstrap: Backend Sentinel Connected.');
-        } catch (e) {
-          console.error('❌ Bootstrap: Backend authorization failed.', e);
+    // tokenReadyPromise already started at module-import time.
+    // We just await it here to log the result — no duplicate fetch.
+    console.log('⏳ [App] Awaiting backend token (started at module load)...');
+    tokenReadyPromise
+      .then((token) => {
+        if (token) {
+          console.log('✅ [App] Backend token ready. Response:', token.slice(0, 24) + '…');
+        } else {
+          console.warn('⚠️ [App] tokenReadyPromise resolved but no token returned.');
         }
-      }
-    }
-    bootstrap();
+      })
+      .catch((e) => {
+        console.error('❌ [App] Backend token generation failed:', e);
+      });
   }, []);
 
   return (

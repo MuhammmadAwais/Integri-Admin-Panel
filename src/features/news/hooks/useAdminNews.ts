@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
 import {
   NewsService,
+  tokenReadyPromise,
   type ArticleSummary,
   type AdminCountriesResponse,
   type CountryDetails,
@@ -50,6 +51,9 @@ interface UseAdminNewsReturn {
   countries: Record<string, CountryDetails>;
   countriesLoading: boolean;
 
+  /** 'waiting' | 'ready' | 'failed' — current state of backend auth token */
+  tokenStatus: 'waiting' | 'ready' | 'failed';
+
   refetch: () => void;
 }
 
@@ -65,48 +69,112 @@ export function useAdminNews(): UseAdminNewsReturn {
   const [committedDays, setCommittedDays] = useState(PERSISTENT_DAYS);
   const daysDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Token readiness gate ─────────────────────────────────────────────────
+  const [tokenStatus, setTokenStatus] = useState<'waiting' | 'ready' | 'failed'>(
+    localStorage.getItem('integri_jwt') ? 'ready' : 'waiting'
+  );
+
+  useEffect(() => {
+    if (tokenStatus === 'ready') {
+      console.log('✅ [useAdminNews] Token already present — fetches can start immediately.');
+      return;
+    }
+    console.log('⏳ [useAdminNews] Waiting for backend token before firing news requests...');
+    let cancelled = false;
+    tokenReadyPromise
+      .then((token) => {
+        if (cancelled) return;
+        if (token) {
+          console.log('🟢 [useAdminNews] Token ready — news fetches will now start.', token.slice(0, 24) + '…');
+          setTokenStatus('ready');
+        } else {
+          console.warn('⚠️ [useAdminNews] tokenReadyPromise resolved but returned null.');
+          setTokenStatus('failed');
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error('❌ [useAdminNews] Token generation failed:', err);
+        setTokenStatus('failed');
+      });
+    return () => { cancelled = true; };
+  }, []);
+
   // ── Countries list (fetched via standard React lifecycle) ────────────────
   const [countries, setCountries] = useState<Record<string, CountryDetails>>({});
   const [countriesLoading, setCountriesLoading] = useState(true);
 
   useEffect(() => {
+    // Wait for token before fetching countries too
+    if (tokenStatus !== 'ready') return;
     let cancelled = false;
+    console.log('🌍 [useAdminNews] Fetching admin countries...');
     NewsService.fetchAdminCountries()
       .then((res) => {
-        if (!cancelled) setCountries(res.supported_countries || {});
+        if (!cancelled) {
+          console.log('🟢 [useAdminNews] Countries loaded:', Object.keys(res.supported_countries || {}).length, 'countries');
+          setCountries(res.supported_countries || {});
+        }
       })
       .catch((err) => {
-        console.error('Failed to load admin countries:', err);
+        console.error('❌ [useAdminNews] Failed to load admin countries:', err);
       })
       .finally(() => {
         if (!cancelled) setCountriesLoading(false);
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [tokenStatus]);
 
   // ── Articles list (cached globally by SWR) ───────────────────────────────
-  const cacheKey = ['admin-articles', country, committedDays];
+  // IMPORTANT: SWR v2 disables fetching when ANY element of the key array is
+  // null/undefined. Since `country` is null when no filter is selected, we
+  // use '' as a sentinel for "All Countries" so the key is always valid.
+  // The whole key is set to null (disabled) only while the token is not ready.
+  const swrCountryKey = country ?? '';
+  const cacheKey = tokenStatus === 'ready'
+    ? ['admin-articles', swrCountryKey, committedDays]
+    : null;
+
   const {
     data: articlesData,
     error: swrError,
     isValidating: loading,
     mutate: mutateArticles
-  } = useSWR(cacheKey, () => NewsService.fetchAdminArticles(country, committedDays), {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    revalidateIfStale: false, // This is key: don't refetch on mount if we have data
-  });
+  } = useSWR(
+    cacheKey,
+    // Simple closure fetcher — avoids fragile destructured-key patterns.
+    // country / committedDays come from the closed-over scope, not from the key.
+    async () => {
+      console.log(`📰 [SWR] Fetching admin articles — country: ${country ?? 'ALL'}, days: ${committedDays}`);
+      const result = await NewsService.fetchAdminArticles(country, committedDays);
+      console.log(`✅ [SWR] Articles received — total: ${result.total}, articles in array: ${result.articles?.length ?? 0}`);
+      return result;
+    },
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
+    }
+  );
 
   const articles = articlesData?.articles || [];
   const total = articlesData?.total || 0;
   const error = swrError ? (swrError.message || 'Failed to fetch articles') : null;
 
-  // ── Prune SWR memory cache on unmount to prevent background memory bloat ──
+  // ── Prune SWR memory cache on unmount only ────────────────────────────────
+  // IMPORTANT: dependency array is intentionally empty so this only runs on
+  // unmount. Using cacheKey in deps would wipe data every time the key changes
+  // (e.g. token becoming ready), erasing freshly fetched articles.
+  const cacheKeyRef = useRef(cacheKey);
+  cacheKeyRef.current = cacheKey;
   useEffect(() => {
     return () => {
-      mutate(cacheKey, undefined, { revalidate: false });
+      if (cacheKeyRef.current) {
+        mutate(cacheKeyRef.current, undefined, { revalidate: false });
+      }
     };
-  }, [cacheKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Setters ───────────────────────────────────────────────────────────────
 
@@ -127,7 +195,7 @@ export function useAdminNews(): UseAdminNewsReturn {
 
   return {
     articles,
-    loading,
+    loading: loading || tokenStatus === 'waiting',
     error,
     total,
     days,
@@ -136,6 +204,7 @@ export function useAdminNews(): UseAdminNewsReturn {
     setCountry,
     countries,
     countriesLoading,
+    tokenStatus,
     refetch: () => mutateArticles(),
   };
 }
