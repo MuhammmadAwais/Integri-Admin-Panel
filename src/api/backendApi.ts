@@ -61,8 +61,19 @@ let activeTokenPromise: Promise<string | null> | null = null;
  * Auth Token Generator
  * Returns the existing in-flight promise when one is already running,
  * otherwise starts a fresh request.
+ *
+ * @param forceRefresh - When true, clears the stored token first so an
+ *   expired/invalid token is never reused. Always pass true on 401 errors.
  */
-export const getBackendToken = async (): Promise<string | null> => {
+export const getBackendToken = async (forceRefresh = false): Promise<string | null> => {
+  // If forced, evict the stale token so we don't return it below.
+  if (forceRefresh) {
+    console.log('🔄 [Token] Force-refresh requested — clearing stored token.');
+    localStorage.removeItem('integri_jwt');
+    // Also clear any in-flight promise so a new request is started.
+    activeTokenPromise = null;
+  }
+
   // Return the in-flight promise so every concurrent caller shares one request.
   if (activeTokenPromise) {
     console.log('🔗 [Token] Awaiting in-flight token request...');
@@ -284,11 +295,11 @@ backendApi.interceptors.response.use(
   (response: AxiosResponse) => {
     const customConfig = response.config as any;
     const method = response.config.method?.toUpperCase() || 'GET';
-    
+
     // Show success toast for mutations (POST, PUT, DELETE, PATCH) or when explicitly requested.
     // Never show success toast if skipToast is explicitly set to true.
     const shouldToast = !customConfig?.skipToast && (method !== 'GET' || customConfig?.showToast);
-    
+
     if (shouldToast) {
       const successMessage = getSuccessMessage(response);
       showToast(successMessage, 'success');
@@ -301,58 +312,97 @@ backendApi.interceptors.response.use(
     // Format readable error message
     const errorMessage = getErrorMessage(error);
 
-    // Print error details in the console as requested by the user
-    console.error(`❌ [API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
-    console.error(`Error Message: ${errorMessage}`);
-    
-    if (error.response) {
-      console.error("Status Code:", error.response.status);
-      console.error("Response Data:", error.response.data);
-      console.error("Headers:", error.response.headers);
-    } else if (error.request) {
-      console.error("No response received. Request details:", error.request);
-    } else {
-      console.error("Error configuration:", error.message);
-    }
-    console.error("Full Error Object:", error);
+    // ── Detect token expiry / invalidity ─────────────────────────────────────
+    const status = error.response?.status;
+    const responseDetail = (error.response?.data as any)?.detail ?? '';
+    const isTokenError =
+      status === 401 &&
+      !originalRequest?._retry &&
+      !(
+        originalRequest?.url?.endsWith('/api/v1/auth/token') ||
+        originalRequest?.url?.includes('/auth/token')
+      );
 
-    // Silent 401 token refresh retry check
-    const is401Retry = error.response?.status === 401 && !originalRequest?._retry;
-
-    // Trigger error toast unless skipToast is set or this is a silent 401 token refresh
-    if (!originalRequest?.skipToast && !is401Retry) {
-      showToast(errorMessage, 'error');
-    }
-
-    if (error.response?.status === 401 && !originalRequest?._retry) {
-      if (isRefreshing) {
-        return new Promise(function(resolve, reject) {
-          failedQueue.push({ resolve, reject });
-        }).then(token => {
-          originalRequest.headers.Authorization = 'Bearer ' + token;
-          return backendApi(originalRequest);
-        }).catch(err => {
-          return Promise.reject(err);
-        });
+    if (isTokenError) {
+      // Log the specific token problem clearly
+      if (
+        typeof responseDetail === 'string' &&
+        (responseDetail.toLowerCase().includes('expired') ||
+          responseDetail.toLowerCase().includes('invalid'))
+      ) {
+        console.warn(
+          `🔑 [Auth] Token invalid/expired (server said: "${responseDetail}"). ` +
+          `Clearing token and fetching a fresh one, then retrying original request...`
+        );
+      } else {
+        console.warn(
+          `🔑 [Auth] 401 Unauthorized on ${originalRequest?.url}. ` +
+          `Attempting token refresh and request retry...`
+        );
       }
 
+      // If another refresh is already in-flight, queue this request and wait.
+      if (isRefreshing) {
+        console.log('⏳ [Auth] Token refresh already in-flight — queuing request...');
+        return new Promise<string>((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = 'Bearer ' + token;
+            return backendApi(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
+      // Mark request so it doesn't loop infinitely.
       originalRequest._retry = true;
       isRefreshing = true;
 
       try {
-        const newToken = await getBackendToken();
+        // IMPORTANT: forceRefresh=true clears the stale/expired token from
+        // localStorage before fetching — otherwise we'd keep reusing the bad token.
+        const newToken = await getBackendToken(true);
+
         isRefreshing = false;
-        processQueue(null, newToken);
+
         if (newToken) {
+          console.log('✅ [Auth] Fresh token obtained. Replaying failed request and draining queue...');
+          processQueue(null, newToken);
           originalRequest.headers.Authorization = 'Bearer ' + newToken;
           return backendApi(originalRequest);
         }
+
+        // Token fetch succeeded but returned null — give up.
+        console.error('❌ [Auth] Token refresh returned null. Cannot replay request.');
+        processQueue(new Error('Token refresh returned null'), null);
         return Promise.reject(error);
-      } catch (err) {
-        processQueue(err, null);
+      } catch (refreshError) {
+        console.error('❌ [Auth] Token refresh itself failed:', refreshError);
+        processQueue(refreshError, null);
         isRefreshing = false;
-        return Promise.reject(err);
+        return Promise.reject(refreshError);
       }
+    }
+
+    // ── Non-401 errors (or already retried) ──────────────────────────────────
+    // Print error details in the console
+    console.error(`❌ [API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
+    console.error(`Error Message: ${errorMessage}`);
+
+    if (error.response) {
+      console.error('Status Code:', error.response.status);
+      console.error('Response Data:', error.response.data);
+      console.error('Headers:', error.response.headers);
+    } else if (error.request) {
+      console.error('No response received. Request details:', error.request);
+    } else {
+      console.error('Error configuration:', error.message);
+    }
+    console.error('Full Error Object:', error);
+
+    // Show error toast unless suppressed.
+    if (!originalRequest?.skipToast) {
+      showToast(errorMessage, 'error');
     }
 
     return Promise.reject(error);
