@@ -49,28 +49,40 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
+let activeTokenPromise: Promise<string | null> | null = null;
+
 /**
  * Auth Token Generator
  */
 export const getBackendToken = async (): Promise<string | null> => {
-  try {
-    const response = await axios.post(`${BASE_URL}/api/v1/auth/token`, {
-      user_id: ADMIN_UID,
-      email: ADMIN_EMAIL,
-      user_type: 'pro'
-    });
-    console.log(response)
-    if (response.data && response.data.access_token) {
-      console.log('🟢 [API] Backend token generated successfully');
-      localStorage.setItem('integri_jwt', response.data.access_token);
-      return response.data.access_token;
-    }
-    console.log("❌ [API] Failed to generate backend token:", response.data);
-    return null;
-  } catch (error) {
-    console.error("❌ [API] Failed to generate backend token:", error);
-    throw error;
+  if (activeTokenPromise) {
+    return activeTokenPromise;
   }
+
+  activeTokenPromise = (async () => {
+    try {
+      const response = await axios.post(`${BASE_URL}/api/v1/auth/token`, {
+        user_id: ADMIN_UID,
+        email: ADMIN_EMAIL,
+        user_type: 'pro'
+      });
+      console.log(response);
+      if (response.data && response.data.access_token) {
+        console.log('🟢 [API] Backend token generated successfully');
+        localStorage.setItem('integri_jwt', response.data.access_token);
+        return response.data.access_token;
+      }
+      console.log("❌ [API] Failed to generate backend token:", response.data);
+      return null;
+    } catch (error) {
+      console.error("❌ [API] Failed to generate backend token:", error);
+      throw error;
+    } finally {
+      activeTokenPromise = null;
+    }
+  })();
+
+  return activeTokenPromise;
 };
 
 /**
@@ -78,8 +90,21 @@ export const getBackendToken = async (): Promise<string | null> => {
  * Automatically attaches stored JWT token.
  */
 backendApi.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('integri_jwt');
+  async (config: InternalAxiosRequestConfig) => {
+    let token = localStorage.getItem('integri_jwt');
+    
+    // Check if it's NOT an authentication request to avoid recursion
+    const isAuthTokenRequest = config.url && (config.url.endsWith('/api/v1/auth/token') || config.url.includes('/auth/token'));
+    
+    if (!token && !isAuthTokenRequest) {
+      try {
+        console.log('🔄 Request Interceptor: No token found. Fetching backend token...');
+        token = await getBackendToken();
+      } catch (error) {
+        console.error('❌ Request Interceptor: Failed to fetch backend token', error);
+      }
+    }
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -713,6 +738,7 @@ export const NewsService = {
     days: number = 7
   ): Promise<AdminArticlesResponse> => {
     try {
+      console.log({ country, "fetching": "admin articles" })
       const params: Record<string, string | number> = { days };
       if (country) params.country = country;
       const response = await backendApi.get<AdminArticlesResponse>(
