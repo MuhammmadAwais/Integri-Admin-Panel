@@ -33,6 +33,7 @@ const TierConfigurationPage = Loadable(lazy(() => import('pages/TierConfiguratio
 const PersonalizationTaxonomyPage    = Loadable(lazy(() => import('pages/PersonalizationTaxonomyPage')));
 const PersonalizationThresholdsPage  = Loadable(lazy(() => import('pages/PersonalizationThresholdsPage')));
 const PersonalizationCalibrationPage = Loadable(lazy(() => import('pages/PersonalizationCalibrationPage')));
+const MemoryBackfillPage             = Loadable(lazy(() => import('pages/MemoryBackfillPage')));
 
 // ==============================|| INTEGRI APP — NAVIGATION ROUTES ||============================== //
 
@@ -65,6 +66,7 @@ const NavigationRoutes = {
         { path: '/personalization/taxonomy',    element: <PersonalizationTaxonomyPage /> },
         { path: '/personalization/thresholds',  element: <PersonalizationThresholdsPage /> },
         { path: '/personalization/calibration', element: <PersonalizationCalibrationPage /> },
+        { path: '/personalization/memory-backfill', element: <MemoryBackfillPage /> },
       ]
     }
   ]

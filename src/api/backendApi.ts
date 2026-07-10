@@ -1631,3 +1631,120 @@ export const CalibrationService = {
     }
   },
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  🧠 MEMORY BACKFILL — Types & Services
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface MemorySeedPayload {
+  estimated_age?: string;
+  gender?: string;
+  occupation?: string;
+  city?: string;
+  country?: string;
+  languages_spoken?: string[];
+  interests?: { name: string; score?: number }[];
+  domains?: string[];
+  notable_facts?: string[];
+  language?: string;
+  communication_style?: string;
+}
+
+export interface MemorySeedResponse {
+  user_id: string;
+  result: "created" | "skipped_has_memory";
+  memory_data?: any;
+}
+
+export interface CountryBackfillPayload {
+  country: string;
+  dry_run?: boolean;
+  payload: MemorySeedPayload;
+}
+
+export interface CountryBackfillResponse {
+  job_id: string;
+  status: string;
+  country: string;
+  dry_run: boolean;
+  message: string;
+}
+
+export interface JobStatusResponse {
+  job_id: string;
+  country: string;
+  status: "pending" | "running" | "completed" | "failed";
+  dry_run: boolean;
+  requested_by: string;
+  users_scanned: number;
+  users_updated: number;
+  users_skipped_has_memory: number;
+  users_failed: number;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+  error_message: string | null;
+}
+
+export interface RecentJobsResponse {
+  jobs: JobStatusResponse[];
+  count: number;
+}
+
+export const MemoryBackfillService = {
+  seedUserMemory: async (userId: string, payload: MemorySeedPayload): Promise<MemorySeedResponse> => {
+    try {
+      const response = await backendApi.post<MemorySeedResponse>(
+        `/api/v1/admin/users/${encodeURIComponent(userId)}/memory/seed`,
+        { payload }
+      );
+      console.log(response)
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [MemoryBackfillService] seedUserMemory error for ${userId}:`, e);
+      throw e;
+    }
+  },
+
+  dispatchCountryBackfill: async (payload: CountryBackfillPayload): Promise<CountryBackfillResponse> => {
+    try {
+      const response = await backendApi.post<CountryBackfillResponse>(
+        '/api/v1/admin/memory/backfill/country',
+        payload
+      );
+      console.log(response);
+      return response.data;
+    } catch (e) {
+      console.error('❌ [MemoryBackfillService] dispatchCountryBackfill error:', e);
+      throw e;
+    }
+  },
+
+  getJobStatus: async (jobId: string): Promise<JobStatusResponse> => {
+    try {
+      const response = await backendApi.get<JobStatusResponse>(
+        `/api/v1/admin/memory/backfill/jobs/${encodeURIComponent(jobId)}`,
+        { skipToast: true } as any
+      );
+      console.log(response);
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [MemoryBackfillService] getJobStatus error for ${jobId}:`, e);
+      throw e;
+    }
+  },
+
+  listRecentJobs: async (limit: number = 20): Promise<RecentJobsResponse> => {
+    try {
+      const response = await backendApi.get<RecentJobsResponse>(
+        '/api/v1/admin/memory/backfill/jobs',
+        { params: { limit }, skipToast: true } as any
+      );
+      console.log(response);
+      return response.data;
+    } catch (e) {
+      console.error('❌ [MemoryBackfillService] listRecentJobs error:', e);
+      throw e;
+    }
+  }
+};

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Newspaper, BookOpen, Users, LogOut, Cpu, Settings, Bell, Layers, Activity, SlidersHorizontal, FilePlus, Tags, Gauge, FlaskConical, BarChart2 } from 'lucide-react';
+import { LayoutDashboard, Newspaper, BookOpen, Users, LogOut, Cpu, Settings, Bell, Layers, Activity, SlidersHorizontal, FilePlus, Tags, Gauge, FlaskConical, BarChart2, Database } from 'lucide-react';
 
 // ==============================|| INTEGRI APP — NAVIGATION MENU ||============================== //
 
@@ -111,6 +111,13 @@ const integriNav = {
       type: 'item',
       icon: FlaskConical,
       url: '/personalization/calibration'
+    },
+    {
+      id: 'personalization-memory-backfill',
+      title: 'Memory Backfill',
+      type: 'item',
+      icon: Database,
+      url: '/personalization/memory-backfill'
     },
 
     {

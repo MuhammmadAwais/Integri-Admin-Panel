@@ -3,13 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from 'lib/firebase/firebase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { UserMemoryService, UserService } from 'api/backendApi';
-import { ArrowLeft, Clock, MapPin, Mail, Shield, Zap, User as UserIcon, Search as SearchIcon, Copy, Check, Activity, Fingerprint, History } from 'lucide-react';
+import { UserMemoryService, UserService, MemoryBackfillService } from 'api/backendApi';
+import { ArrowLeft, Clock, MapPin, Mail, Shield, Zap, User as UserIcon, Search as SearchIcon, Copy, Check, Activity, Fingerprint, History, Database, Loader2, X } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { gsap } from 'gsap';
 import MainCard from 'components/MainCard';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
+import { MemorySeedForm, sanitizeMemoryPayload } from 'components/MemorySeedForm';
+import { showToast } from 'components/EliteUI/EliteToastContainer';
 
 const MemoryCard = ({ label, value }) => {
   const [copied, setCopied] = useState(false);
@@ -269,6 +271,10 @@ export default function UserDetailPage() {
   const [loading, setLoading] = useState(true);
   const pageRef = useRef(null);
 
+  const [seedModalOpen, setSeedModalOpen] = useState(false);
+  const [seedPayload, setSeedPayload] = useState({});
+  const [seeding, setSeeding] = useState(false);
+
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -301,12 +307,12 @@ export default function UserDetailPage() {
           setUser(mappedUser);
 
           try {
-            const memory = await UserMemoryService.getUserMemory(id);
+            const memRes = await UserMemoryService.getUserMemory(id);
             if (!cancelled) {
-              setMemoryData(memory);
+              setMemoryData(memRes.data);
             }
-          } catch (e) {
-            console.warn("User data connection not established.");
+          } catch (memErr) {
+            console.error("No memory doc found or error:", memErr);
           }
 
           const tokensRef = collection(db, 'Users', id, 'generatedTokens');
@@ -504,9 +510,19 @@ export default function UserDetailPage() {
       <Row className="mt-4">
         <Col md={12}>
           <MainCard title={
-            <div className="d-flex align-items-center gap-2">
-              <UserIcon size={18} color="#D4AF37" />
-              <span style={{ color: '#D4AF37' }}>Saved User Data & Preferences</span>
+            <div className="d-flex justify-content-between align-items-center">
+              <div className="d-flex align-items-center gap-2">
+                <UserIcon size={18} color="#D4AF37" />
+                <span style={{ color: '#D4AF37' }}>Saved User Data & Preferences</span>
+              </div>
+              <button 
+                className="btn btn-sm" 
+                style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '4px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                onClick={() => setSeedModalOpen(true)}
+              >
+                <Database size={14} />
+                Seed Memory
+              </button>
             </div>
           } bodyClassName="p-0">
              {memoryData ? (
@@ -580,6 +596,73 @@ export default function UserDetailPage() {
           </MainCard>
         </Col>
       </Row>
+
+      {/* Seed Modal */}
+      {seedModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#111', width: '90%', maxWidth: '700px', borderRadius: '12px', border: '1px solid #D4AF37', padding: '24px', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
+            <button 
+              onClick={() => setSeedModalOpen(false)}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: '#a8956b', cursor: 'pointer' }}
+            >
+              <X size={20} />
+            </button>
+            
+            <h4 style={{ color: '#D4AF37', marginBottom: '8px' }}>
+              <Database size={20} style={{ marginRight: '8px', verticalAlign: 'text-bottom' }} />
+              Seed Memory for {user?.displayName || id}
+            </h4>
+            <p style={{ color: '#a8956b', fontSize: '0.85rem', marginBottom: '24px' }}>
+              Manually bootstrap the personalization memory record for this user.
+            </p>
+            
+            <MemorySeedForm payload={seedPayload} onChange={setSeedPayload} isDark={true} />
+            
+            <div className="mt-4 pt-3 d-flex justify-content-end gap-3" style={{ borderTop: '1px solid rgba(212,175,55,0.2)' }}>
+              <button 
+                className="btn btn-outline-secondary" 
+                style={{ color: '#fff' }} 
+                onClick={() => setSeedModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn" 
+                style={{ background: '#D4AF37', color: '#000', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }} 
+                onClick={async () => {
+                  const sanitized = sanitizeMemoryPayload(seedPayload);
+                  if (Object.keys(sanitized).length === 0) {
+                    showToast('Payload cannot be completely empty after sanitization.', 'error');
+                    return;
+                  }
+                  
+                  setSeeding(true);
+                  try {
+                    const res = await MemoryBackfillService.seedUserMemory(id, sanitized);
+                    showToast(res.result === 'skipped_has_memory' ? 'User already has memory.' : 'Memory seeded successfully!', 'success');
+                    setSeedModalOpen(false);
+                    if (res.memory_data) {
+                      setMemoryData(res.memory_data);
+                    } else {
+                      // Attempt a re-fetch of memory if data wasn't in response but seeded
+                      const memRes = await UserMemoryService.getUserMemory(id);
+                      setMemoryData(memRes.data);
+                    }
+                  } catch (e) {
+                    showToast(e?.response?.data?.message || 'Failed to seed memory', 'error');
+                  } finally {
+                    setSeeding(false);
+                  }
+                }}
+                disabled={seeding || Object.keys(seedPayload).length === 0}
+              >
+                {seeding ? <Loader2 size={16} style={{ animation: 'pers-spin 1s linear infinite' }} /> : <Check size={16} />} 
+                Confirm Seed
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
