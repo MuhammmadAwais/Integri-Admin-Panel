@@ -1696,7 +1696,8 @@ export const MemoryBackfillService = {
     try {
       const response = await backendApi.post<MemorySeedResponse>(
         `/api/v1/admin/users/${encodeURIComponent(userId)}/memory/seed`,
-        { payload }
+        { payload },
+        { skipToast: true } as any
       );
       console.log(response)
       return response.data;
@@ -1710,7 +1711,8 @@ export const MemoryBackfillService = {
     try {
       const response = await backendApi.post<CountryBackfillResponse>(
         '/api/v1/admin/memory/backfill/country',
-        payload
+        payload,
+        { skipToast: true } as any
       );
       console.log(response);
       return response.data;

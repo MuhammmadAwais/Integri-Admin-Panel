@@ -309,7 +309,7 @@ export default function UserDetailPage() {
           try {
             const memRes = await UserMemoryService.getUserMemory(id);
             if (!cancelled) {
-              setMemoryData(memRes.data);
+              setMemoryData(memRes);
             }
           } catch (memErr) {
             console.error("No memory doc found or error:", memErr);
@@ -662,10 +662,10 @@ export default function UserDetailPage() {
                     } else {
                       // Attempt a re-fetch of memory if data wasn't in response but seeded
                       const memRes = await UserMemoryService.getUserMemory(id);
-                      setMemoryData(memRes.data);
+                      setMemoryData(memRes);
                     }
                   } catch (e) {
-                    showToast(e?.response?.data?.message || 'Failed to seed memory', 'error');
+                    showToast(e?.response?.data?.message || e?.response?.data?.detail || 'Failed to seed memory', 'error');
                   } finally {
                     setSeeding(false);
                   }

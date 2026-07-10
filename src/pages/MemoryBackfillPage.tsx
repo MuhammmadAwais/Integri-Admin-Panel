@@ -125,7 +125,7 @@ export default function MemoryBackfillPage() {
       setActiveJobId(response.job_id);
       showToast('Dry run dispatched. Monitoring progress...', 'info');
     } catch (e: any) {
-      showToast(e?.response?.data?.message || 'Dry run failed', 'error');
+      showToast(e?.response?.data?.message || e?.response?.data?.detail || 'Dry run failed', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -146,7 +146,7 @@ export default function MemoryBackfillPage() {
       setActiveJobId(response.job_id);
       showToast('Memory sweep dispatched. Monitoring progress...', 'info');
     } catch (e: any) {
-      showToast(e?.response?.data?.message || 'Sweep dispatch failed', 'error');
+      showToast(e?.response?.data?.message || e?.response?.data?.detail || 'Sweep dispatch failed', 'error');
     } finally {
       setSubmitting(false);
     }
