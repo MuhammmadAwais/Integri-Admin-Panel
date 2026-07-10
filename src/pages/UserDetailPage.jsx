@@ -600,7 +600,23 @@ export default function UserDetailPage() {
       {/* Seed Modal */}
       {seedModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#111', width: '90%', maxWidth: '700px', borderRadius: '12px', border: '1px solid #D4AF37', padding: '24px', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
+          <style>{`
+            .custom-modal-scroll::-webkit-scrollbar {
+              width: 6px;
+            }
+            .custom-modal-scroll::-webkit-scrollbar-track {
+              background: rgba(255,255,255,0.02);
+              border-radius: 12px;
+            }
+            .custom-modal-scroll::-webkit-scrollbar-thumb {
+              background: rgba(212,175,55,0.3);
+              border-radius: 12px;
+            }
+            .custom-modal-scroll::-webkit-scrollbar-thumb:hover {
+              background: rgba(212,175,55,0.6);
+            }
+          `}</style>
+          <div className="custom-modal-scroll" style={{ background: '#111', width: '90%', maxWidth: '700px', borderRadius: '12px', border: '1px solid #D4AF37', padding: '24px', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
             <button 
               onClick={() => setSeedModalOpen(false)}
               style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: '#a8956b', cursor: 'pointer' }}

@@ -32,6 +32,104 @@ export const sanitizeMemoryPayload = (payload: MemorySeedPayload): MemorySeedPay
   return sanitized;
 };
 
+const TagInput: React.FC<{
+  tags: string[];
+  onChange: (tags: string[]) => void;
+  placeholder: string;
+  isDark?: boolean;
+}> = ({ tags = [], onChange, placeholder, isDark }) => {
+  const [inputValue, setInputValue] = React.useState('');
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTag();
+    }
+  };
+
+  const addTag = () => {
+    const val = inputValue.trim().replace(/,/g, '');
+    if (val && !tags.includes(val)) {
+      const newTags = [...tags, val];
+      onChange(newTags);
+      setInputValue('');
+    }
+  };
+
+  const removeTag = (indexToRemove: number) => {
+    const newTags = tags.filter((_, idx) => idx !== indexToRemove);
+    onChange(newTags);
+  };
+
+  const containerStyle: React.CSSProperties = {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '6px',
+    padding: '6px 8px',
+    background: isDark ? 'rgba(255,255,255,0.03)' : '#fff',
+    border: '1px solid rgba(212,175,55,0.3)',
+    borderRadius: '6px',
+    alignItems: 'center',
+    minHeight: '40px'
+  };
+
+  const inputStyle: React.CSSProperties = {
+    flex: '1 1 120px',
+    border: 'none',
+    outline: 'none',
+    background: 'transparent',
+    color: isDark ? '#e0d5b8' : '#333',
+    fontSize: '0.85rem',
+    padding: '4px 0'
+  };
+
+  const pillStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    background: 'rgba(212,175,55,0.15)',
+    border: '1px solid rgba(212,175,55,0.4)',
+    color: '#D4AF37',
+    padding: '2px 8px',
+    borderRadius: '12px',
+    fontSize: '0.75rem',
+    fontWeight: 600,
+  };
+
+  const deleteBtnStyle: React.CSSProperties = {
+    marginLeft: '6px',
+    cursor: 'pointer',
+    opacity: 0.8,
+    display: 'inline-flex',
+    alignItems: 'center',
+    border: 'none',
+    background: 'none',
+    padding: 0,
+    color: '#D4AF37'
+  };
+
+  return (
+    <div style={containerStyle}>
+      {tags.map((tag, idx) => (
+        <span key={tag} style={pillStyle}>
+          {tag}
+          <button type="button" onClick={() => removeTag(idx)} style={deleteBtnStyle}>
+            <X size={12} />
+          </button>
+        </span>
+      ))}
+      <input
+        type="text"
+        placeholder={tags.length === 0 ? placeholder : ''}
+        value={inputValue}
+        onChange={e => setInputValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={addTag}
+        style={inputStyle}
+      />
+    </div>
+  );
+};
+
 export const MemorySeedForm: React.FC<MemorySeedFormProps> = ({ payload, onChange, isDark = true }) => {
   const handleChange = (field: keyof MemorySeedPayload, value: any) => {
     onChange({ ...payload, [field]: value });
@@ -143,21 +241,21 @@ export const MemorySeedForm: React.FC<MemorySeedFormProps> = ({ payload, onChang
         />
       </div>
       <div className="col-md-6">
-        <label style={labelStyle}>Languages Spoken (comma separated)</label>
-        <input 
-          style={inputStyle} 
-          placeholder="e.g. English, Urdu" 
-          value={payload.languages_spoken?.join(', ') || ''} 
-          onChange={e => handleArrayChange('languages_spoken', e.target.value)} 
+        <label style={labelStyle}>Languages Spoken</label>
+        <TagInput 
+          tags={payload.languages_spoken || []}
+          onChange={val => handleChange('languages_spoken', val)}
+          placeholder="Type language & press Enter or comma"
+          isDark={isDark}
         />
       </div>
       <div className="col-md-6">
-        <label style={labelStyle}>Domains (comma separated)</label>
-        <input 
-          style={inputStyle} 
-          placeholder="e.g. technology, sports" 
-          value={payload.domains?.join(', ') || ''} 
-          onChange={e => handleArrayChange('domains', e.target.value)} 
+        <label style={labelStyle}>Domains</label>
+        <TagInput 
+          tags={payload.domains || []}
+          onChange={val => handleChange('domains', val)}
+          placeholder="Type domain & press Enter or comma"
+          isDark={isDark}
         />
       </div>
       <div className="col-md-6">
