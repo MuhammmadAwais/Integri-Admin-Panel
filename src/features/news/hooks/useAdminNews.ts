@@ -61,7 +61,7 @@ interface UseAdminNewsReturn {
 //  Persistence — Module-level state survives route changes within the same session
 // ─────────────────────────────────────────────────────────────────────────────
 let PERSISTENT_DAYS = 7;
-let PERSISTENT_COUNTRY: string | null = null;
+let PERSISTENT_COUNTRY: string | null = 'Germany';
 
 export function useAdminNews(): UseAdminNewsReturn {
   const [days, setDaysRaw] = useState(PERSISTENT_DAYS);
