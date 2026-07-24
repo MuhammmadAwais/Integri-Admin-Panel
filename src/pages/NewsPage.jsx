@@ -33,6 +33,16 @@ export default function NewsPage() {
     refetch,
   } = useAdminNews();
 
+    // Log article updates for debugging network/responses
+    React.useEffect(() => {
+      console.log('📰 [NewsPage] articles state changed', { total, articlesCount: (articles || []).length, loading, error });
+    }, [articles, total, loading, error]);
+
+    const refetchAndLog = () => {
+      console.log('📰 [NewsPage] manual refetch triggered');
+      try { refetch(); } catch (e) { console.error('📰 [NewsPage] refetch error:', e); }
+    };
+
   // ── Detail panel state ────────────────────────────────────────────────────
   const [panelOpen, setPanelOpen]       = useState(false);
   const [selectedId, setSelectedId]     = useState(null);
@@ -329,7 +339,7 @@ export default function NewsPage() {
           <label style={{ color: 'transparent', fontSize: '0.7rem', userSelect: 'none' }}>·</label>
           <button
             title="Refresh"
-            onClick={refetch}
+            onClick={refetchAndLog}
             disabled={loading}
             style={{
               background: 'transparent', border: '1px solid var(--news-card-border)', color: 'var(--news-text-muted)',

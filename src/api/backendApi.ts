@@ -831,21 +831,39 @@ export const NewsService = {
     country?: string | null,
     days: number = 7
   ): Promise<AdminArticlesResponse> => {
-    try {
-      console.log({ country, "fetching": "admin articles" })
-      const params: Record<string, string | number> = { days };
-      if (country) params.country = country;
-      const response = await backendApi.get<AdminArticlesResponse>(
-        '/api/v1/news/admin/articles',
-        { params }
-      );
-      console.log({ "response": response })
-      return response.data;
-    } catch (e) {
-      console.error('❌ [NewsService] fetchAdminArticles error:', e);
-      throw e;
+    const maxAttempts = 3;
+    let attempt = 0;
+    const params: Record<string, string | number> = { days };
+    if (country) params.country = country;
+    while (attempt < maxAttempts) {
+      attempt++;
+      try {
+        console.log(`📰 [NewsService] fetchAdminArticles attempt ${attempt}/${maxAttempts} — country: ${country ?? 'ALL'}, days: ${days}`, { params });
+        const response = await backendApi.get<AdminArticlesResponse>(
+          '/api/v1/news/admin/articles',
+          { params }
+        );
+        console.log(`✅ [NewsService] fetchAdminArticles success (attempt ${attempt}):`, { status: response.status, dataPreview: Array.isArray(response.data?.articles) ? `${response.data.articles.length} articles` : typeof response.data });
+        return response.data;
+      } catch (e: any) {
+        const status = e?.response?.status;
+        console.error(`❌ [NewsService] fetchAdminArticles error on attempt ${attempt}:`, { message: e?.message, status, data: e?.response?.data });
+        // If auth error, let interceptor/token logic handle it (avoid retrying)
+        if (status === 401) {
+          throw e;
+        }
+        if (attempt >= maxAttempts) {
+          console.error(`❌ [NewsService] fetchAdminArticles exhausted ${maxAttempts} attempts.`);
+          throw e;
+        }
+        // Backoff before retrying (grow with attempt)
+        await new Promise((res) => setTimeout(res, 500 * attempt));
+      }
     }
+    // Shouldn't reach here, but satisfy TypeScript
+    throw new Error('❌ [NewsService] fetchAdminArticles unexpected exit');
   },
+
 
   /**
    * Fetch full article detail (content, grammar, keywords).
