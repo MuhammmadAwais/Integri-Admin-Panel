@@ -26,7 +26,12 @@ export function getLocalizedStr(field, fallback = '') {
   if (!field) return fallback;
   if (typeof field === 'string') return field;
   if (typeof field === 'object') {
-    return field['en'] ?? field['ar'] ?? Object.values(field)[0] ?? fallback;
+    const candidate = field['en'] ?? field['de'] ?? field['ar'] ?? Object.values(field).find(v => typeof v === 'string');
+    if (typeof candidate === 'string') return candidate;
+    if (candidate && typeof candidate === 'object') {
+      const nested = candidate['en'] ?? candidate['de'] ?? candidate['ar'] ?? Object.values(candidate).find(v => typeof v === 'string');
+      if (typeof nested === 'string') return nested;
+    }
   }
   return fallback;
 }

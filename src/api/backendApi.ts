@@ -672,6 +672,17 @@ export interface RecentNotificationRun {
   total_tokens: number;
   success_rate: number;
   per_topic: Record<string, any>;
+  per_language?: Record<
+    string,
+    {
+      sent: number;
+      failed: number;
+      batches: number;
+      total_tokens: number;
+      success_rate: number;
+      headline?: string;
+    }
+  >;
   triggered_by: string;
   notified_at: string;
 }
@@ -1106,11 +1117,47 @@ export const NewsService = {
       throw e;
     }
   },
+
+  /**
+   * Manual Admin Push — immediately push a specific already-compiled article.
+   * POST /api/v1/news/admin/articles/{news_id}/push
+   */
+  pushArticle: async (
+    news_id: string,
+    payload: { collection: string; language?: string | null }
+  ): Promise<ManualPushResponse> => {
+    try {
+      const response = await backendApi.post<ManualPushResponse>(
+        `/api/v1/news/admin/articles/${news_id}/push`,
+        payload,
+        { skipToast: true } as any
+      );
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [NewsService] pushArticle error for ${news_id}:`, e);
+      throw e;
+    }
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  📰 MANUAL ARTICLE — Types
+//  📰 MANUAL ARTICLE & PUSH — Types
 // ─────────────────────────────────────────────────────────────────────────────
+
+export interface ManualPushRequest {
+  collection: string;
+  language?: string | null;
+}
+
+export interface ManualPushResponse {
+  status: string;
+  task_id: string;
+  country: string;
+  news_id: string;
+  collection: string;
+  language_scope: string;
+  detail: string;
+}
 
 export interface ManualArticleSource {
   title: string;

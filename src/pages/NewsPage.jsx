@@ -12,6 +12,7 @@ import MainCard from 'components/MainCard';
 import { NewsService } from 'api/backendApi';
 import EliteModal from 'components/EliteUI/EliteModal';
 import { showToast } from 'components/EliteUI/EliteToastContainer';
+import { ManualPushModal } from 'features/news/components/ManualPushModal';
 
 // styles
 import 'features/news/styles/news.scss';
@@ -54,6 +55,14 @@ export default function NewsPage() {
   // ── Modal state ───────────────────────────────────────────────────────────
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget]           = useState(null);
+
+  const [pushModalOpen, setPushModalOpen] = useState(false);
+  const [pushTarget, setPushTarget]       = useState(null);
+
+  const handlePushClick = (id, collection, headline, country) => {
+    setPushTarget({ id, collection, headline, country });
+    setPushModalOpen(true);
+  };
 
   const handleRowClick = (id, collection) => {
     setSelectedId(id);
@@ -410,6 +419,7 @@ export default function NewsPage() {
         total={total}
         onRowClick={handleRowClick}
         onDelete={handleDelete}
+        onPushClick={handlePushClick}
       />
 
       {/* ── Article Detail Slide-over ─────────────────────────────────────── */}
@@ -418,6 +428,7 @@ export default function NewsPage() {
         newsId={selectedId}
         collection={selectedCollection}
         onClose={handleClosePanel}
+        onPushClick={handlePushClick}
       />
 
       {/* ── Delete Confirmation Modal ─────────────────────────────────────── */}
@@ -430,6 +441,16 @@ export default function NewsPage() {
       >
         Are you sure you want to delete this article? This action is permanent and cannot be undone.
       </EliteModal>
+
+      {/* ── Manual Admin Push Modal ───────────────────────────────────────── */}
+      <ManualPushModal
+        isOpen={pushModalOpen}
+        onClose={() => { setPushModalOpen(false); setPushTarget(null); }}
+        newsId={pushTarget?.id || null}
+        collection={pushTarget?.collection || null}
+        fallbackHeadline={pushTarget?.headline || null}
+        fallbackCountry={pushTarget?.country || null}
+      />
     </div>
   );
 }

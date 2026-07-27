@@ -1,16 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { X, ExternalLink, Eye, Layers, BookOpen, Tag } from 'lucide-react';
+import { X, ExternalLink, Eye, Layers, BookOpen, Tag, Bell } from 'lucide-react';
 import { NewsService, type ArticleDetail, type ContentBlock } from 'api/backendApi';
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-function getEn(field: Record<string, string | undefined> | string | undefined | null, fallback = ''): string {
-  if (!field) return fallback;
-  if (typeof field === 'string') return field;
-  return field['en'] ?? field['de'] ?? Object.values(field).find(Boolean) ?? fallback;
-}
+import { getLocalizedStr as getEn } from 'features/news/hooks/useAdminNews';
 
 function fmt(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
@@ -103,9 +94,10 @@ interface Props {
   newsId: string | null;
   collection: string | null;
   onClose: () => void;
+  onPushClick?: (id: string, collection: string, headline?: any, country?: string) => void;
 }
 
-const ArticleDetailPanel: React.FC<Props> = ({ open, newsId, collection, onClose }) => {
+const ArticleDetailPanel: React.FC<Props> = ({ open, newsId, collection, onClose, onPushClick }) => {
   const [article, setArticle]   = useState<ArticleDetail | null>(null);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState<string | null>(null);
@@ -209,13 +201,52 @@ const ArticleDetailPanel: React.FC<Props> = ({ open, newsId, collection, onClose
               Article Preview
             </span>
           </div>
-          <button
-            className="dp-close-btn"
-            onClick={onClose}
-            style={{ background: 'transparent', border: '1px solid var(--news-panel-border)', color: 'var(--news-text-dim)', width: 34, height: 34, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s ease', flexShrink: 0 }}
-          >
-            <X size={16} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {onPushClick && article && (
+              <button
+                type="button"
+                onClick={() => {
+                  onPushClick(
+                    article._id,
+                    article._collection || 'News',
+                    getEn(article.headline),
+                    article.country
+                  );
+                }}
+                style={{
+                  background: 'rgba(212,175,55,0.1)',
+                  border: '1px solid rgba(212,175,55,0.4)',
+                  color: '#D4AF37',
+                  padding: '6px 14px',
+                  borderRadius: 4,
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#D4AF37';
+                  e.currentTarget.style.color = '#000';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(212,175,55,0.1)';
+                  e.currentTarget.style.color = '#D4AF37';
+                }}
+              >
+                <Bell size={14} /> Push Notification
+              </button>
+            )}
+            <button
+              className="dp-close-btn"
+              onClick={onClose}
+              style={{ background: 'transparent', border: '1px solid var(--news-panel-border)', color: 'var(--news-text-dim)', width: 34, height: 34, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s ease', flexShrink: 0 }}
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         {/* ── Scrollable body ──────────────────────────────────────────────── */}

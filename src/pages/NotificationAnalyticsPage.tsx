@@ -41,6 +41,7 @@ import {
   Newspaper,
 } from 'lucide-react';
 import CountryFlag from 'components/CountryFlag';
+import { getLocalizedStr } from 'features/news/hooks/useAdminNews';
 import 'features/news/styles/news.scss';
 
 // ─── constants ─────────────────────────────────────────────────────────────────
@@ -196,9 +197,9 @@ const AuditRow = memo(({ row, index, style }: RowProps) => {
             color: 'var(--news-text-main)',
             fontSize: '0.82rem',
           }}
-          title={row.headline_en}
+          title={getLocalizedStr(row.headline_en, '—')}
         >
-          {row.headline_en}
+          {getLocalizedStr(row.headline_en, '—')}
         </div>
         <div style={{ fontSize: '0.68rem', color: 'var(--news-text-dim)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <span>{new Date(row.notified_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
@@ -465,7 +466,7 @@ export default function NotificationAnalyticsPage({ onBack }: Props) {
         .slice(0, 8)
         .map((a, i) => ({
           name: `#${i + 1}`,          // short Y-axis label
-          fullName: truncate(a.headline_en, 80),
+          fullName: truncate(getLocalizedStr(a.headline_en, '—'), 80),
           unique_opens: a.unique_opens,
           total_taps: a.total_taps,
         })),

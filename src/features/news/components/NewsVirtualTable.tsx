@@ -11,8 +11,9 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { gsap } from 'gsap';
 import Dropdown from 'react-bootstrap/Dropdown';
-import { MoreVertical, Edit3, Eye, Trash2, TrendingUp, Globe } from 'lucide-react';
+import { MoreVertical, Edit3, Eye, Trash2, TrendingUp, Globe, Bell } from 'lucide-react';
 import type { ArticleSummary } from 'api/backendApi';
+import { getLocalizedStr } from 'features/news/hooks/useAdminNews';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Helpers
@@ -114,12 +115,13 @@ interface Props {
   total: number;
   onRowClick: (id: string, collection: string) => void;
   onDelete?: (id: string, collection: string) => void;
+  onPushClick?: (id: string, collection: string, headline?: any, country?: string) => void;
 }
 
 const OVERSCAN = 5;
 const ROW_HEIGHT = 68; // px — estimated row height for virtualizer
 
-const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClick, onDelete }) => {
+const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClick, onDelete, onPushClick }) => {
   const navigate  = useNavigate();
   const tableRef  = useRef<HTMLTableElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -159,7 +161,7 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
         return (
           <div style={{ minWidth: 0 }}>
             <div style={{ color: 'var(--news-text-main)', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.4, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 420 }}>
-              {a.headline_en || a.headline_de || '—'}
+              {getLocalizedStr(a.headline || a.headline_en || a.headline_de, '—')}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               {a.markAsTrending && (
@@ -248,6 +250,41 @@ const NewsVirtualTable: React.FC<Props> = ({ articles, loading, total, onRowClic
         const item = row.original;
         return (
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            {onPushClick && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPushClick(item.id, item.collection || 'News', item.headline, item.country);
+                }}
+                style={{
+                  background: 'rgba(212,175,55,0.08)',
+                  border: '1px solid rgba(212,175,55,0.3)',
+                  color: '#D4AF37',
+                  padding: '4px 9px',
+                  borderRadius: 4,
+                  fontSize: '0.73rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  transition: 'all 0.18s ease',
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#D4AF37';
+                  e.currentTarget.style.color = '#000';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(212,175,55,0.08)';
+                  e.currentTarget.style.color = '#D4AF37';
+                }}
+                title="Manual Push Notification"
+              >
+                <Bell size={12} /> Push ▾
+              </button>
+            )}
             <div 
               onClick={(e) => { e.stopPropagation(); navigate(`/news/preview/${item.id}?collection=${item.collection || 'News'}`); }}
               style={{ 

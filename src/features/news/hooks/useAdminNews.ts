@@ -12,14 +12,21 @@ import useSWR, { mutate } from 'swr';
 //  Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Safely extract the English string from a LocalizedString map or plain string */
 export function getLocalizedStr(
-  field: Record<string, string | undefined> | string | undefined | null,
+  field: Record<string, string | undefined> | string | undefined | null | any,
   fallback = ''
 ): string {
   if (!field) return fallback;
   if (typeof field === 'string') return field;
-  return field['en'] ?? field['de'] ?? Object.values(field)[0] ?? fallback;
+  if (typeof field === 'object') {
+    const candidate = field['en'] ?? field['de'] ?? field['ar'] ?? Object.values(field).find(v => typeof v === 'string');
+    if (typeof candidate === 'string') return candidate;
+    if (candidate && typeof candidate === 'object') {
+      const nested = candidate['en'] ?? candidate['de'] ?? candidate['ar'] ?? Object.values(candidate).find(v => typeof v === 'string');
+      if (typeof nested === 'string') return nested;
+    }
+  }
+  return fallback;
 }
 
 /** Parse an ISO date string to a Date, returning null on failure */

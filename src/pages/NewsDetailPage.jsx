@@ -5,10 +5,11 @@ import Spinner from 'react-bootstrap/Spinner';
 import Logo from 'components/Logo';
 import {
   ChevronLeft, Globe, Calendar, Tag, ExternalLink, TrendingUp,
-  CheckCircle, Eye, Clock
+  CheckCircle, Eye, Clock, Bell
 } from 'lucide-react';
 import { getLocalizedStr, toDate } from 'features/news/hooks/useAdminNews';
 import { NewsService } from 'api/backendApi';
+import { ManualPushModal } from 'features/news/components/ManualPushModal';
 // ══════════════════════════════════════════════════════════════════════════════
 //  NewsDetailPage — Full-width immersive article view
 //  Reads from Flutter/Firestore News schema:
@@ -30,6 +31,7 @@ export default function NewsDetailPage() {
 
   const [searchParams] = useSearchParams();
   const collection = searchParams.get('collection') || 'News';
+  const [pushModalOpen, setPushModalOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,6 +139,28 @@ export default function NewsDetailPage() {
 
         {/* Actions */}
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button
+            onClick={() => setPushModalOpen(true)}
+            style={{
+              background: 'rgba(212,175,55,0.1)',
+              border: '1px solid rgba(212,175,55,0.4)',
+              color: '#D4AF37',
+              padding: '8px 16px',
+              borderRadius: 4,
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#D4AF37'; e.currentTarget.style.color = '#000'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(212,175,55,0.1)'; e.currentTarget.style.color = '#D4AF37'; }}
+          >
+            <Bell size={15} /> Push Notification
+          </button>
+
           {/* Trending badge */}
           {article.markAsTrending && (
             <span style={{
@@ -395,6 +419,15 @@ export default function NewsDetailPage() {
         .news-menu-item-danger:hover { background: rgba(220,20,60,0.1) !important; }
         [bsprefix="no-caret"]::after { display: none !important; }
       `}</style>
+
+      <ManualPushModal
+        isOpen={pushModalOpen}
+        onClose={() => setPushModalOpen(false)}
+        newsId={id}
+        collection={collection}
+        fallbackHeadline={headline}
+        fallbackCountry={article?.country}
+      />
     </div>
   );
 }

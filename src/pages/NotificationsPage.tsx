@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { NewsService, ScheduleEntry } from 'api/backendApi';
 import { Bell, Activity, Send, Clock, Plus, Trash2, X, Save, Globe, BarChart2 } from 'lucide-react';
 import CountryFlag from 'components/CountryFlag';
+import { getLocalizedStr } from 'features/news/hooks/useAdminNews';
 import 'features/news/styles/news.scss';
 
 // --- Types for local component state ---
@@ -15,6 +16,17 @@ export default function NotificationsPage() {
   const navigate = useNavigate();
   const [testCountry, setTestCountry] = useState<string>('');
   const [toast, setToast] = useState<Toast>(null);
+
+  const [searchParams] = useSearchParams();
+  const initialCountry = searchParams.get('country') || 'ALL';
+  const initialTrigger = (searchParams.get('trigger') as 'all' | 'manual' | 'scheduled') || 'all';
+  const [countryFilter, setCountryFilter] = useState<string>(initialCountry);
+  const [triggerFilter, setTriggerFilter] = useState<'all' | 'manual' | 'scheduled'>(initialTrigger);
+  const [expandedRunIds, setExpandedRunIds] = useState<Record<string, boolean>>({});
+
+  const toggleRunExpand = (runId: string) => {
+    setExpandedRunIds(prev => ({ ...prev, [runId]: !prev[runId] }));
+  };
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -193,7 +205,13 @@ export default function NotificationsPage() {
   // RENDER HELPERS
   // ==========================================
   const summary = statsData?.summary;
-  const recentRuns = statsData?.recent_runs || [];
+  const rawRecentRuns = statsData?.recent_runs || [];
+  const recentRuns = rawRecentRuns.filter(run => {
+    if (countryFilter !== 'ALL' && run.country !== countryFilter) return false;
+    if (triggerFilter === 'manual' && run.triggered_by !== 'manual_admin_push') return false;
+    if (triggerFilter === 'scheduled' && run.triggered_by === 'manual_admin_push') return false;
+    return true;
+  });
   const schedules = schedulesData?.schedules || [];
   const countries = countriesData?.supported_countries ? Object.keys(countriesData.supported_countries) : [];
 
@@ -326,14 +344,65 @@ export default function NotificationsPage() {
 
       {/* SECTION B: Recent Deliveries */}
       <div style={{ marginBottom: 48 }}>
-        <h3 style={{ color: 'var(--news-text-main)', fontSize: '1.15rem', fontWeight: 800, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, textTransform: 'uppercase', letterSpacing: '1px' }}>
-          <Activity size={20} color="#D4AF37" /> Recent Pipeline Executions
-        </h3>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, marginBottom: 20 }}>
+          <h3 style={{ color: 'var(--news-text-main)', fontSize: '1.15rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 10, textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <Activity size={20} color="#D4AF37" /> Recent Pipeline Executions
+          </h3>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {/* Trigger Type Filter Pills */}
+            <div style={{ display: 'flex', background: 'var(--news-glass-bg)', border: '1px solid var(--news-glass-border)', borderRadius: 6, padding: 2 }}>
+              {(['all', 'manual', 'scheduled'] as const).map(f => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setTriggerFilter(f)}
+                  style={{
+                    background: triggerFilter === f ? '#D4AF37' : 'transparent',
+                    color: triggerFilter === f ? '#000' : 'var(--news-text-dim)',
+                    border: 'none',
+                    padding: '5px 12px',
+                    borderRadius: 4,
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    textTransform: 'uppercase',
+                    transition: 'all 0.18s ease'
+                  }}
+                >
+                  {f === 'all' ? 'All Runs' : f === 'manual' ? 'Manual Pushes' : 'Scheduled Runs'}
+                </button>
+              ))}
+            </div>
+
+            {/* Country Filter Dropdown */}
+            <select
+              value={countryFilter}
+              onChange={(e) => setCountryFilter(e.target.value)}
+              style={{
+                background: 'var(--news-glass-bg)',
+                border: '1px solid var(--news-glass-border)',
+                color: 'var(--news-text-main)',
+                padding: '5px 12px',
+                borderRadius: 4,
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              <option value="ALL">All Countries</option>
+              {countries.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <div style={{ background: 'var(--news-glass-bg)', backdropFilter: 'blur(12px)', border: '1px solid var(--news-glass-border)', borderRadius: 4, overflow: 'hidden', boxShadow: 'var(--news-card-shadow)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead style={{ background: 'var(--news-table-header-bg)', borderBottom: '1px solid var(--news-glass-border)', color: 'var(--news-text-dim)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
               <tr>
-                <th style={{ padding: '14px 20px', fontWeight: 700 }}>Country</th>
+                <th style={{ padding: '14px 20px', fontWeight: 700 }}>Country / Langs</th>
                 <th style={{ padding: '14px 20px', fontWeight: 700 }}>Successful</th>
                 <th style={{ padding: '14px 20px', fontWeight: 700 }}>Failed</th>
                 <th style={{ padding: '14px 20px', fontWeight: 700 }}>Performance</th>
@@ -349,45 +418,140 @@ export default function NotificationsPage() {
                   </tr>
                 ))
               ) : recentRuns.length === 0 ? (
-                <tr><td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: 'var(--news-text-dim)', fontStyle: 'italic' }}>No recent executions found in history.</td></tr>
+                <tr><td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: 'var(--news-text-dim)', fontStyle: 'italic' }}>No executions matching current filter criteria.</td></tr>
               ) : (
                 recentRuns.map(run => (
-                  <tr 
-                    key={run.id} 
-                    style={{ borderBottom: '1px solid var(--news-glass-border)', color: 'var(--news-text-main)', fontSize: '0.88rem', transition: 'all 0.2s' }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--news-table-header-bg)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <td style={{ padding: '14px 20px', fontWeight: 700 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <CountryFlag country={run.country} size={28} />
-                        {run.country}
-                      </div>
-                    </td>
-                    <td style={{ padding: '14px 20px', color: '#2ecc71', fontWeight: 700 }}>{run.sent}</td>
-                    <td style={{ padding: '14px 20px', color: run.failed > 0 ? '#e74c3c' : 'var(--news-text-dim)' }}>{run.failed}</td>
-                    <td style={{ padding: '14px 20px' }}>
-                      <span style={{ 
-                        padding: '4px 10px', 
-                        borderRadius: 3, 
-                        background: run.success_rate === 100 ? 'rgba(46,204,113,0.1)' : 'rgba(231,76,60,0.1)', 
-                        color: run.success_rate === 100 ? '#2ecc71' : '#e74c3c',
-                        fontSize: '0.75rem',
-                        fontWeight: 800,
-                        border: `1px solid ${run.success_rate === 100 ? 'rgba(46,204,113,0.2)' : 'rgba(231,76,60,0.2)'}`
-                      }}>
-                        {run.success_rate}%
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 20px' }}>
-                       <span style={{ color: 'var(--news-text-dim)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>
-                        {run.triggered_by}
-                       </span>
-                    </td>
-                    <td style={{ padding: '14px 20px', color: 'var(--news-text-muted)', fontSize: '0.8rem' }}>
-                      {new Date(run.notified_at).toLocaleString()}
-                    </td>
-                  </tr>
+                  <React.Fragment key={run.id}>
+                    <tr 
+                      style={{ borderBottom: '1px solid var(--news-glass-border)', color: 'var(--news-text-main)', fontSize: '0.88rem', transition: 'all 0.2s' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--news-table-header-bg)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <td style={{ padding: '14px 20px', fontWeight: 700 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <CountryFlag country={run.country} size={28} />
+                          <span>{run.country}</span>
+                          {run.per_language && Object.keys(run.per_language).length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => toggleRunExpand(run.id)}
+                              style={{
+                                background: expandedRunIds[run.id] ? 'rgba(212,175,55,0.2)' : 'rgba(212,175,55,0.08)',
+                                border: '1px solid rgba(212,175,55,0.3)',
+                                color: '#D4AF37',
+                                padding: '3px 8px',
+                                borderRadius: 4,
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4
+                              }}
+                            >
+                              {expandedRunIds[run.id] ? '▾' : '▸'} {Object.keys(run.per_language).length} Langs
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ padding: '14px 20px', color: '#2ecc71', fontWeight: 700 }}>{run.sent}</td>
+                      <td style={{ padding: '14px 20px', color: run.failed > 0 ? '#e74c3c' : 'var(--news-text-dim)' }}>{run.failed}</td>
+                      <td style={{ padding: '14px 20px' }}>
+                        <span style={{ 
+                          padding: '4px 10px', 
+                          borderRadius: 3, 
+                          background: run.success_rate === 100 ? 'rgba(46,204,113,0.1)' : 'rgba(231,76,60,0.1)', 
+                          color: run.success_rate === 100 ? '#2ecc71' : '#e74c3c',
+                          fontSize: '0.75rem',
+                          fontWeight: 800,
+                          border: `1px solid ${run.success_rate === 100 ? 'rgba(46,204,113,0.2)' : 'rgba(231,76,60,0.2)'}`
+                        }}>
+                          {run.success_rate}%
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 20px' }}>
+                        {run.triggered_by === 'manual_admin_push' ? (
+                          <span style={{
+                            padding: '4px 10px',
+                            borderRadius: 4,
+                            background: 'rgba(212,175,55,0.15)',
+                            border: '1px solid rgba(212,175,55,0.4)',
+                            color: '#D4AF37',
+                            fontSize: '0.73rem',
+                            fontWeight: 800,
+                            letterSpacing: '0.5px'
+                          }}>
+                            MANUAL PUSH
+                          </span>
+                        ) : (
+                          <span style={{
+                            padding: '4px 10px',
+                            borderRadius: 4,
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            color: '#a1a1aa',
+                            fontSize: '0.73rem',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                          }}>
+                            {run.triggered_by || 'SCHEDULED'}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '14px 20px', color: 'var(--news-text-muted)', fontSize: '0.8rem' }}>
+                        {new Date(run.notified_at).toLocaleString()}
+                      </td>
+                    </tr>
+                    {expandedRunIds[run.id] && run.per_language && (
+                      <tr style={{ background: 'rgba(212,175,55,0.03)', borderBottom: '1px solid var(--news-glass-border)' }}>
+                        <td colSpan={6} style={{ padding: '16px 28px' }}>
+                          <div style={{ color: '#D4AF37', fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: 12, letterSpacing: '1px' }}>
+                            Per-Language Delivery Breakdown ({Object.keys(run.per_language).length} languages)
+                          </div>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', background: 'rgba(0,0,0,0.25)', borderRadius: 4, overflow: 'hidden' }}>
+                            <thead style={{ background: 'rgba(212,175,55,0.1)', color: 'var(--news-text-dim)', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                              <tr>
+                                <th style={{ padding: '8px 14px' }}>Language</th>
+                                <th style={{ padding: '8px 14px' }}>Headline / Topic</th>
+                                <th style={{ padding: '8px 14px' }}>Sent</th>
+                                <th style={{ padding: '8px 14px' }}>Failed</th>
+                                <th style={{ padding: '8px 14px' }}>Batches</th>
+                                <th style={{ padding: '8px 14px' }}>Tokens</th>
+                                <th style={{ padding: '8px 14px' }}>Success Rate</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {Object.entries(run.per_language).map(([lang, stats]) => (
+                                <tr key={lang} style={{ borderTop: '1px solid var(--news-glass-border)', fontSize: '0.8rem', color: 'var(--news-text-main)' }}>
+                                  <td style={{ padding: '8px 14px', fontWeight: 800 }}>{lang.toUpperCase()}</td>
+                                  <td style={{ padding: '8px 14px', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--news-text-muted)' }}>
+                                    {getLocalizedStr(stats.headline, '—')}
+                                  </td>
+                                  <td style={{ padding: '8px 14px', color: '#2ecc71', fontWeight: 700 }}>{stats.sent}</td>
+                                  <td style={{ padding: '8px 14px', color: stats.failed > 0 ? '#e74c3c' : 'var(--news-text-dim)' }}>{stats.failed}</td>
+                                  <td style={{ padding: '8px 14px' }}>{stats.batches || 1}</td>
+                                  <td style={{ padding: '8px 14px' }}>{(stats.total_tokens || 0).toLocaleString()}</td>
+                                  <td style={{ padding: '8px 14px' }}>
+                                    <span style={{ 
+                                      padding: '2px 6px', 
+                                      borderRadius: 3, 
+                                      background: stats.success_rate === 100 ? 'rgba(46,204,113,0.15)' : 'rgba(231,76,60,0.15)', 
+                                      color: stats.success_rate === 100 ? '#2ecc71' : '#e74c3c',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 700
+                                    }}>
+                                      {stats.success_rate}%
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))
               )}
             </tbody>
