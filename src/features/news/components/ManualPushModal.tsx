@@ -42,23 +42,14 @@ export const ManualPushModal: React.FC<ManualPushModalProps> = ({
   const navigate = useNavigate();
 
   // Local UI state
-  const [selectedLang, setSelectedLang] = useState<string | null>(null); // null = "All configured languages"
+  const [isAllLangs, setIsAllLangs] = useState<boolean>(true);
+  const [selectedLangs, setSelectedLangs] = useState<string[]>([]);
   const [isPushing, setIsPushing] = useState(false);
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
-  const [successResponse, setSuccessResponse] = useState<ManualPushResponse | null>(null);
+  const [successResponses, setSuccessResponses] = useState<ManualPushResponse[]>([]);
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
 
-  // Reset state when modal opens for a new article
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedLang(null);
-      setIsPushing(false);
-      setErrorDetail(null);
-      setSuccessResponse(null);
-    }
-  }, [isOpen, newsId]);
-
-  // Fetch article detail to get exact country and translated headline map (§3)
+  // Fetch article detail to get exact country and translated headline map
   const {
     data: article,
     isLoading: isArticleLoading,
@@ -72,7 +63,7 @@ export const ManualPushModal: React.FC<ManualPushModalProps> = ({
     staleTime: 30000
   });
 
-  // Fetch supported languages dictionary ({ code: name }) to show readable labels (§3)
+  // Fetch supported languages dictionary ({ code: name }) to show readable labels
   const { data: supportedLangsData } = useQuery<SupportedLanguagesResponse>({
     queryKey: ['supported-languages'],
     queryFn: () => NewsService.fetchSupportedLanguages(),
@@ -108,13 +99,61 @@ export const ManualPushModal: React.FC<ManualPushModalProps> = ({
     return Object.keys(headlineMap);
   }, [headlineMap]);
 
-  // Derive preview headline to display in header (guaranteed primitive string)
+  // Derive preview headline to display in header
   const displayHeadline = useMemo(() => {
     return getLocalizedStr(article?.headline || fallbackHeadline, 'Article');
   }, [article, fallbackHeadline]);
 
-  // Check and countdown cooldown timer (§5 - 60s Redis lock protection)
-  const effectiveScopeKey = `${effectiveCountry}:${newsId}:${selectedLang || 'all'}`;
+  // Reset state when modal opens for a new article
+  useEffect(() => {
+    if (isOpen) {
+      setIsAllLangs(true);
+      setSelectedLangs([]);
+      setIsPushing(false);
+      setErrorDetail(null);
+      setSuccessResponses([]);
+    }
+  }, [isOpen, newsId]);
+
+  // Auto-populate selectedLangs when article data loads and isAllLangs is active
+  useEffect(() => {
+    if (availableLangCodes.length > 0 && isAllLangs) {
+      setSelectedLangs(availableLangCodes);
+    }
+  }, [availableLangCodes, isAllLangs]);
+
+  const handleToggleAllLangs = (checked: boolean) => {
+    setIsAllLangs(checked);
+    if (checked) {
+      setSelectedLangs([...availableLangCodes]);
+    }
+  };
+
+  const handleToggleLang = (code: string) => {
+    let next: string[];
+    if (selectedLangs.includes(code)) {
+      next = selectedLangs.filter((c) => c !== code);
+    } else {
+      next = [...selectedLangs, code];
+    }
+    setSelectedLangs(next);
+
+    if (availableLangCodes.length > 0 && next.length === availableLangCodes.length) {
+      setIsAllLangs(true);
+    } else {
+      setIsAllLangs(false);
+    }
+  };
+
+  // Check and countdown cooldown timer
+  const effectiveScopeKey = useMemo(() => {
+    const scopeStr =
+      isAllLangs || (availableLangCodes.length > 0 && selectedLangs.length === availableLangCodes.length)
+        ? 'all'
+        : [...selectedLangs].sort().join(',') || 'none';
+    return `${effectiveCountry}:${newsId}:${scopeStr}`;
+  }, [effectiveCountry, newsId, isAllLangs, selectedLangs, availableLangCodes]);
+
   useEffect(() => {
     if (!isOpen || !newsId) return;
 
@@ -129,24 +168,77 @@ export const ManualPushModal: React.FC<ManualPushModalProps> = ({
     return () => clearInterval(interval);
   }, [isOpen, newsId, effectiveScopeKey]);
 
-  // Handle push submission (§4 POST /news/admin/articles/{news_id}/push)
+  // Handle push submission
   const handlePushNow = async () => {
     if (!newsId || isPushing || cooldownRemaining > 0) return;
+
+    if (!isAllLangs && selectedLangs.length === 0) {
+      setErrorDetail('Please select at least one language to push.');
+      return;
+    }
 
     setIsPushing(true);
     setErrorDetail(null);
 
+    const activeCollection = collection || article?._collection || 'News';
+
     try {
-      const payload = {
-        collection: collection || article?._collection || 'News',
-        language: selectedLang // null for "All configured languages"
-      };
+      // If "All configured languages" is selected (or all available checked), pass language: null
+      if (isAllLangs || (availableLangCodes.length > 0 && selectedLangs.length === availableLangCodes.length)) {
+        const payload = {
+          collection: activeCollection,
+          language: null
+        };
+        const response = await NewsService.pushArticle(newsId, payload);
+        setSuccessResponses([response]);
+        showToast('Push queued for all configured languages. Delivery stats will appear in ~30s.', 'success');
+      } else if (selectedLangs.length === 1) {
+        // Single language push
+        const payload = {
+          collection: activeCollection,
+          language: selectedLangs[0]
+        };
+        const response = await NewsService.pushArticle(newsId, payload);
+        setSuccessResponses([response]);
+        const langLabel = langNameMap[selectedLangs[0].toLowerCase()] || selectedLangs[0].toUpperCase();
+        showToast(`Push queued for ${langLabel}. Delivery stats will appear in ~30s.`, 'success');
+      } else {
+        // Multi-language push
+        const pushPromises = selectedLangs.map((lang) =>
+          NewsService.pushArticle(newsId, {
+            collection: activeCollection,
+            language: lang
+          })
+        );
 
-      const response = await NewsService.pushArticle(newsId, payload);
-      setSuccessResponse(response);
-      showToast('Push queued. Delivery stats will appear in ~30 seconds.', 'success');
+        const results = await Promise.allSettled(pushPromises);
+        const responses: ManualPushResponse[] = [];
+        const errors: string[] = [];
 
-      // Set 60-second cooldown for this target scope (§5)
+        results.forEach((res, idx) => {
+          if (res.status === 'fulfilled') {
+            responses.push(res.value);
+          } else {
+            const langCode = selectedLangs[idx];
+            const langLabel = langNameMap[langCode.toLowerCase()] || langCode.toUpperCase();
+            const detailMsg = res.reason?.response?.data?.detail || res.reason?.message || 'Failed';
+            errors.push(`${langLabel}: ${detailMsg}`);
+          }
+        });
+
+        if (responses.length > 0) {
+          setSuccessResponses(responses);
+          if (errors.length > 0) {
+            showToast(`Pushed to ${responses.length} languages (${errors.length} failed).`, 'warning');
+          } else {
+            showToast(`Push queued for ${responses.length} selected languages. Delivery stats in ~30s.`, 'success');
+          }
+        } else {
+          throw new Error(errors.join(' | ') || 'Failed to push to selected languages.');
+        }
+      }
+
+      // Set 60-second cooldown for this target scope
       pushCooldowns.set(effectiveScopeKey, Date.now() + 60000);
       setCooldownRemaining(60);
     } catch (err: any) {
@@ -159,7 +251,6 @@ export const ManualPushModal: React.FC<ManualPushModalProps> = ({
       setErrorDetail(detailMsg);
       showToast(detailMsg, 'error');
 
-      // If 409 Conflict, activate 60s cooldown automatically per recommendation (§5)
       if (status === 409) {
         pushCooldowns.set(effectiveScopeKey, Date.now() + 60000);
         setCooldownRemaining(60);
@@ -292,7 +383,7 @@ export const ManualPushModal: React.FC<ManualPushModalProps> = ({
 
         {/* ── Modal Body ────────────────────────────────────────────────── */}
         <div style={{ padding: '24px' }}>
-          {/* Headline & Country confirmation box (§1 & §2) */}
+          {/* Headline & Country confirmation box */}
           <div
             style={{
               padding: '14px 16px',
@@ -386,8 +477,8 @@ export const ManualPushModal: React.FC<ManualPushModalProps> = ({
             </div>
           )}
 
-          {/* ── SUCCESS VIEW (§4 & §6) ── */}
-          {successResponse ? (
+          {/* ── SUCCESS VIEW ── */}
+          {successResponses.length > 0 ? (
             <div
               style={{
                 padding: '20px',
@@ -401,10 +492,13 @@ export const ManualPushModal: React.FC<ManualPushModalProps> = ({
                 <CheckCircle2 size={22} color="#2ecc71" />
                 <div>
                   <div style={{ color: '#2ecc71', fontWeight: 800, fontSize: '0.95rem' }}>
-                    Push Queued Successfully
+                    {successResponses.length === 1
+                      ? 'Push Queued Successfully'
+                      : `${successResponses.length} Pushes Queued Successfully`}
                   </div>
                   <div style={{ color: '#a1a1aa', fontSize: '0.75rem', fontFamily: 'monospace' }}>
-                    Task ID: {successResponse.task_id}
+                    Task ID{successResponses.length > 1 ? 's' : ''}:{' '}
+                    {successResponses.map((r) => r.task_id).join(', ')}
                   </div>
                 </div>
               </div>
@@ -417,8 +511,17 @@ export const ManualPushModal: React.FC<ManualPushModalProps> = ({
                   margin: '0 0 16px 0'
                 }}
               >
-                Delivery is in progress. Check the <strong>Notification Stats</strong> view in ~30
-                seconds for live sent/failed counts.
+                Delivery is in progress for{' '}
+                <strong>
+                  {successResponses
+                    .map((r) =>
+                      r.language_scope === 'all'
+                        ? 'All configured languages'
+                        : langNameMap[r.language_scope.toLowerCase()] || r.language_scope.toUpperCase()
+                    )
+                    .join(', ')}
+                </strong>
+                . Check the <strong>Notification Stats</strong> view in ~30 seconds for live sent/failed counts.
               </p>
 
               <button
@@ -447,54 +550,140 @@ export const ManualPushModal: React.FC<ManualPushModalProps> = ({
             </div>
           ) : (
             <>
-              {/* ── LANGUAGE PICKER (§3) ── */}
+              {/* ── MULTI-LANGUAGE PICKER ── */}
               <div style={{ marginBottom: 20 }}>
-                <label
+                <div
                   style={{
-                    display: 'block',
-                    color: '#e4e4e7',
-                    fontSize: '0.82rem',
-                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
                     marginBottom: 8
                   }}
                 >
-                  Language Scope:
-                </label>
+                  <label
+                    style={{
+                      color: '#e4e4e7',
+                      fontSize: '0.82rem',
+                      fontWeight: 700
+                    }}
+                  >
+                    Language Scope:
+                  </label>
+                  {availableLangCodes.length > 0 && (
+                    <span style={{ color: '#a1a1aa', fontSize: '0.75rem' }}>
+                      {isAllLangs
+                        ? 'All languages selected'
+                        : `${selectedLangs.length} of ${availableLangCodes.length} selected`}
+                    </span>
+                  )}
+                </div>
 
-                <select
-                  value={selectedLang || ''}
-                  onChange={(e) => setSelectedLang(e.target.value || null)}
-                  disabled={isPushing || isArticleLoading}
+                {/* "All configured languages" Card */}
+                <div
+                  onClick={() => !isPushing && !isArticleLoading && handleToggleAllLangs(!isAllLangs)}
                   style={{
-                    width: '100%',
-                    background: '#27272a',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    color: '#fff',
                     padding: '10px 14px',
                     borderRadius: 6,
-                    fontSize: '0.88rem',
-                    outline: 'none',
-                    cursor: 'pointer'
+                    background: isAllLangs ? 'rgba(212,175,55,0.12)' : 'rgba(255,255,255,0.03)',
+                    border: isAllLangs ? '1px solid rgba(212,175,55,0.4)' : '1px solid rgba(255,255,255,0.1)',
+                    cursor: isPushing || isArticleLoading ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    marginBottom: availableLangCodes.length > 0 ? 10 : 0,
+                    transition: 'all 0.15s ease'
                   }}
                 >
-                  <option value="">● All configured languages</option>
-                  {availableLangCodes.map((code) => {
-                    const readableName = langNameMap[code.toLowerCase()] || code.toUpperCase();
-                    return (
-                      <option key={code} value={code}>
-                        ○ {readableName} ({code})
-                      </option>
-                    );
-                  })}
-                </select>
-                <div style={{ color: '#71717a', fontSize: '0.74rem', marginTop: 6 }}>
-                  {selectedLang
-                    ? `Only users in ${effectiveCountry} whose app language is "${selectedLang}" will receive this notification.`
-                    : `Sends to all translated languages in ${effectiveCountry}. Each user receives the version matching their in-app language.`}
+                  <input
+                    type="checkbox"
+                    checked={isAllLangs}
+                    onChange={(e) => handleToggleAllLangs(e.target.checked)}
+                    disabled={isPushing || isArticleLoading}
+                    style={{ cursor: 'pointer', accentColor: '#D4AF37', width: 16, height: 16 }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: isAllLangs ? '#D4AF37' : '#fff', fontWeight: 700, fontSize: '0.86rem' }}>
+                      ● All configured languages
+                    </div>
+                    <div style={{ color: '#71717a', fontSize: '0.73rem' }}>
+                      Broadcast to all translated versions in {effectiveCountry}.
+                    </div>
+                  </div>
+                </div>
+
+                {/* Individual Language Checkboxes Grid */}
+                {availableLangCodes.length > 0 && (
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                      gap: 8,
+                      maxHeight: 180,
+                      overflowY: 'auto',
+                      paddingRight: 4
+                    }}
+                  >
+                    {availableLangCodes.map((code) => {
+                      const readableName = langNameMap[code.toLowerCase()] || code.toUpperCase();
+                      const isChecked = selectedLangs.includes(code);
+
+                      return (
+                        <div
+                          key={code}
+                          onClick={() => !isPushing && !isArticleLoading && handleToggleLang(code)}
+                          style={{
+                            padding: '8px 12px',
+                            borderRadius: 6,
+                            background: isChecked
+                              ? 'rgba(212,175,55,0.08)'
+                              : 'rgba(255,255,255,0.02)',
+                            border: isChecked
+                              ? '1px solid rgba(212,175,55,0.35)'
+                              : '1px solid rgba(255,255,255,0.07)',
+                            cursor: isPushing || isArticleLoading ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleLang(code)}
+                            disabled={isPushing || isArticleLoading}
+                            style={{ cursor: 'pointer', accentColor: '#D4AF37' }}
+                          />
+                          <span
+                            style={{
+                              color: isChecked ? '#fff' : '#a1a1aa',
+                              fontSize: '0.82rem',
+                              fontWeight: isChecked ? 600 : 400,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {readableName} ({code.toUpperCase()})
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div style={{ color: '#71717a', fontSize: '0.74rem', marginTop: 8 }}>
+                  {isAllLangs
+                    ? `Sends to all translated languages in ${effectiveCountry}. Each user receives the version matching their in-app language.`
+                    : selectedLangs.length === 0
+                      ? `Select at least one language to push.`
+                      : `Will push to users in ${effectiveCountry} matching language(s): ${selectedLangs
+                          .map((c) => langNameMap[c.toLowerCase()] || c.toUpperCase())
+                          .join(', ')}.`}
                 </div>
               </div>
 
-              {/* ── SAFETY WARNING (§2 Rule #3) ── */}
+              {/* ── SAFETY WARNING ── */}
               <div
                 style={{
                   padding: '14px 16px',
@@ -521,7 +710,7 @@ export const ManualPushModal: React.FC<ManualPushModalProps> = ({
                 </div>
               </div>
 
-              {/* ── ERROR DISPLAY (§5) ── */}
+              {/* ── ERROR DISPLAY ── */}
               {errorDetail && (
                 <div
                   style={{
@@ -542,7 +731,7 @@ export const ManualPushModal: React.FC<ManualPushModalProps> = ({
                 </div>
               )}
 
-              {/* ── ACTION FOOTER (§2) ── */}
+              {/* ── ACTION FOOTER ── */}
               <div
                 style={{
                   display: 'flex',
@@ -571,10 +760,15 @@ export const ManualPushModal: React.FC<ManualPushModalProps> = ({
 
                 <button
                   onClick={handlePushNow}
-                  disabled={isPushing || cooldownRemaining > 0 || isArticleLoading}
+                  disabled={
+                    isPushing ||
+                    cooldownRemaining > 0 ||
+                    isArticleLoading ||
+                    (!isAllLangs && selectedLangs.length === 0)
+                  }
                   style={{
                     background:
-                      cooldownRemaining > 0
+                      cooldownRemaining > 0 || (!isAllLangs && selectedLangs.length === 0)
                         ? '#3f3f46'
                         : isPushing
                           ? '#a1a1aa'
@@ -586,7 +780,9 @@ export const ManualPushModal: React.FC<ManualPushModalProps> = ({
                     fontWeight: 800,
                     fontSize: '0.86rem',
                     cursor:
-                      cooldownRemaining > 0 || isPushing ? 'not-allowed' : 'pointer',
+                      cooldownRemaining > 0 || isPushing || (!isAllLangs && selectedLangs.length === 0)
+                        ? 'not-allowed'
+                        : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
