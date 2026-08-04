@@ -814,6 +814,28 @@ export const PromptsService = {
       console.error(`❌ [API] Failure updating summary prompt for ${country}:`, e);
       throw e;
     }
+  },
+  getMemoryExtractionPrompt: async (): Promise<{ source?: string; prompt?: string }> => {
+    try {
+      const response = await backendApi.get('/api/v1/prompts/memory-extraction');
+      return response.data;
+    } catch (e) {
+      console.error("❌ [API] Failure getting memory extraction prompt:", e);
+      throw e;
+    }
+  },
+  updateMemoryExtractionPrompt: async (prompt: string): Promise<{ status?: string; message?: string; warning?: string }> => {
+    try {
+      const response = await backendApi.put(
+        '/api/v1/prompts/memory-extraction',
+        { prompt },
+        { skipToast: true } as any
+      );
+      return response.data;
+    } catch (e) {
+      console.error("❌ [API] Failure updating memory extraction prompt:", e);
+      throw e;
+    }
   }
 };
 
