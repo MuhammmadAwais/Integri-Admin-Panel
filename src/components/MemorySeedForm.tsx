@@ -41,14 +41,14 @@ const TagInput: React.FC<{
   const [inputValue, setInputValue] = React.useState('');
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
+    if (e.key === 'Enter' || e.key === ',' || e.key === '،' || e.key === '，') {
       e.preventDefault();
       addTag();
     }
   };
 
   const addTag = () => {
-    const val = inputValue.trim().replace(/,/g, '');
+    const val = inputValue.trim().replace(/[,،，]/g, '');
     if (val && !tags.includes(val)) {
       const newTags = [...tags, val];
       onChange(newTags);
@@ -119,6 +119,7 @@ const TagInput: React.FC<{
       ))}
       <input
         type="text"
+        dir="auto"
         placeholder={tags.length === 0 ? placeholder : ''}
         value={inputValue}
         onChange={e => setInputValue(e.target.value)}

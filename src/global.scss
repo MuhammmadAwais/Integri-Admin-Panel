@@ -746,3 +746,27 @@
     }
   }
 }
+
+/* ==================================================== */
+/*  UNIVERSAL MULTI-LANGUAGE & BIDI TYPOGRAPHY SYSTEM   */
+/* ==================================================== */
+:root {
+  --multilang-font-stack: "Noto Sans", "Noto Sans Arabic", "Noto Sans Devanagari", "Noto Sans SC", "Noto Sans JP", "Noto Sans KR", "Noto Sans Hebrew", "Noto Sans Bengali", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+  --bs-body-font-family: var(--multilang-font-stack);
+}
+
+body, input, textarea, select, button, table {
+  font-family: var(--multilang-font-stack);
+}
+
+/* Enable auto-direction for LTR & RTL text rendering across inputs and display containers */
+input, textarea, [contenteditable], [dir="auto"], .multilang-text {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Multi-language word wrap safety */
+.multilang-content, p, span, h1, h2, h3, h4, h5, h6, td, th {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}

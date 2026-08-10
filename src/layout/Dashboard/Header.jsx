@@ -13,6 +13,7 @@ import Stack from 'react-bootstrap/Stack';
 import MainCard from 'components/MainCard';
 import SimpleBarScroll from 'components/third-party/SimpleBar';
 import ThemeToggle from 'components/ThemeToggle';
+import MultiLangHeaderButton from 'components/MultiLangHeaderButton';
 import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
 import { useAuth } from 'contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -113,6 +114,9 @@ export default function Header() {
         </div>
         <div className="ms-auto">
           <Nav className="list-unstyled align-items-center">
+            <Nav.Item className="pc-h-item me-2">
+              <MultiLangHeaderButton />
+            </Nav.Item>
             <Nav.Item className="pc-h-item me-2">
               <ThemeToggle />
             </Nav.Item>
