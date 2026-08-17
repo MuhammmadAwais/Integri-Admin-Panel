@@ -1198,10 +1198,14 @@ export interface ManualArticleRequest {
   image_url?: string;
   sources?: ManualArticleSource[];
   mark_as_trending?: boolean;
+  send_push?: boolean;
+  push_language?: string;
 }
 
 export interface ManualArticleResponse {
   detail: string;
+  push_scheduled?: boolean;
+  push_language_scope?: string | null;
   [key: string]: unknown;
 }
 

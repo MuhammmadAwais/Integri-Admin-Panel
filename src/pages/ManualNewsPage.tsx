@@ -28,6 +28,8 @@ export interface ManualArticleRequest {
   image_url?: string;
   sources?: ManualArticleSource[];
   mark_as_trending?: boolean;
+  send_push?: boolean;
+  push_language?: string;
 }
 
 interface FieldErrors {
@@ -40,6 +42,8 @@ interface FieldErrors {
 
 interface ManualArticleResponse {
   detail: string;
+  push_scheduled?: boolean;
+  push_language_scope?: string | null;
   [key: string]: unknown;
 }
 
@@ -714,6 +718,8 @@ export default function ManualNewsPage() {
   const [markAsTrending, setMarkAsTrending] = useState(false);
   const [sources, setSources] = useState<ManualArticleSource[]>([]);
   const imageUrlRef = useRef<HTMLInputElement>(null);
+  const [sendPush, setSendPush] = useState(false);
+  const [pushLanguage, setPushLanguage] = useState('');
 
   // ── Refs for lag-free text inputs ─────────────────────────────────────────
   // Using uncontrolled refs for heavy-text fields to avoid React re-render lag
@@ -727,6 +733,7 @@ export default function ManualNewsPage() {
   // ── Country data (open/search state lives inside CountryDropdown) ──────────
   const [countries, setCountries] = useState<Record<string, unknown>>({});
   const [countriesLoading, setCountriesLoading] = useState(true);
+  const [availableLanguages, setAvailableLanguages] = useState<string[]>([]);
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [submitting, setSubmitting] = useState(false);
@@ -756,6 +763,20 @@ export default function ManualNewsPage() {
   const handleCountrySelect = useCallback((c: string) => {
     setCountry(c);
     setFieldErrors(prev => ({ ...prev, country: undefined }));
+    // Fetch supported languages for the selected country
+    NewsService.fetchCountryLangConfig(c)
+      .then(res => {
+        if (res.config && res.config.languages) {
+          setAvailableLanguages(res.config.languages);
+        } else {
+          setAvailableLanguages([]);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load languages for country', c, err);
+        setAvailableLanguages([]);
+      });
+    setPushLanguage(''); // Reset language selection
   }, []);
 
   // ── Sources CRUD ──────────────────────────────────────────────────────────
@@ -809,7 +830,12 @@ export default function ManualNewsPage() {
       article_type: articleType,
       extract_learning_aids: extractLearningAids,
       mark_as_trending: markAsTrending,
+      send_push: sendPush,
     };
+
+    if (sendPush && pushLanguage) {
+      payload.push_language = pushLanguage;
+    }
 
     if (imageUrlVal) payload.image_url = imageUrlVal;
     if (sources.length > 0) {
@@ -875,6 +901,9 @@ export default function ManualNewsPage() {
     setExtractLearningAids(true);
     setMarkAsTrending(false);
     setCountry('');
+    setSendPush(false);
+    setPushLanguage('');
+    setAvailableLanguages([]);
     setHeadlineError(undefined);
     setBodyError(undefined);
   }, []);
@@ -1215,6 +1244,63 @@ export default function ManualNewsPage() {
                     label="Mark as Trending"
                     description="Promotes article to trending section in the app."
                   />
+                </div>
+              </fieldset>
+
+              {/* ── Notification Delivery ──────────────────────────────────────────── */}
+              <fieldset
+                style={{
+                  border: '1px solid var(--news-card-border)',
+                  borderRadius: 4,
+                  padding: '20px',
+                  background: 'var(--news-panel-bg)',
+                  margin: 0,
+                }}
+              >
+                <legend
+                  style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    color: 'var(--news-text-muted)',
+                    padding: '0 8px',
+                  }}
+                >
+                  Notification Delivery
+                </legend>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <Toggle
+                    id="mn-send-push"
+                    checked={sendPush}
+                    onChange={setSendPush}
+                    label="Send Immediate Notification"
+                    description="Notify users immediately after the article is published."
+                  />
+
+                  {sendPush && (
+                    <div style={{ animation: 'fadeIn 0.2s ease' }}>
+                      <FieldLabel htmlFor="mn-push-language">Translation Option (Optional)</FieldLabel>
+                      <select
+                        id="mn-push-language"
+                        value={pushLanguage}
+                        onChange={e => setPushLanguage(e.target.value)}
+                        className="mn-input"
+                        style={{ ...inputStyle, cursor: 'pointer', appearance: 'none' }}
+                      >
+                        <option value="">All translated languages</option>
+                        {availableLanguages.map(lang => (
+                          <option key={lang} value={lang}>
+                            {lang.toUpperCase()}
+                          </option>
+                        ))}
+                      </select>
+                      <p style={{ margin: '5px 0 0', fontSize: '0.72rem', color: 'var(--news-text-dim)', lineHeight: 1.4 }}>
+                        Select a specific translation to notify users, or leave empty to notify everyone in their preferred language.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </fieldset>
 

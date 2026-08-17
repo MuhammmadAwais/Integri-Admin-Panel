@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Globe } from 'lucide-react';
 import { MemorySeedPayload } from 'api/backendApi';
 
 interface MemorySeedFormProps {
@@ -201,6 +201,24 @@ export const MemorySeedForm: React.FC<MemorySeedFormProps> = ({ payload, onChang
 
   return (
     <div className="memory-seed-form row g-3">
+      <div className="col-12 mb-1">
+        <div 
+          style={{ 
+            background: 'rgba(212, 175, 55, 0.08)', 
+            border: '1px solid rgba(212, 175, 55, 0.25)', 
+            borderRadius: '6px', 
+            padding: '8px 12px', 
+            fontSize: '0.78rem', 
+            color: '#D4AF37', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px' 
+          }}
+        >
+          <Globe size={15} /> 
+          <span><strong>Multi-Language Field Engine:</strong> Supports typing, pasting & rendering text in any global language (Urdu, Arabic, Hindi, Chinese, etc.). Text direction (RTL/LTR) is auto-detected.</span>
+        </div>
+      </div>
       <div className="col-md-6">
         <label style={labelStyle}>Estimated Age</label>
         <input 
