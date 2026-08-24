@@ -35,6 +35,9 @@ const PersonalizationThresholdsPage  = Loadable(lazy(() => import('pages/Persona
 const PersonalizationCalibrationPage = Loadable(lazy(() => import('pages/PersonalizationCalibrationPage')));
 const MemoryBackfillPage             = Loadable(lazy(() => import('pages/MemoryBackfillPage')));
 
+// ── Map Pages ──
+const GoogleMaps = Loadable(lazy(() => import('views/maps/GoogleMap')));
+
 // ==============================|| INTEGRI APP — NAVIGATION ROUTES ||============================== //
 
 const NavigationRoutes = {
@@ -67,6 +70,9 @@ const NavigationRoutes = {
         { path: '/personalization/thresholds',  element: <PersonalizationThresholdsPage /> },
         { path: '/personalization/calibration', element: <PersonalizationCalibrationPage /> },
         { path: '/personalization/memory-backfill', element: <MemoryBackfillPage /> },
+
+        // ── Maps ──
+        { path: '/map/google-map', element: <GoogleMaps /> },
       ]
     }
   ]
