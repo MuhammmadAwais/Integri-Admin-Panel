@@ -427,6 +427,7 @@ export default function NotificationAnalyticsPage({ onBack }: Props) {
   const [limit, setLimit] = useState<number>(100);
   const [params, setParams] = useState<NotificationOpensParams>({ limit: 100 });
   const [hasQueried, setHasQueried] = useState(true);
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
   const handleExecute = useCallback(() => {
     const p: NotificationOpensParams = { limit };
@@ -455,6 +456,14 @@ export default function NotificationAnalyticsPage({ onBack }: Props) {
 
   const summary = data?.summary;
   const articles = data?.articles ?? [];
+
+  const sortedArticles = useMemo(() => {
+    return [...articles].sort((a, b) => {
+      const timeA = new Date(a.notified_at).getTime();
+      const timeB = new Date(b.notified_at).getTime();
+      return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+    });
+  }, [articles, sortOrder]);
 
   // ── Computed chart datasets ────────────────────────────────────────────────
   // 1. Top Articles — use article index labels on Y axis; full title in tooltip
@@ -645,10 +654,9 @@ export default function NotificationAnalyticsPage({ onBack }: Props) {
               id="na-limit"
               type="number"
               min={1}
-              max={500}
               style={inputStyle}
               value={limit}
-              onChange={e => setLimit(Math.min(500, Math.max(1, parseInt(e.target.value) || 1)))}
+              onChange={e => setLimit(parseInt(e.target.value) || 100)}
               onKeyDown={e => e.key === 'Enter' && handleExecute()}
               onFocus={e => (e.target.style.borderColor = '#D4AF37')}
               onBlur={e => (e.target.style.borderColor = 'var(--news-glass-border)')}
@@ -921,7 +929,9 @@ export default function NotificationAnalyticsPage({ onBack }: Props) {
                     zIndex: 1,
                   }}
                 >
-                  <div style={{ padding: '0 12px 0 20px' }}>Headline</div>
+                  <div style={{ padding: '0 12px 0 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }} onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}>
+                    Headline <span>{sortOrder === 'desc' ? '↓' : '↑'}</span>
+                  </div>
                   <div style={{ padding: '0 8px' }}>Country</div>
                   <div style={{ padding: '0 16px 0 8px', textAlign: 'right' }}>Sent</div>
                   <div style={{ padding: '0 16px 0 8px', textAlign: 'right' }}>Opens</div>
@@ -933,10 +943,10 @@ export default function NotificationAnalyticsPage({ onBack }: Props) {
                     No article records found for the selected parameters.
                   </div>
                 ) : articles.length > 200 ? (
-                  <VirtualAuditTable rows={articles} />
+                  <VirtualAuditTable rows={sortedArticles} />
                 ) : (
                   <div style={{ maxHeight: TABLE_VIEWPORT, overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: 'var(--news-scroll-thumb) var(--news-scroll-track)' }}>
-                    {articles.map((row, index) => (
+                    {sortedArticles.map((row, index) => (
                       <AuditRow
                         key={row.news_id + row.notified_at}
                         row={row}

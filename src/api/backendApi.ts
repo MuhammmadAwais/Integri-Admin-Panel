@@ -1418,6 +1418,7 @@ export const CustomGptService = {
     conversation_starters?: string[];
     recommended_model: string;
     recommended_provider: string;
+    is_public?: boolean;
   }): Promise<CustomGpt> => {
     try {
       const payload = {
@@ -1430,6 +1431,7 @@ export const CustomGptService = {
             : [agentData.name],
         recommended_model: agentData.recommended_model,
         recommended_provider: agentData.recommended_provider,
+        is_public: agentData.is_public !== undefined ? agentData.is_public : true,
       };
       const response = await backendApi.post<CustomGpt>('/api/v1/custom-gpts', payload);
       return response.data;

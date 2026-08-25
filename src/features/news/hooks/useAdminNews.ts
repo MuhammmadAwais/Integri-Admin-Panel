@@ -186,7 +186,7 @@ export function useAdminNews(): UseAdminNewsReturn {
   // ── Setters ───────────────────────────────────────────────────────────────
 
   const setDays = useCallback((v: number) => {
-    const clamped = Math.max(1, Math.min(90, v));
+    const clamped = Math.max(1, Math.min(3650, v));
     PERSISTENT_DAYS = clamped;
     setDaysRaw(clamped);
     if (daysDebounceRef.current) clearTimeout(daysDebounceRef.current);

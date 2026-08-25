@@ -187,7 +187,6 @@ export default function NewsPage() {
               id="news-days-input"
               type="number"
               min={1}
-              max={90}
               value={days}
               onChange={handleDaysChange}
               style={{

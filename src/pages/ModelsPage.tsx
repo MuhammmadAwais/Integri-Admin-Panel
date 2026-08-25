@@ -342,6 +342,7 @@ interface AgentFormData {
   instructions: string;
   starters: string[];  // conversation starters
   model: string;
+  isPublic: boolean;
 }
 
 type FormStep = 'details' | 'confirm';
@@ -362,6 +363,7 @@ const CreateAgentModal: React.FC<CreateAgentModalProps> = ({ isDark, models, onC
     instructions: '',
     starters: [''],
     model: models[0] ?? '',
+    isPublic: true,
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof AgentFormData, string>>>({});
@@ -416,6 +418,7 @@ const CreateAgentModal: React.FC<CreateAgentModalProps> = ({ isDark, models, onC
         conversation_starters: cleanStarters.length ? cleanStarters : undefined,
         recommended_model: form.model,
         recommended_provider: deriveProvider(form.model),
+        is_public: form.isPublic,
       });
       showToast(`"${form.name.trim()}" agent created!`, 'success');
       onCreated();
@@ -614,6 +617,37 @@ const CreateAgentModal: React.FC<CreateAgentModalProps> = ({ isDark, models, onC
                   />
                 </FieldBlock>
 
+                {/* Publicity */}
+                <FieldBlock label="Visibility" isDark={isDark} gold={gold} textMuted={textMuted}
+                  hint="Public agents are visible to all users on the platform.">
+                  <div 
+                    onClick={() => setField('isPublic', !form.isPublic)}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                      border: `1px solid ${form.isPublic ? gold : (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.14)')}`,
+                      borderRadius: '10px', padding: '10px 14px',
+                      cursor: 'pointer', transition: 'all 0.2s',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.875rem', color: textPrimary, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {form.isPublic ? <Eye size={16} color={gold} /> : <EyeOff size={16} color={textMuted} />}
+                      {form.isPublic ? 'Public (Visible to everyone)' : 'Private (Admin only)'}
+                    </span>
+                    <div style={{
+                      width: '36px', height: '20px', borderRadius: '10px',
+                      background: form.isPublic ? gold : (isDark ? '#3f3f46' : '#d1d5db'),
+                      position: 'relative', transition: 'background 0.2s'
+                    }}>
+                      <div style={{
+                        width: '16px', height: '16px', borderRadius: '50%', background: '#fff',
+                        position: 'absolute', top: '2px', left: form.isPublic ? '18px' : '2px',
+                        transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                      }} />
+                    </div>
+                  </div>
+                </FieldBlock>
+
                 {/* Conversation starters */}
                 <FieldBlock label="Conversation Starters" isDark={isDark} gold={gold} textMuted={textMuted}
                   hint="Suggested prompts users see when they open this agent (leave blank to auto-generate)">
@@ -694,6 +728,7 @@ const CreateAgentModal: React.FC<CreateAgentModalProps> = ({ isDark, models, onC
                   { label: 'Description', value: form.description || '(none)' },
                   { label: 'Model', value: form.model },
                   { label: 'Provider', value: provider },
+                  { label: 'Visibility', value: form.isPublic ? 'Public' : 'Private' },
                 ].map(row => (
                   <ConfirmRow key={row.label} label={row.label} value={row.value} isDark={isDark} gold={gold} textPrimary={textPrimary} textMuted={textMuted} />
                 ))}
@@ -1705,7 +1740,7 @@ export default function ModelsPage() {
   });
 
   // ── Tab State ──
-  const [gptTab, setGptTab] = useState<'all' | 'public'>('all');
+  const [gptTab, setGptTab] = useState<'all' | 'public' | 'private'>('all');
 
   // ── All Admin GPTs ──
   const {
@@ -1729,10 +1764,10 @@ export default function ModelsPage() {
     queryFn: () => CustomGptService.fetchPublicGpts(200),
   });
 
-  const currentGpts = gptTab === 'all' ? allGpts : publicGpts;
-  const currentGptsLoading = gptTab === 'all' ? allGptsLoading : publicGptsLoading;
-  const currentGptsError = gptTab === 'all' ? allGptsError : publicGptsError;
-  const refetchCurrentGpts = gptTab === 'all' ? refetchAllGpts : refetchPublicGpts;
+  const currentGpts = gptTab === 'all' ? allGpts : (gptTab === 'public' ? publicGpts : allGpts?.filter(gpt => !gpt.is_public));
+  const currentGptsLoading = gptTab === 'all' || gptTab === 'private' ? allGptsLoading : publicGptsLoading;
+  const currentGptsError = gptTab === 'all' || gptTab === 'private' ? allGptsError : publicGptsError;
+  const refetchCurrentGpts = gptTab === 'all' || gptTab === 'private' ? refetchAllGpts : refetchPublicGpts;
 
   // ── Modal state ──
   const [selectedGptId, setSelectedGptId] = useState<string | null>(null);
@@ -2094,7 +2129,7 @@ export default function ModelsPage() {
                           }}
                         >
                           <Layers size={13} />
-                          All Agents ({allGpts?.length || 0})
+                          My Agents ({allGpts?.length || 0})
                         </button>
                         <button
                           type="button"
@@ -2117,6 +2152,28 @@ export default function ModelsPage() {
                         >
                           <Globe size={13} />
                           Public List ({publicGpts?.length || 0})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setGptTab('private')}
+                          style={{
+                            background: gptTab === 'private' ? (isDark ? 'rgba(212,175,55,0.18)' : 'rgba(212,175,55,0.22)') : 'transparent',
+                            border: 'none',
+                            outline: 'none',
+                            color: gptTab === 'private' ? gold : textMuted,
+                            padding: '6px 16px',
+                            borderRadius: '6px',
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            transition: 'all 0.18s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <EyeOff size={13} />
+                          Private ({allGpts?.filter(gpt => !gpt.is_public).length || 0})
                         </button>
                       </div>
                     </div>
@@ -2238,12 +2295,12 @@ export default function ModelsPage() {
           <div className="gpt-empty-state">
             <Bot size={52} color={isDark ? '#3f3f46' : '#d1d5db'} style={{ marginBottom: '14px' }} />
             <p style={{ color: isDark ? '#52525b' : '#9ca3af', fontWeight: 700, fontSize: '1.05rem', margin: '0 0 6px' }}>
-              {gptTab === 'public' ? 'No Public Agents Yet' : 'No Agents Found'}
+              {gptTab === 'public' ? 'No Public Agents Yet' : (gptTab === 'private' ? 'No Private Agents Found' : 'No Agents Found')}
             </p>
             <p style={{ color: textMuted, fontSize: '0.85rem', maxWidth: '360px', margin: '0 auto 20px', lineHeight: 1.5 }}>
               {gptTab === 'public' 
-                ? "No custom agents are currently marked as public. Select 'All Agents' to view private ones, or click a private agent's card to toggle its publicity."
-                : "You haven't created any agents yet. Get started by clicking the button below."}
+                ? "No custom agents are currently marked as public. Select 'My Agents' to view your private ones, or click a private agent's card to toggle its publicity."
+                : (gptTab === 'private' ? "You have no private agents. All your agents are currently public." : "You haven't created any agents yet. Get started by clicking the button below.")}
             </p>
             <button
               onClick={() => setCreateOpen(true)}
@@ -2274,7 +2331,7 @@ export default function ModelsPage() {
             marginTop: '24px', textAlign: 'center',
             fontSize: '0.8rem', color: textMuted, fontWeight: 600
           }}>
-            Showing {currentGpts.length} {gptTab === 'public' ? 'public' : 'total'} agent{currentGpts.length !== 1 ? 's' : ''}
+            Showing {currentGpts.length} {gptTab === 'public' ? 'public' : (gptTab === 'private' ? 'private' : 'total')} agent{currentGpts.length !== 1 ? 's' : ''}
           </div>
         )}
       </div>
