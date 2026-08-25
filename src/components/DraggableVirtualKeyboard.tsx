@@ -244,6 +244,7 @@ export const DraggableVirtualKeyboard: React.FC<DraggableVirtualKeyboardProps> =
         </button>
       </div>
 
+
       {/* Keyboard Grid */}
       <div
         dir={activeKb.dir}
@@ -279,7 +280,7 @@ export const DraggableVirtualKeyboard: React.FC<DraggableVirtualKeyboardProps> =
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
+                   justifyContent: 'center',
                   transition: 'background-color 0.1s ease, transform 0.05s ease',
                   userSelect: 'none'
                 }}
