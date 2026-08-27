@@ -886,8 +886,7 @@ export default function ManualNewsPage() {
     } finally {
       setSubmitting(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [country, topic, articleType, extractLearningAids, markAsTrending, sources]);
+  }, [country, topic, articleType, extractLearningAids, markAsTrending, sources, sendPush, pushLanguage]);
 
   const handleSuccessClose = useCallback(() => {
     setSuccessDetail(null);
