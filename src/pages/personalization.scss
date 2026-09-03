@@ -1172,3 +1172,81 @@ $text-label:    #a8956b;
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+@keyframes pers-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+// ── Skeleton Loader ──────────────────────────────────────────
+.pers-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  border-radius: 6px;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(212, 175, 55, 0.05) 30%,
+      rgba(212, 175, 55, 0.12) 60%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    animation: pers-shimmer 1.8s infinite linear;
+  }
+}
+
+.light-mode .pers-skeleton {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(212, 175, 55, 0.2);
+
+  &::after {
+    background: linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0) 0%,
+      rgba(212, 175, 55, 0.08) 30%,
+      rgba(212, 175, 55, 0.15) 60%,
+      rgba(0, 0, 0, 0) 100%
+    );
+  }
+}
+
+// ── Custom Scrollbar for Modal ───────────────────────────────
+.pers-modal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(212, 175, 55, 0.4) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 3px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(212, 175, 55, 0.35);
+    border-radius: 3px;
+    &:hover {
+      background: rgba(212, 175, 55, 0.6);
+    }
+  }
+}
+
+.light-mode .pers-modal-scroll {
+  scrollbar-color: rgba(180, 138, 4, 0.4) transparent;
+
+  &::-webkit-scrollbar-track {
+    background: #f0f0f0;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(180, 138, 4, 0.4);
+    &:hover {
+      background: rgba(180, 138, 4, 0.7);
+    }
+  }
+}

@@ -28,6 +28,7 @@ import {
   type CalibrationBin,
 } from 'api/backendApi';
 import { showToast } from 'components/EliteUI/EliteToastContainer';
+import PersonalizationNavTabs from 'components/PersonalizationNavTabs';
 import './personalization.scss';
 
 // ── Confirmation Modal ────────────────────────────────────────────────────────
@@ -269,6 +270,9 @@ export default function PersonalizationCalibrationPage() {
           )}
         </div>
       </div>
+
+      {/* ── Personalization Suite Navigation Tabs ── */}
+      <PersonalizationNavTabs />
 
       {/* ── Controls ── */}
       <div className="pers-control-row">

@@ -1,12 +1,11 @@
 // project-imports
-import integriNav from './integri-nav';
+import { generalNav, personalizationNav, settingsNav } from './integri-nav';
 
 // ==============================|| INTEGRI APP — MENU ITEMS ||============================== //
-// All old template groups (forms, tables, charts-maps, other, pages, ui-components)
-// have been intentionally removed. Only Integri App routes are exported here.
+// Explicitly organized into General, Personalization, and Settings groups.
 
 const menuItems = {
-  items: [integriNav]
+  items: [generalNav, personalizationNav, settingsNav],
 };
 
 export default menuItems;

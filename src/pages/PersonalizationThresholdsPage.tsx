@@ -21,6 +21,7 @@ import {
   type TierThresholds,
 } from 'api/backendApi';
 import { showToast } from 'components/EliteUI/EliteToastContainer';
+import PersonalizationNavTabs from 'components/PersonalizationNavTabs';
 import './personalization.scss';
 
 // ── Confirmation Modal ────────────────────────────────────────────────────────
@@ -285,6 +286,9 @@ export default function PersonalizationThresholdsPage() {
           </button>
         </div>
       </div>
+
+      {/* ── Personalization Suite Navigation Tabs ── */}
+      <PersonalizationNavTabs />
 
       {/* ── Country Selector ── */}
       <div className="pers-control-row">

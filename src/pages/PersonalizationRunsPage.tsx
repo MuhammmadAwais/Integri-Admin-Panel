@@ -3,37 +3,28 @@ import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
-import {
-  Radio,
   RefreshCw,
-  Loader2,
   AlertTriangle,
   Info,
   CheckCircle,
   Globe,
   TrendingUp,
   Target,
-  Zap,
   Users,
   Clock,
-  Send,
-  Sparkles,
   Layers,
   ArrowRight,
-  ExternalLink,
   ChevronRight,
-  HelpCircle,
   X,
   FileText,
   Copy,
   Check,
+  Search,
 } from 'lucide-react';
 import {
   PersonalizationRunsService,
   ThresholdsService,
+  tokenReadyPromise,
   type PersoRunSummary,
   type PersoRunSummaryList,
   type PersoTopicDispatch,
@@ -42,9 +33,9 @@ import {
   getStatusMeta,
   analyzeRunDiagnosis,
   buildAudienceFunnel,
-  getScoreInterpretation,
 } from 'utils/personalizationPlainEnglish';
 import { showToast } from 'components/EliteUI/EliteToastContainer';
+import PersonalizationNavTabs from 'components/PersonalizationNavTabs';
 import './personalization.scss';
 
 // ── Slot Configuration ───────────────────────────────────────────────────────
@@ -69,7 +60,6 @@ function formatDate(isoStr?: string): string {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit',
     });
   } catch {
     return isoStr;
@@ -82,50 +72,59 @@ function formatDuration(ms?: number): string {
   return `${(ms / 1000).toFixed(2)}s`;
 }
 
-// ── Custom Tooltip for Trend Chart ──────────────────────────────────────────
-const CustomTrendTooltip: React.FC<any> = ({ active, payload, label, isDark }) => {
-  if (!active || !payload?.length) return null;
-  const item = payload[0]?.payload;
-  return (
+// ── Skeleton Loader Components ───────────────────────────────────────────────
+const RunsPageSkeleton: React.FC = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    {/* Diagnostic Skeleton */}
+    <div className="pers-skeleton" style={{ height: '110px', borderRadius: '10px' }} />
+
+    {/* KPI Cards Skeleton */}
     <div
       style={{
-        background: isDark ? '#1a1a1a' : '#ffffff',
-        border: '1px solid rgba(212, 175, 55, 0.3)',
-        borderRadius: '8px',
-        padding: '0.85rem 1.15rem',
-        fontSize: '0.82rem',
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
-        color: isDark ? '#fafafa' : '#111111',
-        minWidth: '220px',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '1rem',
       }}
     >
-      <div style={{ color: '#D4AF37', fontWeight: 700, marginBottom: '0.5rem', borderBottom: '1px solid rgba(212,175,55,0.2)', paddingBottom: '0.35rem' }}>
-        {formatDate(item?.run_at || item?.date)}
-        <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', opacity: 0.8 }}>
-          (Slot {item?.slot})
-        </span>
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.3rem' }}>
-        <span>Audience Reach:</span>
-        <strong style={{ color: '#86efac' }}>{item?.push_rate_pct?.toFixed(1)}%</strong>
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.3rem' }}>
-        <span>Relevance Filtered:</span>
-        <strong style={{ color: '#fde047' }}>{item?.threshold_drop_rate_pct?.toFixed(1)}%</strong>
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.3rem' }}>
-        <span>New Readers:</span>
-        <strong style={{ color: '#93c5fd' }}>{item?.cold_start_rate_pct?.toFixed(1)}%</strong>
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', marginTop: '0.35rem', paddingTop: '0.35rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-        <span>Delivered / Matched:</span>
-        <strong>{item?.users_matched?.toLocaleString()} readers</strong>
-      </div>
+      {[...Array(5)].map((_, i) => (
+        <div
+          key={i}
+          className="pers-skeleton"
+          style={{ height: '100px', borderRadius: '8px' }}
+        />
+      ))}
     </div>
-  );
-};
 
-// ── Run Detail Modal ─────────────────────────────────────────────────────────
+    {/* Funnel Skeleton */}
+    <div className="pers-skeleton" style={{ height: '340px', borderRadius: '8px' }} />
+
+    {/* Bottom Cards Skeleton */}
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+        gap: '1.5rem',
+      }}
+    >
+      <div className="pers-skeleton" style={{ height: '240px', borderRadius: '8px' }} />
+      <div className="pers-skeleton" style={{ height: '240px', borderRadius: '8px' }} />
+    </div>
+  </div>
+);
+
+const HistoryTableSkeleton: React.FC = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', padding: '1rem' }}>
+    {[...Array(6)].map((_, i) => (
+      <div
+        key={i}
+        className="pers-skeleton"
+        style={{ height: '44px', borderRadius: '4px' }}
+      />
+    ))}
+  </div>
+);
+
+// ── Run Detail Modal (With Custom Scrollbar) ─────────────────────────────────
 interface RunDetailModalProps {
   run: PersoRunSummary | null;
   open: boolean;
@@ -141,11 +140,11 @@ const RunDetailModal: React.FC<RunDetailModalProps> = ({ run, open, onClose, isD
 
   useEffect(() => {
     if (open && modalOverlayRef.current && modalBoxRef.current) {
-      gsap.fromTo(modalOverlayRef.current, { opacity: 0 }, { opacity: 1, duration: 0.2 });
+      gsap.fromTo(modalOverlayRef.current, { opacity: 0 }, { opacity: 1, duration: 0.18 });
       gsap.fromTo(
         modalBoxRef.current,
-        { opacity: 0, scale: 0.94, y: 16 },
-        { opacity: 1, scale: 1, y: 0, duration: 0.25, ease: 'back.out(1.3)' }
+        { opacity: 0, scale: 0.95, y: 12 },
+        { opacity: 1, scale: 1, y: 0, duration: 0.22, ease: 'power2.out' }
       );
     }
   }, [open]);
@@ -168,20 +167,28 @@ const RunDetailModal: React.FC<RunDetailModalProps> = ({ run, open, onClose, isD
         className={`pers-modal ${!isDark ? 'light' : ''}`}
         ref={modalBoxRef}
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '640px', width: '92%', maxHeight: '88vh', display: 'flex', flexDirection: 'column', textAlign: 'left', padding: '1.75rem' }}
+        style={{
+          maxWidth: '680px',
+          width: '92%',
+          maxHeight: '88vh',
+          display: 'flex',
+          flexDirection: 'column',
+          textAlign: 'left',
+          padding: '1.75rem',
+        }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <div>
-            <h3 style={{ margin: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Radio size={18} style={{ color: '#D4AF37' }} />
-              Run Breakdown — {run.country}
+            <h3 style={{ margin: 0, textAlign: 'left', fontSize: '1.15rem' }}>
+              Delivery Run Report — {run.country}
             </h3>
-            <div style={{ fontSize: '0.78rem', color: '#a8956b', marginTop: '0.2rem' }}>
-              Slot {run.slot} • {formatDate(run.run_at)}
+            <div style={{ fontSize: '0.8rem', color: '#a8956b', marginTop: '0.2rem' }}>
+              Slot {run.slot} • {formatDate(run.run_at || run.date)}
             </div>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close modal"
             style={{ background: 'none', border: 'none', color: '#a8956b', cursor: 'pointer', padding: '0.3rem' }}
           >
             <X size={18} />
@@ -203,7 +210,7 @@ const RunDetailModal: React.FC<RunDetailModalProps> = ({ run, open, onClose, isD
               cursor: 'pointer',
             }}
           >
-            Friendly Summary
+            Report Overview
           </button>
           <button
             onClick={() => setActiveTab('json')}
@@ -218,11 +225,12 @@ const RunDetailModal: React.FC<RunDetailModalProps> = ({ run, open, onClose, isD
               cursor: 'pointer',
             }}
           >
-            Raw JSON
+            Raw Technical JSON
           </button>
         </div>
 
-        <div style={{ overflowY: 'auto', flex: 1, paddingRight: '0.25rem' }}>
+        {/* Custom-scrolled body */}
+        <div className="pers-modal-scroll" style={{ overflowY: 'auto', flex: 1, paddingRight: '0.5rem' }}>
           {activeTab === 'summary' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {/* Status Header */}
@@ -239,7 +247,7 @@ const RunDetailModal: React.FC<RunDetailModalProps> = ({ run, open, onClose, isD
               >
                 <div>
                   <div style={{ fontSize: '0.72rem', color: '#a8956b', textTransform: 'uppercase', fontWeight: 700 }}>
-                    Delivery Result
+                    Run Outcome
                   </div>
                   <div style={{ fontSize: '0.95rem', fontWeight: 700, color: statusMeta.color, marginTop: '0.15rem' }}>
                     {statusMeta.label}
@@ -248,10 +256,10 @@ const RunDetailModal: React.FC<RunDetailModalProps> = ({ run, open, onClose, isD
                 <span className={`pers-badge ${statusMeta.badgeClass}`}>{run.status}</span>
               </div>
 
-              {/* Audience Funnel Summary */}
+              {/* Funnel Breakdown Table */}
               <div style={{ background: isDark ? 'rgba(255,255,255,0.02)' : '#ffffff', border: '1px solid rgba(212,175,55,0.15)', borderRadius: '8px', padding: '1rem' }}>
                 <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#D4AF37', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-                  Audience Flow & Filtering
+                  Audience Breakdown
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.82rem' }}>
                   <div>
@@ -259,19 +267,19 @@ const RunDetailModal: React.FC<RunDetailModalProps> = ({ run, open, onClose, isD
                     <strong style={{ display: 'block', fontSize: '1rem' }}>{run.cohort?.enumerated?.toLocaleString() ?? 0}</strong>
                   </div>
                   <div>
-                    <span style={{ color: '#8a8a8f' }}>Passed to Recommender:</span>
+                    <span style={{ color: '#8a8a8f' }}>Available for Matching:</span>
                     <strong style={{ display: 'block', fontSize: '1rem' }}>{run.cohort?.eligible_for_match?.toLocaleString() ?? 0}</strong>
                   </div>
                   <div>
-                    <span style={{ color: '#8a8a8f' }}>Matched Relevant Stories:</span>
+                    <span style={{ color: '#8a8a8f' }}>Matched Readers:</span>
                     <strong style={{ display: 'block', fontSize: '1rem', color: '#86efac' }}>{run.matching?.users_matched?.toLocaleString() ?? 0}</strong>
                   </div>
                   <div>
-                    <span style={{ color: '#8a8a8f' }}>Dropped by Relevance Cutoff:</span>
+                    <span style={{ color: '#8a8a8f' }}>Held Back (Below Cutoff):</span>
                     <strong style={{ display: 'block', fontSize: '1rem', color: '#fde047' }}>{run.matching?.users_below_threshold?.toLocaleString() ?? 0}</strong>
                   </div>
                   <div>
-                    <span style={{ color: '#8a8a8f' }}>Skipped (No Profile Yet):</span>
+                    <span style={{ color: '#8a8a8f' }}>Skipped (New / No History):</span>
                     <strong style={{ display: 'block', fontSize: '1rem', color: '#93c5fd' }}>{run.cohort?.no_vector?.toLocaleString() ?? 0}</strong>
                   </div>
                   <div>
@@ -284,11 +292,11 @@ const RunDetailModal: React.FC<RunDetailModalProps> = ({ run, open, onClose, isD
               {/* Delivery Stats */}
               <div style={{ background: isDark ? 'rgba(255,255,255,0.02)' : '#ffffff', border: '1px solid rgba(212,175,55,0.15)', borderRadius: '8px', padding: '1rem' }}>
                 <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#D4AF37', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-                  Delivery & Device Dispatch
+                  Device Delivery
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.82rem' }}>
                   <div>
-                    <span style={{ color: '#8a8a8f' }}>Delivered Notifications:</span>
+                    <span style={{ color: '#8a8a8f' }}>Successfully Sent:</span>
                     <strong style={{ display: 'block', fontSize: '1rem', color: '#86efac' }}>{run.dispatch?.sent?.toLocaleString() ?? 0}</strong>
                   </div>
                   <div>
@@ -298,11 +306,11 @@ const RunDetailModal: React.FC<RunDetailModalProps> = ({ run, open, onClose, isD
                     </strong>
                   </div>
                   <div>
-                    <span style={{ color: '#8a8a8f' }}>Elapsed Compute Time:</span>
+                    <span style={{ color: '#8a8a8f' }}>Time Taken:</span>
                     <strong style={{ display: 'block', fontSize: '1rem' }}>{formatDuration(run.elapsed_ms)}</strong>
                   </div>
                   <div>
-                    <span style={{ color: '#8a8a8f' }}>Candidate Stories Evaluated:</span>
+                    <span style={{ color: '#8a8a8f' }}>Articles Evaluated:</span>
                     <strong style={{ display: 'block', fontSize: '1rem' }}>{run.candidate_articles ?? 0}</strong>
                   </div>
                 </div>
@@ -316,10 +324,11 @@ const RunDetailModal: React.FC<RunDetailModalProps> = ({ run, open, onClose, isD
                   onClick={handleCopyJson}
                   style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}
                 >
-                  {copied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy JSON</>}
+                  {copied ? <><Check size={13} /> Copied</> : <><Copy size={13} /> Copy JSON</>}
                 </button>
               </div>
               <pre
+                className="pers-modal-scroll"
                 style={{
                   background: isDark ? '#080808' : '#f0f0f0',
                   color: isDark ? '#d4af37' : '#333',
@@ -327,6 +336,7 @@ const RunDetailModal: React.FC<RunDetailModalProps> = ({ run, open, onClose, isD
                   borderRadius: '6px',
                   fontSize: '0.76rem',
                   overflowX: 'auto',
+                  maxHeight: '48vh',
                   border: '1px solid rgba(212,175,55,0.2)',
                 }}
               >
@@ -351,59 +361,70 @@ export default function PersonalizationRunsPage() {
   const navigate = useNavigate();
   const isDark = useSelector((state: any) => state.theme?.isDark ?? true);
 
+  // Authorization & Initialization
+  const [isAuthorizing, setIsAuthorizing] = useState(true);
+
   // Filters & State
   const [countries, setCountries] = useState<string[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [selectedSlot, setSelectedSlot] = useState<number | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<'latest' | 'history'>('latest');
   const [selectedDays, setSelectedDays] = useState<number>(7);
+  const [historySearch, setHistorySearch] = useState<string>('');
 
   // Data states
   const [lastRun, setLastRun] = useState<PersoRunSummary | null>(null);
   const [recentRuns, setRecentRuns] = useState<PersoRunSummaryList | null>(null);
   const [loadingLastRun, setLoadingLastRun] = useState(false);
   const [loadingRecentRuns, setLoadingRecentRuns] = useState(false);
-  const [loadingCountries, setLoadingCountries] = useState(true);
   const [lastRunNotFound, setLastRunNotFound] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Detail Modal State
   const [modalRun, setModalRun] = useState<PersoRunSummary | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  // Refs for animations
-  const pageRef = useRef<HTMLDivElement>(null);
-  const latestRunRef = useRef<HTMLDivElement>(null);
-  const historyRef = useRef<HTMLDivElement>(null);
-
-  // ── Fetch Available Countries ──────────────────────────────
+  // ── 1. Safe Initialization: Await Auth Token Before Firing Calls ──
   useEffect(() => {
-    async function loadCountries() {
-      setLoadingCountries(true);
+    let isMounted = true;
+
+    async function initAuth() {
+      setIsAuthorizing(true);
+      setErrorMessage(null);
       try {
+        // Wait for token to be confirmed ready so requests don't 401 or cause lagging
+        await tokenReadyPromise;
         const res = await ThresholdsService.fetchAll();
+        if (!isMounted) return;
+
         const list = res?.configs?.map((c) => c.country) || [];
         setCountries(list);
-        if (list.length > 0 && !selectedCountry) {
+        if (list.length > 0) {
           setSelectedCountry(list[0]);
         }
-      } catch (e) {
-        console.error('Failed to load countries list', e);
-        // Fallback default country
+      } catch (e: any) {
+        console.warn('Initial setup warning:', e);
+        if (!isMounted) return;
         const fallback = ['Germany', 'Pakistan', 'United States', 'United Kingdom'];
         setCountries(fallback);
         setSelectedCountry(fallback[0]);
       } finally {
-        setLoadingCountries(false);
+        if (isMounted) setIsAuthorizing(false);
       }
     }
-    loadCountries();
+
+    initAuth();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // ── Fetch Last Run for Selected Country & Slot ─────────────
+  // ── 2. Fetch Last Run (Only when authorized and country is set) ──
   const loadLastRun = useCallback(async (country: string, slot?: number) => {
     if (!country) return;
     setLoadingLastRun(true);
     setLastRunNotFound(false);
+    setErrorMessage(null);
     try {
       const data = await PersonalizationRunsService.fetchLastRun(country, slot);
       setLastRun(data);
@@ -411,8 +432,14 @@ export default function PersonalizationRunsPage() {
       if (e?.response?.status === 404) {
         setLastRunNotFound(true);
         setLastRun(null);
+      } else if (e?.response?.status === 403) {
+        setErrorMessage('Administrator privileges are required to view news delivery summaries.');
+        setLastRun(null);
+      } else if (e?.response?.status === 422) {
+        setErrorMessage(`Region "${country}" is not recognized in the system.`);
+        setLastRun(null);
       } else {
-        showToast(e?.response?.data?.message || 'Failed to load last run summary', 'error');
+        setErrorMessage('Unable to connect to the delivery server. Please click Refresh to try again.');
         setLastRun(null);
       }
     } finally {
@@ -420,76 +447,74 @@ export default function PersonalizationRunsPage() {
     }
   }, []);
 
-  // ── Fetch Recent Runs for Selected Country & Days ──────────
+  // ── 3. Fetch Recent Runs ──
   const loadRecentRuns = useCallback(async (country: string, days: number) => {
     if (!country) return;
     setLoadingRecentRuns(true);
+    setErrorMessage(null);
     try {
       const data = await PersonalizationRunsService.fetchRecentRuns(country, days);
       setRecentRuns(data);
     } catch (e: any) {
-      showToast(e?.response?.data?.message || 'Failed to load historical runs', 'error');
+      if (e?.response?.status === 403) {
+        setErrorMessage('Administrator privileges are required to view historical summaries.');
+      } else {
+        setErrorMessage('Failed to load past delivery runs. Please check your connection.');
+      }
       setRecentRuns(null);
     } finally {
       setLoadingRecentRuns(false);
     }
   }, []);
 
-  // Trigger loads on parameter changes
+  // Trigger loads after authorization is ready
   useEffect(() => {
-    if (selectedCountry) {
+    if (!isAuthorizing && selectedCountry) {
       loadLastRun(selectedCountry, selectedSlot);
     }
-  }, [selectedCountry, selectedSlot, loadLastRun]);
+  }, [isAuthorizing, selectedCountry, selectedSlot, loadLastRun]);
 
   useEffect(() => {
-    if (selectedCountry && activeTab === 'history') {
+    if (!isAuthorizing && selectedCountry && activeTab === 'history') {
       loadRecentRuns(selectedCountry, selectedDays);
     }
-  }, [selectedCountry, selectedDays, activeTab, loadRecentRuns]);
-
-  // GSAP animation when latest run data changes
-  useEffect(() => {
-    if (lastRun && latestRunRef.current) {
-      gsap.fromTo(
-        latestRunRef.current.querySelectorAll('.pers-diagnostic-card, .pers-stat-card, .pers-funnel-card, .pers-card'),
-        { opacity: 0, y: 15 },
-        { opacity: 1, y: 0, duration: 0.4, stagger: 0.05, ease: 'power2.out' }
-      );
-    }
-  }, [lastRun]);
-
-  // GSAP animation for history tab
-  useEffect(() => {
-    if (recentRuns && historyRef.current) {
-      gsap.fromTo(
-        historyRef.current.querySelectorAll('.pers-chart-wrap, .pers-table-wrapper'),
-        { opacity: 0, y: 15 },
-        { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power2.out' }
-      );
-    }
-  }, [recentRuns]);
+  }, [isAuthorizing, selectedCountry, selectedDays, activeTab, loadRecentRuns]);
 
   // Computed data for components
   const diagnosis = lastRun ? analyzeRunDiagnosis(lastRun) : null;
   const funnelSteps = lastRun ? buildAudienceFunnel(lastRun) : [];
   const statusMeta = lastRun ? getStatusMeta(lastRun.status) : null;
 
-  // Chart data for historical runs
-  const trendChartData = (recentRuns?.runs ?? [])
-    .slice()
-    .reverse()
-    .map((r, i) => ({
-      index: i,
-      slot: r.slot,
-      date: r.date,
-      run_at: r.run_at,
-      label: `${r.date} (S${r.slot})`,
-      push_rate_pct: r.rates?.push_rate_pct ?? 0,
-      threshold_drop_rate_pct: r.rates?.threshold_drop_rate_pct ?? 0,
-      cold_start_rate_pct: r.rates?.cold_start_rate_pct ?? 0,
-      users_matched: r.matching?.users_matched ?? 0,
-    }));
+  // Filtered runs for history table
+  const filteredRuns = (recentRuns?.runs ?? []).filter((r) => {
+    if (!historySearch.trim()) return true;
+    const q = historySearch.toLowerCase();
+    const dateStr = (r.run_at || r.date || '').toLowerCase();
+    const slotStr = `slot ${r.slot}`.toLowerCase();
+    const statusStr = (r.status || '').toLowerCase();
+    return dateStr.includes(q) || slotStr.includes(q) || statusStr.includes(q);
+  });
+
+  // Aggregated history stats for chosen window
+  const totalRunsCount = recentRuns?.runs?.length ?? 0;
+  const avgPushRate =
+    totalRunsCount > 0
+      ? (
+          recentRuns!.runs.reduce((acc, r) => acc + (r.rates?.push_rate_pct ?? 0), 0) /
+          totalRunsCount
+        ).toFixed(1)
+      : '0.0';
+  const avgDropRate =
+    totalRunsCount > 0
+      ? (
+          recentRuns!.runs.reduce((acc, r) => acc + (r.rates?.threshold_drop_rate_pct ?? 0), 0) /
+          totalRunsCount
+        ).toFixed(1)
+      : '0.0';
+  const totalDeliveredInWindow = (recentRuns?.runs ?? []).reduce(
+    (acc, r) => acc + (r.dispatch?.sent ?? r.matching?.users_matched ?? 0),
+    0
+  );
 
   const openRunModal = (r: PersoRunSummary) => {
     setModalRun(r);
@@ -497,16 +522,13 @@ export default function PersonalizationRunsPage() {
   };
 
   return (
-    <div className={`pers-page ${!isDark ? 'light-mode' : ''}`} ref={pageRef}>
-      {/* ── Page Header ── */}
+    <div className={`pers-page ${!isDark ? 'light-mode' : ''}`}>
+      {/* ── Header ── */}
       <div className="pers-header">
         <div className="pers-title-group">
-          <h1>
-            <Radio size={24} style={{ display: 'inline', marginRight: '0.6rem', verticalAlign: 'middle' }} />
-            Personalization Run Summaries
-          </h1>
+          <h1>News Delivery Summaries</h1>
           <div className="pers-subtitle">
-            Understand how notifications match reader interests across each slot. View delivery funnels and diagnose why readers received or missed alerts in plain English.
+            Review how notifications match reader interests across each slot. View the audience funnel and understand why readers received or missed alerts in simple words.
           </div>
         </div>
 
@@ -519,19 +541,21 @@ export default function PersonalizationRunsPage() {
               } else {
                 loadRecentRuns(selectedCountry, selectedDays);
               }
-              showToast('Refreshed delivery run data', 'success');
+              showToast('Refreshed delivery data', 'success');
             }}
-            disabled={loadingLastRun || loadingRecentRuns}
+            disabled={isAuthorizing || loadingLastRun || loadingRecentRuns}
           >
-            {loadingLastRun || loadingRecentRuns ? (
-              <Loader2 size={15} className="spin-icon" />
-            ) : (
-              <RefreshCw size={15} />
-            )}
+            <RefreshCw
+              size={14}
+              className={loadingLastRun || loadingRecentRuns ? 'spin-icon' : ''}
+            />
             Refresh
           </button>
         </div>
       </div>
+
+      {/* ── Cross-Navigation Tabs across all Personalization Views ── */}
+      <PersonalizationNavTabs />
 
       {/* ── Control Row (Country & Slot Switchers) ── */}
       <div className="pers-control-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
@@ -539,13 +563,13 @@ export default function PersonalizationRunsPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <span className="pers-select-label">
               <Globe size={13} style={{ display: 'inline', marginRight: '0.25rem', verticalAlign: 'middle' }} />
-              Region:
+              Country / Region:
             </span>
             <div className="pers-select-wrapper" style={{ minWidth: '180px' }}>
               <select
                 value={selectedCountry}
                 onChange={(e) => setSelectedCountry(e.target.value)}
-                disabled={loadingCountries}
+                disabled={isAuthorizing}
               >
                 {countries.map((c) => (
                   <option key={c} value={c}>
@@ -567,6 +591,7 @@ export default function PersonalizationRunsPage() {
                     key={slot.label}
                     className={`pers-pill-btn ${selectedSlot === slot.id ? 'active' : ''}`}
                     onClick={() => setSelectedSlot(slot.id)}
+                    disabled={isAuthorizing || loadingLastRun}
                   >
                     {slot.label}
                   </button>
@@ -578,15 +603,16 @@ export default function PersonalizationRunsPage() {
           {/* Days filter selector for History */}
           {activeTab === 'history' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span className="pers-select-label">Lookback Window:</span>
+              <span className="pers-select-label">Time Window:</span>
               <div className="pers-pill-group">
                 {DAYS_OPTIONS.map((days) => (
                   <button
                     key={days}
                     className={`pers-pill-btn ${selectedDays === days ? 'active' : ''}`}
                     onClick={() => setSelectedDays(days)}
+                    disabled={isAuthorizing || loadingRecentRuns}
                   >
-                    {days} Days
+                    Last {days} Days
                   </button>
                 ))}
               </div>
@@ -595,11 +621,10 @@ export default function PersonalizationRunsPage() {
         </div>
 
         {/* Last Run Timing Badge */}
-        {lastRun && activeTab === 'latest' && (
+        {lastRun && activeTab === 'latest' && !isAuthorizing && !loadingLastRun && (
           <div style={{ fontSize: '0.8rem', color: '#a8956b', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <Clock size={14} />
-            <span>Fired: <strong>{formatDate(lastRun.run_at)}</strong></span>
-            <span>(Slot {lastRun.slot})</span>
+            <Clock size={13} />
+            <span>Fired: <strong>{formatDate(lastRun.run_at)}</strong> (Slot {lastRun.slot})</span>
           </div>
         )}
       </div>
@@ -610,70 +635,70 @@ export default function PersonalizationRunsPage() {
           className={`pers-tab-btn ${activeTab === 'latest' ? 'active' : ''}`}
           onClick={() => setActiveTab('latest')}
         >
-          <Radio size={16} />
           Latest Delivery Run
         </button>
         <button
           className={`pers-tab-btn ${activeTab === 'history' ? 'active' : ''}`}
           onClick={() => setActiveTab('history')}
         >
-          <TrendingUp size={16} />
-          Run History & Trends
+          Delivery History & Past Logs
         </button>
       </div>
+
+      {/* ── Error Banner if any ── */}
+      {errorMessage && (
+        <div className="pers-alert alert-error" style={{ marginBottom: '1.5rem' }}>
+          <AlertTriangle size={18} style={{ flexShrink: 0 }} />
+          <div>{errorMessage}</div>
+        </div>
+      )}
 
       {/* ──────────────────────────────────────────────────────────── */}
       {/*  TAB 1: LATEST DELIVERY RUN                                  */}
       {/* ──────────────────────────────────────────────────────────── */}
       {activeTab === 'latest' && (
-        <div ref={latestRunRef}>
-          {loadingLastRun ? (
-            <div className="pers-loading">
-              <div className="pers-spinner" />
-              <p>Analyzing latest delivery run for {selectedCountry}...</p>
-            </div>
+        <div>
+          {isAuthorizing || loadingLastRun ? (
+            <RunsPageSkeleton />
           ) : lastRunNotFound ? (
             <div className="pers-card" style={{ textAlign: 'center', padding: '3.5rem 2rem' }}>
-              <Info size={40} style={{ color: '#D4AF37', margin: '0 auto 1rem', display: 'block' }} />
-              <h3 style={{ fontSize: '1.25rem', color: '#fafafa', marginBottom: '0.5rem' }}>
+              <Info size={36} style={{ color: '#D4AF37', margin: '0 auto 1rem', display: 'block' }} />
+              <h3 style={{ fontSize: '1.2rem', color: '#fafafa', marginBottom: '0.5rem' }}>
                 No Notification Runs Recorded for {selectedCountry}
               </h3>
-              <p style={{ color: '#8a8a8f', maxWidth: '520px', margin: '0 auto 1.5rem', lineHeight: 1.6 }}>
-                Personalization has not fired for this region yet, or notifications are currently disabled.
-                Once the scheduled background dispatcher triggers, detailed run summaries will appear here.
+              <p style={{ color: '#8a8a8f', maxWidth: '520px', margin: '0 auto 1.5rem', lineHeight: 1.6, fontSize: '0.9rem' }}>
+                The automated news delivery system has not run for this country yet, or notifications are currently turned off for this region.
+                Once the scheduled background delivery fires, detailed reports will appear here automatically.
               </p>
               <button
                 className="pers-btn pers-btn-secondary"
                 onClick={() => navigate('/personalization/thresholds')}
               >
-                Inspect Country Thresholds
+                View Country Relevance Thresholds
               </button>
             </div>
           ) : !lastRun ? (
             <div className="pers-empty">
-              <AlertTriangle size={36} />
-              <p>No run summary data available for this selection.</p>
+              <p>No delivery data available for this selection.</p>
             </div>
           ) : (
-            <>
-              {/* ── 1. Diagnostic Card (Plain English "Why did only N users get pushed?") ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+              {/* ── 1. Diagnostic Card (Plain English Answer) ── */}
               {diagnosis && (
                 <div className={`pers-diagnostic-card diag-${diagnosis.severity}`}>
                   <div className="diag-top">
                     <div className="diag-icon">
                       {diagnosis.severity === 'success' ? (
-                        <CheckCircle size={24} />
+                        <CheckCircle size={22} />
                       ) : diagnosis.severity === 'error' ? (
-                        <AlertTriangle size={24} />
-                      ) : diagnosis.severity === 'warning' ? (
-                        <Sparkles size={24} />
+                        <AlertTriangle size={22} />
                       ) : (
-                        <Info size={24} />
+                        <Info size={22} />
                       )}
                     </div>
                     <div className="diag-content">
                       <div className="diag-badge-row">
-                        <span className="diag-tag">Dispatch Diagnostic</span>
+                        <span className="diag-tag">Delivery Diagnosis</span>
                         <span className={`pers-badge ${statusMeta?.badgeClass || 'badge-default'}`}>
                           {statusMeta?.label || lastRun.status}
                         </span>
@@ -692,7 +717,7 @@ export default function PersonalizationRunsPage() {
                         onClick={() => navigate(diagnosis.action!.path)}
                       >
                         {diagnosis.action.label}
-                        <ArrowRight size={14} />
+                        <ArrowRight size={13} />
                       </button>
                     </div>
                   )}
@@ -700,7 +725,7 @@ export default function PersonalizationRunsPage() {
               )}
 
               {/* ── 2. Top Metric KPI Cards ── */}
-              <div className="pers-stats-row" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}>
+              <div className="pers-stats-row" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
                 {/* Reach Rate */}
                 <div className="pers-stat-card">
                   <span className="stat-label">Audience Reached</span>
@@ -708,18 +733,18 @@ export default function PersonalizationRunsPage() {
                     {lastRun.rates?.push_rate_pct?.toFixed(1) ?? '0'}%
                   </span>
                   <span className="stat-sub">
-                    {lastRun.matching?.users_matched?.toLocaleString() ?? 0} of {lastRun.cohort?.eligible_for_match?.toLocaleString() ?? 0} ready readers
+                    {lastRun.matching?.users_matched?.toLocaleString() ?? 0} of {lastRun.cohort?.eligible_for_match?.toLocaleString() ?? 0} available readers
                   </span>
                 </div>
 
                 {/* Relevance Cutoff Drop */}
                 <div className="pers-stat-card">
-                  <span className="stat-label">Filtered by Relevance</span>
+                  <span className="stat-label">Held Back (Low Relevance)</span>
                   <span className="stat-value" style={{ color: '#fde047' }}>
                     {lastRun.rates?.threshold_drop_rate_pct?.toFixed(1) ?? '0'}%
                   </span>
                   <span className="stat-sub">
-                    {lastRun.matching?.users_below_threshold?.toLocaleString() ?? 0} readers held back by cutoff
+                    {lastRun.matching?.users_below_threshold?.toLocaleString() ?? 0} readers had stories below cutoff
                   </span>
                 </div>
 
@@ -730,43 +755,43 @@ export default function PersonalizationRunsPage() {
                     {lastRun.rates?.cold_start_rate_pct?.toFixed(1) ?? '0'}%
                   </span>
                   <span className="stat-sub">
-                    {lastRun.cohort?.no_vector?.toLocaleString() ?? 0} readers without history profile
+                    {lastRun.cohort?.no_vector?.toLocaleString() ?? 0} readers have no reading history yet
                   </span>
                 </div>
 
                 {/* Phone Delivery Success */}
                 <div className="pers-stat-card">
-                  <span className="stat-label">Device Deliveries</span>
+                  <span className="stat-label">Phone Deliveries</span>
                   <span className="stat-value">
                     {lastRun.dispatch?.sent?.toLocaleString() ?? 0}
                   </span>
                   <span className="stat-sub">
-                    {lastRun.dispatch?.failed ? `${lastRun.dispatch.failed} failed deliveries` : '100% delivered to devices'}
+                    {lastRun.dispatch?.failed ? `${lastRun.dispatch.failed} failed phone deliveries` : '100% delivered to devices'}
                   </span>
                 </div>
 
-                {/* Candidate Articles & Speed */}
+                {/* Articles Evaluated & Duration */}
                 <div className="pers-stat-card">
-                  <span className="stat-label">Stories & Speed</span>
+                  <span className="stat-label">Articles & Speed</span>
                   <span className="stat-value" style={{ color: '#D4AF37' }}>
-                    {lastRun.candidate_articles ?? 0} Stories
+                    {lastRun.candidate_articles ?? 0} Articles
                   </span>
                   <span className="stat-sub">
-                    Completed in {formatDuration(lastRun.elapsed_ms)}
+                    Processed in {formatDuration(lastRun.elapsed_ms)}
                   </span>
                 </div>
               </div>
 
-              {/* ── 3. Interactive Visual Audience Funnel Flow ── */}
+              {/* ── 3. Audience Journey (Funnel) ── */}
               <div className="pers-funnel-card">
                 <div className="funnel-header">
                   <div>
                     <h3 className="fh-title">
-                      <Target size={18} style={{ display: 'inline', marginRight: '0.5rem', verticalAlign: 'middle', color: '#D4AF37' }} />
-                      Audience Journey & Decision Funnel
+                      <Target size={16} style={{ display: 'inline', marginRight: '0.5rem', verticalAlign: 'middle', color: '#D4AF37' }} />
+                      Audience Journey & Step-by-Step Drop-off
                     </h3>
                     <div className="fh-sub">
-                      Step-by-step trace of how reader audience flowed from registered user count to phone delivery.
+                      Shows how many users started in this country and how many reached each milestone to receive a notification.
                     </div>
                   </div>
                   <button
@@ -774,7 +799,7 @@ export default function PersonalizationRunsPage() {
                     style={{ padding: '0.4rem 0.85rem', fontSize: '0.78rem' }}
                     onClick={() => openRunModal(lastRun)}
                   >
-                    <FileText size={14} /> Full Technical Details
+                    <FileText size={13} /> Full Report & JSON
                   </button>
                 </div>
 
@@ -818,89 +843,66 @@ export default function PersonalizationRunsPage() {
                 </div>
               </div>
 
-              {/* ── 4. Two-Column Row: Match Strength vs Required Cutoffs & Delivery Breakdown ── */}
+              {/* ── 4. Two-Column Row: Clean Score Benchmarks & Category Breakdown ── */}
               <div className="pers-grid-2">
-                {/* Column 1: Match Strength vs Cutoff */}
+                {/* Column 1: Match Score Benchmarks (Real Data, No Fake Multiplier Graph) */}
                 <div className="pers-card">
-                  <h3 className="pers-card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Target size={18} style={{ color: '#D4AF37' }} />
-                    Reader Match Scores vs Required Cutoffs
+                  <h3 className="pers-card-title">
+                    Reader Interest Score Benchmarks
                   </h3>
                   <div className="pers-card-subtitle">
-                    How strongly the candidate news stories matched reader interests compared against the minimum cutoff floor.
+                    How strongly the candidate news stories scored against reader preferences in this run.
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '1.25rem' }}>
-                    {/* Typical Reader Match Score (p50) */}
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.35rem' }}>
-                        <span>
-                          <strong>Typical Reader Match</strong> (Median / p50):
-                        </span>
-                        <span style={{ color: '#D4AF37', fontWeight: 700 }}>
-                          {(lastRun.matching?.score_p50 ?? 0).toFixed(4)}
-                        </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '1rem' }}>
+                    {/* p50 Median */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.65rem 0.85rem', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(212,175,55,0.12)' }}>
+                      <div>
+                        <strong style={{ fontSize: '0.85rem', display: 'block' }}>Typical Reader Match (Median / p50)</strong>
+                        <span style={{ fontSize: '0.74rem', color: '#8a8a8f' }}>Score of the middle reader in the group</span>
                       </div>
-                      <div className="fs-progress-track" style={{ height: '8px' }}>
-                        <div
-                          className="fs-progress-fill"
-                          style={{
-                            width: `${Math.min((lastRun.matching?.score_p50 ?? 0) * 400, 100)}%`,
-                            background: getScoreInterpretation(lastRun.matching?.score_p50 ?? 0).color,
-                          }}
-                        />
-                      </div>
-                      <div style={{ fontSize: '0.72rem', color: '#8a8a8f', marginTop: '0.25rem' }}>
-                        Level: {getScoreInterpretation(lastRun.matching?.score_p50 ?? 0).label}
-                      </div>
+                      <span style={{ color: '#D4AF37', fontWeight: 700, fontSize: '1.05rem', alignSelf: 'center' }}>
+                        {(lastRun.matching?.score_p50 ?? 0).toFixed(4)}
+                      </span>
                     </div>
 
-                    {/* Top 10% Strongest Matches (p90) */}
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.35rem' }}>
-                        <span>
-                          <strong>Top 10% Strongest Matches</strong> (p90):
-                        </span>
-                        <span style={{ color: '#86efac', fontWeight: 700 }}>
-                          {(lastRun.matching?.score_p90 ?? 0).toFixed(4)}
-                        </span>
+                    {/* p90 */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.65rem 0.85rem', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(212,175,55,0.12)' }}>
+                      <div>
+                        <strong style={{ fontSize: '0.85rem', display: 'block' }}>Top 10% Strongest Match (p90)</strong>
+                        <span style={{ fontSize: '0.74rem', color: '#8a8a8f' }}>90% of reader scores were below this</span>
                       </div>
-                      <div className="fs-progress-track" style={{ height: '8px' }}>
-                        <div
-                          className="fs-progress-fill"
-                          style={{
-                            width: `${Math.min((lastRun.matching?.score_p90 ?? 0) * 400, 100)}%`,
-                            background: '#86efac',
-                          }}
-                        />
-                      </div>
+                      <span style={{ color: '#86efac', fontWeight: 700, fontSize: '1.05rem', alignSelf: 'center' }}>
+                        {(lastRun.matching?.score_p90 ?? 0).toFixed(4)}
+                      </span>
                     </div>
 
-                    {/* Highest Cohort Score */}
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.35rem' }}>
-                        <span>
-                          <strong>Highest Cohort Score</strong>:
-                        </span>
-                        <span style={{ color: '#86efac', fontWeight: 700 }}>
-                          {(lastRun.matching?.score_max ?? 0).toFixed(4)}
-                        </span>
+                    {/* Max */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.65rem 0.85rem', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(212,175,55,0.12)' }}>
+                      <div>
+                        <strong style={{ fontSize: '0.85rem', display: 'block' }}>Highest Score in Run (Max)</strong>
+                        <span style={{ fontSize: '0.74rem', color: '#8a8a8f' }}>Single best article-to-reader match</span>
                       </div>
-                      <div className="fs-progress-track" style={{ height: '8px' }}>
-                        <div
-                          className="fs-progress-fill"
-                          style={{
-                            width: `${Math.min((lastRun.matching?.score_max ?? 0) * 400, 100)}%`,
-                            background: '#86efac',
-                          }}
-                        />
-                      </div>
+                      <span style={{ color: '#86efac', fontWeight: 700, fontSize: '1.05rem', alignSelf: 'center' }}>
+                        {(lastRun.matching?.score_max ?? 0).toFixed(4)}
+                      </span>
                     </div>
 
-                    {/* Active Threshold Floors Snapshot */}
-                    <div style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid rgba(212,175,55,0.15)' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#D4AF37', textTransform: 'uppercase', marginBottom: '0.6rem' }}>
-                        Active Cutoff Floors (This Run)
+                    {/* Mean */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.65rem 0.85rem', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(212,175,55,0.12)' }}>
+                      <div>
+                        <strong style={{ fontSize: '0.85rem', display: 'block' }}>Average Match Score (Mean)</strong>
+                        <span style={{ fontSize: '0.74rem', color: '#8a8a8f' }}>Overall average across all evaluated readers</span>
+                      </div>
+                      <span style={{ color: '#a8956b', fontWeight: 700, fontSize: '1.05rem', alignSelf: 'center' }}>
+                        {(lastRun.matching?.score_mean ?? 0).toFixed(4)}
+                      </span>
+                    </div>
+
+                    {/* Active Threshold Floors */}
+                    <div style={{ marginTop: '0.4rem', paddingTop: '0.85rem', borderTop: '1px solid rgba(212,175,55,0.15)' }}>
+                      <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#D4AF37', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                        Required Cutoff Floors for this Run
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                         {Object.entries(lastRun.config?.thresholds ?? {}).map(([topic, threshold]) => (
@@ -908,9 +910,9 @@ export default function PersonalizationRunsPage() {
                             key={topic}
                             style={{
                               background: 'rgba(212,175,55,0.06)',
-                              border: '1px solid rgba(212,175,55,0.25)',
-                              borderRadius: '6px',
-                              padding: '0.35rem 0.65rem',
+                              border: '1px solid rgba(212,175,55,0.22)',
+                              borderRadius: '5px',
+                              padding: '0.3rem 0.6rem',
                               fontSize: '0.78rem',
                               display: 'flex',
                               gap: '0.4rem',
@@ -927,12 +929,11 @@ export default function PersonalizationRunsPage() {
 
                 {/* Column 2: Category Delivery Breakdown */}
                 <div className="pers-card">
-                  <h3 className="pers-card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Layers size={18} style={{ color: '#D4AF37' }} />
-                    Category Delivery Breakdown
+                  <h3 className="pers-card-title">
+                    Delivery by News Category
                   </h3>
                   <div className="pers-card-subtitle">
-                    Notifications dispatched to mobile devices grouped by news topic.
+                    Notifications sent to devices grouped by category.
                   </div>
 
                   {lastRun.dispatch?.per_topic && Object.keys(lastRun.dispatch.per_topic).length > 0 ? (
@@ -955,7 +956,7 @@ export default function PersonalizationRunsPage() {
                               <span className="ts-val-failed">{stats.failed.toLocaleString()}</span>
                             </div>
                             <div className="ts-item">
-                              <span className="ts-label">Success</span>
+                              <span className="ts-label">Success Rate</span>
                               <span className="ts-val">
                                 {stats.sent + stats.failed > 0
                                   ? `${((stats.sent / (stats.sent + stats.failed)) * 100).toFixed(0)}%`
@@ -968,7 +969,7 @@ export default function PersonalizationRunsPage() {
                     </div>
                   ) : (
                     <div style={{ padding: '2rem', textAlign: 'center', color: '#8a8a8f', fontSize: '0.85rem' }}>
-                      No per-category breakdown available for this run.
+                      No per-category breakdown recorded for this run.
                     </div>
                   )}
 
@@ -985,135 +986,104 @@ export default function PersonalizationRunsPage() {
                     }}
                   >
                     <div>
-                      <span style={{ color: '#8a8a8f' }}>Unique Story Bundles:</span>
-                      <strong style={{ display: 'block', color: '#D4AF37' }}>
-                        {lastRun.matching?.distinct_payload_groups ?? 0} multicast payloads
+                      <span style={{ color: '#8a8a8f' }}>Unique Notification Bundles:</span>
+                      <strong style={{ display: 'block', color: '#D4AF37', marginTop: '0.15rem' }}>
+                        {lastRun.matching?.distinct_payload_groups ?? 0} article bundles
                       </strong>
                     </div>
                     <div>
-                      <span style={{ color: '#8a8a8f' }}>7-Day History Dedup:</span>
-                      <strong style={{ display: 'block', color: '#86efac' }}>
-                        {lastRun.matching?.recent_push_dedup_count ?? 0} duplicate stories filtered
+                      <span style={{ color: '#8a8a8f' }}>Filtered Past 7-Day Stories:</span>
+                      <strong style={{ display: 'block', color: '#86efac', marginTop: '0.15rem' }}>
+                        {lastRun.matching?.recent_push_dedup_count ?? 0} duplicates skipped
                       </strong>
                     </div>
                   </div>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
       )}
 
       {/* ──────────────────────────────────────────────────────────── */}
-      {/*  TAB 2: RUN HISTORY & TRENDS                                 */}
+      {/*  TAB 2: RUN HISTORY & PAST LOGS                              */}
       {/* ──────────────────────────────────────────────────────────── */}
       {activeTab === 'history' && (
-        <div ref={historyRef}>
-          {loadingRecentRuns ? (
-            <div className="pers-loading">
-              <div className="pers-spinner" />
-              <p>Loading {selectedDays}-day history for {selectedCountry}...</p>
+        <div>
+          {isAuthorizing || loadingRecentRuns ? (
+            <div className="pers-card">
+              <HistoryTableSkeleton />
             </div>
           ) : !recentRuns || recentRuns.runs.length === 0 ? (
             <div className="pers-card" style={{ textAlign: 'center', padding: '3.5rem 2rem' }}>
-              <Info size={40} style={{ color: '#D4AF37', margin: '0 auto 1rem', display: 'block' }} />
-              <h3 style={{ fontSize: '1.25rem', color: '#fafafa', marginBottom: '0.5rem' }}>
+              <Info size={36} style={{ color: '#D4AF37', margin: '0 auto 1rem', display: 'block' }} />
+              <h3 style={{ fontSize: '1.2rem', color: '#fafafa', marginBottom: '0.5rem' }}>
                 No Runs Found in the Last {selectedDays} Days
               </h3>
               <p style={{ color: '#8a8a8f', maxWidth: '480px', margin: '0 auto' }}>
-                There are no recorded personalization runs for {selectedCountry} in this time window.
-                Try widening your lookback to 30 or 90 days.
+                There are no recorded notification delivery runs for {selectedCountry} in this time period.
+                Try widening your time window to 30 or 90 days.
               </p>
             </div>
           ) : (
-            <>
-              {/* ── 1. Recharts Trend Area Chart ── */}
-              <div className="pers-chart-wrap">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <div>
-                    <h3 className="chart-title" style={{ margin: 0 }}>
-                      Delivery Reach vs Relevance Cutoff Drift
-                    </h3>
-                    <div style={{ fontSize: '0.78rem', color: '#8a8a8f', marginTop: '0.2rem' }}>
-                      Watch for drift: A rising amber line indicates that relevance cutoffs are gating too aggressively.
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.75rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#86efac' }} />
-                      <span style={{ color: '#86efac' }}>Audience Reached %</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#fde047' }} />
-                      <span style={{ color: '#fde047' }}>Relevance Filtered %</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#93c5fd' }} />
-                      <span style={{ color: '#93c5fd' }}>New Readers %</span>
-                    </div>
-                  </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* ── Summary Cards for the Historical Window ── */}
+              <div className="pers-stats-row" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+                <div className="pers-stat-card">
+                  <span className="stat-label">Runs Recorded</span>
+                  <span className="stat-value">{totalRunsCount}</span>
+                  <span className="stat-sub">in the last {selectedDays} days</span>
                 </div>
-
-                <div style={{ width: '100%', height: 320 }}>
-                  <ResponsiveContainer>
-                    <AreaChart data={trendChartData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="reachGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#86efac" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#86efac" stopOpacity={0.0} />
-                        </linearGradient>
-                        <linearGradient id="dropGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#fde047" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#fde047" stopOpacity={0.0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(212, 175, 55, 0.1)' : '#eaeaea'} />
-                      <XAxis
-                        dataKey="label"
-                        stroke={isDark ? '#8a8a8f' : '#666'}
-                        fontSize={11}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        stroke={isDark ? '#8a8a8f' : '#666'}
-                        fontSize={11}
-                        domain={[0, 100]}
-                        tickFormatter={(v) => `${v}%`}
-                        tickLine={false}
-                      />
-                      <Tooltip content={<CustomTrendTooltip isDark={isDark} />} />
-                      <Area
-                        type="monotone"
-                        dataKey="push_rate_pct"
-                        name="Audience Reach %"
-                        stroke="#86efac"
-                        strokeWidth={2.5}
-                        fillOpacity={1}
-                        fill="url(#reachGrad)"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="threshold_drop_rate_pct"
-                        name="Relevance Filtered %"
-                        stroke="#fde047"
-                        strokeWidth={2}
-                        fillOpacity={1}
-                        fill="url(#dropGrad)"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                <div className="pers-stat-card">
+                  <span className="stat-label">Average Reach</span>
+                  <span className="stat-value" style={{ color: '#86efac' }}>{avgPushRate}%</span>
+                  <span className="stat-sub">of available audience</span>
+                </div>
+                <div className="pers-stat-card">
+                  <span className="stat-label">Average Cutoff Filtered</span>
+                  <span className="stat-value" style={{ color: '#fde047' }}>{avgDropRate}%</span>
+                  <span className="stat-sub">held back by cutoff</span>
+                </div>
+                <div className="pers-stat-card">
+                  <span className="stat-label">Total Delivered</span>
+                  <span className="stat-value" style={{ color: '#D4AF37' }}>{totalDeliveredInWindow.toLocaleString()}</span>
+                  <span className="stat-sub">alerts sent across all slots</span>
                 </div>
               </div>
 
-              {/* ── 2. Historical Runs Table ── */}
+              {/* ── Historical Runs Table ── */}
               <div className="pers-table-wrapper">
                 <div className="table-toolbar">
-                  <div className="tt-title">
-                    Run Logs — {recentRuns.count} {recentRuns.count === 1 ? 'Run' : 'Runs'} in {recentRuns.days} Days
+                  <div>
+                    <div className="tt-title">
+                      Delivery Run Logs ({filteredRuns.length} of {recentRuns.count} runs)
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#8a8a8f', marginTop: '0.15rem' }}>
+                      Click any row to inspect the full report and view raw data.
+                    </div>
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#8a8a8f' }}>
-                    Click any run row to view complete breakdown & JSON
+
+                  {/* Search box */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <Search size={14} style={{ position: 'absolute', left: '0.75rem', color: '#8a8a8f' }} />
+                      <input
+                        type="text"
+                        placeholder="Filter by date or slot..."
+                        value={historySearch}
+                        onChange={(e) => setHistorySearch(e.target.value)}
+                        style={{
+                          background: isDark ? '#060606' : '#ffffff',
+                          border: '1px solid rgba(212,175,55,0.25)',
+                          borderRadius: '6px',
+                          padding: '0.45rem 0.75rem 0.45rem 2.2rem',
+                          color: isDark ? '#fafafa' : '#111111',
+                          fontSize: '0.8rem',
+                          outline: 'none',
+                          minWidth: '220px',
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1123,64 +1093,72 @@ export default function PersonalizationRunsPage() {
                       <tr>
                         <th>Date & Time</th>
                         <th>Slot</th>
-                        <th>Status</th>
-                        <th>Stories</th>
-                        <th>Eligible</th>
+                        <th>Outcome</th>
+                        <th>Articles</th>
+                        <th>Eligible Audience</th>
                         <th>Matched</th>
                         <th>Reach Rate</th>
-                        <th>Cutoff Drop</th>
-                        <th>Compute Time</th>
-                        <th style={{ textAlign: 'right' }}>Actions</th>
+                        <th>Held Back Rate</th>
+                        <th>Speed</th>
+                        <th style={{ textAlign: 'right' }}>Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {recentRuns.runs.map((r, idx) => {
-                        const sMeta = getStatusMeta(r.status);
-                        return (
-                          <tr key={`${r.date}-${r.slot}-${idx}`} onClick={() => openRunModal(r)}>
-                            <td style={{ fontWeight: 600 }}>{formatDate(r.run_at || r.date)}</td>
-                            <td>
-                              <span style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
-                                Slot {r.slot}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={`pers-badge ${sMeta.badgeClass}`}>
-                                {sMeta.label}
-                              </span>
-                            </td>
-                            <td>{r.candidate_articles ?? 0}</td>
-                            <td>{r.cohort?.eligible_for_match?.toLocaleString() ?? 0}</td>
-                            <td style={{ color: '#86efac', fontWeight: 700 }}>
-                              {r.matching?.users_matched?.toLocaleString() ?? 0}
-                            </td>
-                            <td style={{ fontWeight: 700 }}>
-                              {r.rates?.push_rate_pct?.toFixed(1) ?? '0'}%
-                            </td>
-                            <td style={{ color: '#fde047' }}>
-                              {r.rates?.threshold_drop_rate_pct?.toFixed(1) ?? '0'}%
-                            </td>
-                            <td style={{ color: '#8a8a8f' }}>{formatDuration(r.elapsed_ms)}</td>
-                            <td style={{ textAlign: 'right' }}>
-                              <button
-                                className="pers-btn pers-btn-secondary"
-                                style={{ padding: '0.25rem 0.65rem', fontSize: '0.72rem' }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openRunModal(r);
-                                }}
-                              >
-                                Inspect <ChevronRight size={12} />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {filteredRuns.length === 0 ? (
+                        <tr>
+                          <td colSpan={10} style={{ textAlign: 'center', padding: '2rem', color: '#8a8a8f' }}>
+                            No runs match your search query.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredRuns.map((r, idx) => {
+                          const sMeta = getStatusMeta(r.status);
+                          return (
+                            <tr key={`${r.date}-${r.slot}-${idx}`} onClick={() => openRunModal(r)}>
+                              <td style={{ fontWeight: 600 }}>{formatDate(r.run_at || r.date)}</td>
+                              <td>
+                                <span style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
+                                  Slot {r.slot}
+                                </span>
+                              </td>
+                              <td>
+                                <span className={`pers-badge ${sMeta.badgeClass}`}>
+                                  {sMeta.label}
+                                </span>
+                              </td>
+                              <td>{r.candidate_articles ?? 0}</td>
+                              <td>{r.cohort?.eligible_for_match?.toLocaleString() ?? 0}</td>
+                              <td style={{ color: '#86efac', fontWeight: 700 }}>
+                                {r.matching?.users_matched?.toLocaleString() ?? 0}
+                              </td>
+                              <td style={{ fontWeight: 700 }}>
+                                {r.rates?.push_rate_pct?.toFixed(1) ?? '0'}%
+                              </td>
+                              <td style={{ color: '#fde047' }}>
+                                {r.rates?.threshold_drop_rate_pct?.toFixed(1) ?? '0'}%
+                              </td>
+                              <td style={{ color: '#8a8a8f' }}>{formatDuration(r.elapsed_ms)}</td>
+                              <td style={{ textAlign: 'right' }}>
+                                <button
+                                  className="pers-btn pers-btn-secondary"
+                                  style={{ padding: '0.25rem 0.65rem', fontSize: '0.72rem' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openRunModal(r);
+                                  }}
+                                >
+                                  Inspect <ChevronRight size={12} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
       )}
