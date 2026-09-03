@@ -597,6 +597,423 @@ $text-label:    #a8956b;
     }
   }
 
+  // ── Navigation Tabs ─────────────────────────────────────────
+  .pers-tab-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid $border-gold;
+    margin-bottom: 1.75rem;
+    padding-bottom: 0.25rem;
+
+    .pers-tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.25rem;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: $text-muted;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        color: $text-primary;
+      }
+
+      &.active {
+        color: $gold;
+        border-bottom-color: $gold;
+      }
+    }
+  }
+
+  // ── Pill Selector Group (Slots & Days) ──────────────────────
+  .pers-pill-group {
+    display: inline-flex;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid $border-gold;
+    border-radius: 8px;
+    padding: 0.25rem;
+    gap: 0.25rem;
+
+    .pers-pill-btn {
+      padding: 0.35rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: transparent;
+      border: none;
+      color: $text-muted;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      white-space: nowrap;
+
+      &:hover {
+        color: $text-primary;
+        background-color: rgba(212, 175, 55, 0.08);
+      }
+
+      &.active {
+        background-color: rgba(212, 175, 55, 0.18);
+        color: $gold;
+        font-weight: 700;
+      }
+    }
+  }
+
+  // ── Diagnostic Card (Plain English Answer) ──────────────────
+  .pers-diagnostic-card {
+    border-radius: 10px;
+    padding: 1.5rem 1.75rem;
+    margin-bottom: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    position: relative;
+    overflow: hidden;
+
+    &.diag-success {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(17, 17, 17, 0.95) 100%);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      .diag-title { color: #86efac; }
+      .diag-icon { color: #4ade80; background: rgba(34, 197, 94, 0.15); }
+    }
+    &.diag-warning {
+      background: linear-gradient(135deg, rgba(234, 179, 8, 0.1) 0%, rgba(17, 17, 17, 0.95) 100%);
+      border: 1px solid rgba(234, 179, 8, 0.35);
+      .diag-title { color: #fde047; }
+      .diag-icon { color: #facc15; background: rgba(234, 179, 8, 0.15); }
+    }
+    &.diag-info {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(17, 17, 17, 0.95) 100%);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      .diag-title { color: #a5b4fc; }
+      .diag-icon { color: #818cf8; background: rgba(99, 102, 241, 0.15); }
+    }
+    &.diag-error {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(17, 17, 17, 0.95) 100%);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      .diag-title { color: #f87171; }
+      .diag-icon { color: #ef4444; background: rgba(239, 68, 68, 0.15); }
+    }
+
+    .diag-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .diag-icon {
+      width: 2.75rem;
+      height: 2.75rem;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .diag-content {
+      flex: 1;
+
+      .diag-badge-row {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 0.35rem;
+
+        .diag-tag {
+          font-size: 0.68rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: $text-label;
+        }
+      }
+
+      .diag-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin: 0 0 0.4rem 0;
+      }
+
+      .diag-summary {
+        font-size: 0.92rem;
+        line-height: 1.5;
+        color: $text-primary;
+        margin: 0 0 0.5rem 0;
+      }
+
+      .diag-detail {
+        font-size: 0.82rem;
+        line-height: 1.5;
+        color: $text-muted;
+      }
+    }
+
+    .diag-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+    }
+  }
+
+  // ── Audience Funnel Flow ─────────────────────────────────────
+  .pers-funnel-card {
+    background-color: $card-bg;
+    border: 1px solid $border-gold;
+    border-radius: 8px;
+    padding: 1.75rem;
+    margin-bottom: 2rem;
+
+    .funnel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+
+      .fh-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: $text-primary;
+        margin: 0 0 0.3rem 0;
+      }
+      .fh-sub {
+        font-size: 0.8rem;
+        color: $text-muted;
+      }
+    }
+
+    .funnel-steps-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .funnel-step {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(212, 175, 55, 0.12);
+      border-radius: 8px;
+      padding: 1.15rem 1.35rem;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: rgba(212, 175, 55, 0.3);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .fs-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.6rem;
+      }
+
+      .fs-left {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+
+        .fs-num {
+          width: 1.8rem;
+          height: 1.8rem;
+          border-radius: 50%;
+          background: rgba(212, 175, 55, 0.15);
+          color: $gold;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.78rem;
+          font-weight: 700;
+        }
+
+        .fs-title-box {
+          .fs-name {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: $text-primary;
+          }
+          .fs-desc {
+            font-size: 0.76rem;
+            color: $text-muted;
+          }
+        }
+      }
+
+      .fs-right {
+        display: flex;
+        align-items: baseline;
+        gap: 0.75rem;
+
+        .fs-count {
+          font-size: 1.3rem;
+          font-weight: 700;
+          color: $text-primary;
+        }
+        .fs-pct {
+          font-size: 0.8rem;
+          color: $gold;
+          font-weight: 600;
+        }
+      }
+
+      .fs-progress-track {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 3px;
+        overflow: hidden;
+
+        .fs-progress-fill {
+          height: 100%;
+          border-radius: 3px;
+          background: linear-gradient(90deg, #D4AF37 0%, #86efac 100%);
+          transition: width 0.4s ease;
+        }
+      }
+    }
+
+    .funnel-drop-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.35rem 1rem 0.35rem 2.8rem;
+      font-size: 0.76rem;
+      color: $text-muted;
+
+      .drop-arrow {
+        color: rgba(239, 68, 68, 0.7);
+        font-size: 0.9rem;
+      }
+      .drop-text {
+        color: #fca5a5;
+      }
+      .drop-pill {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        border-radius: 4px;
+        padding: 0.15rem 0.45rem;
+        font-size: 0.68rem;
+        color: #fca5a5;
+        font-weight: 600;
+      }
+    }
+  }
+
+  // ── Category Topics Grid ────────────────────────────────────
+  .pers-topics-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+
+    @media (min-width: 640px) { grid-template-columns: repeat(2, 1fr); }
+    @media (min-width: 1024px) { grid-template-columns: repeat(3, 1fr); }
+
+    .topic-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid $border-gold;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+
+      .topic-name {
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: capitalize;
+        color: $gold;
+        margin-bottom: 0.6rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .topic-stats {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.78rem;
+
+        .ts-item {
+          display: flex;
+          flex-direction: column;
+          gap: 0.15rem;
+
+          .ts-label { color: $text-muted; font-size: 0.7rem; }
+          .ts-val { font-weight: 700; color: $text-primary; }
+          .ts-val-sent { color: #86efac; font-weight: 700; }
+          .ts-val-failed { color: #f87171; font-weight: 700; }
+        }
+      }
+    }
+  }
+
+  // ── Historical Runs Table ───────────────────────────────────
+  .pers-table-wrapper {
+    background-color: $card-bg;
+    border: 1px solid $border-gold;
+    border-radius: 8px;
+    overflow: hidden;
+
+    .table-toolbar {
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      border-bottom: 1px solid $border-gold;
+
+      .tt-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: $text-primary;
+      }
+    }
+
+    .pers-data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.85rem;
+
+      th {
+        padding: 0.85rem 1.25rem;
+        background: rgba(255, 255, 255, 0.02);
+        color: $text-label;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        border-bottom: 1px solid $border-gold;
+        white-space: nowrap;
+      }
+
+      td {
+        padding: 0.95rem 1.25rem;
+        border-bottom: 1px solid rgba(212, 175, 55, 0.08);
+        color: $text-primary;
+        vertical-align: middle;
+      }
+
+      tbody tr {
+        transition: background-color 0.15s ease;
+        cursor: pointer;
+
+        &:hover {
+          background-color: rgba(212, 175, 55, 0.04);
+        }
+      }
+    }
+  }
+
   // ── Light Mode overrides ─────────────────────────────────────
   &.light-mode {
     background-color: #f9f9f9 !important;
@@ -607,10 +1024,45 @@ $text-label:    #a8956b;
     .pers-card,
     .pers-chart-wrap,
     .pers-stat-card,
+    .pers-funnel-card,
+    .pers-table-wrapper,
     .threshold-tier-card {
       background-color: #ffffff !important;
       border-color: rgba(212, 175, 55, 0.3) !important;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+    }
+
+    .funnel-step,
+    .topic-card {
+      background: #fafafa !important;
+      border-color: rgba(212, 175, 55, 0.25) !important;
+    }
+
+    .pers-tab-nav {
+      border-bottom-color: rgba(212, 175, 55, 0.3);
+      .pers-tab-btn {
+        color: #666;
+        &.active { color: #b48a04; border-bottom-color: #b48a04; }
+      }
+    }
+
+    .pers-pill-group {
+      background-color: #f0f0f0;
+      border-color: rgba(212, 175, 55, 0.3);
+      .pers-pill-btn {
+        color: #555;
+        &.active {
+          background-color: #ffffff;
+          color: #b48a04;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+      }
+    }
+
+    .pers-data-table {
+      th { background-color: #f5f5f5 !important; color: #666 !important; }
+      td { color: #222 !important; border-bottom-color: #eee !important; }
+      tbody tr:hover { background-color: #fcf8ee !important; }
     }
 
     .pers-chip {

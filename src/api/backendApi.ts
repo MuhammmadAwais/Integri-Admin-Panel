@@ -1843,3 +1843,129 @@ export const MemoryBackfillService = {
     }
   }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  📊 PERSONALIZATION RUN SUMMARIES — Types & Services
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PersoCohortFunnel {
+  enumerated: number;           // total users found in Firestore
+  no_vector: number;            // skipped — no personalization vector
+  stale_vector: number;         // skipped — vector built on old taxonomy
+  with_vector: number;          // users that cleared the vector gate
+  frequency_capped: number;     // already hit daily push cap
+  eligible_for_match: number;   // passed to the cosine matcher
+}
+
+export interface PersoMatchingStats {
+  scored_users: number;          // users with ≥1 scorable article
+  users_no_signal: number;        // zero-norm vector — no topical signal
+  users_below_threshold: number; // had signal but no article cleared threshold
+  users_matched: number;         // ≥1 article passed threshold → will receive push
+  pushes_assigned: number;       // total (user, article) assignments
+  distinct_payload_groups: number;// unique (article_id, lang) FCM multicasts
+  recent_push_dedup_count: number;// articles deduped (7-day window)
+  score_p50: number;             // median of each user's best article score
+  score_p90: number;             // 90th percentile
+  score_p99: number;             // 99th percentile
+  score_max: number;             // highest score in cohort
+  score_mean: number;            // mean of best scores
+}
+
+export interface PersoTopicDispatch {
+  sent: number;
+  failed: number;
+  batches: number;
+}
+
+export interface PersoDispatchStats {
+  sent: number;
+  failed: number;
+  batches: number;
+  per_topic?: Record<string, PersoTopicDispatch>;
+  committed_users: number;       // push succeeded → frequency cap committed
+  failed_users: number;
+}
+
+export interface PersoConfigSnapshot {
+  thresholds: Record<string, number>; // per-tier cosine floors used this run
+  top_k: number;
+  max_pool: number;
+  scoring_method: string;             // "embedding" or "keyword"
+  taxonomy_hash?: string;
+}
+
+export interface PersoDerivedRates {
+  push_rate_pct: number;           // users_matched / eligible × 100
+  threshold_drop_rate_pct: number; // users_below_threshold / eligible × 100
+  cold_start_rate_pct: number;     // no_vector / enumerated × 100
+}
+
+export type PersoRunStatus = 
+  | 'ok'
+  | 'empty_pool'
+  | 'no_scoreable_articles'
+  | 'no_users'
+  | 'no_user_vectors'
+  | 'all_frequency_capped'
+  | 'no_matches'
+  | 'error'
+  | string;
+
+export interface PersoRunSummary {
+  country: string;
+  slot: number;
+  date: string;
+  run_at: string;
+  status: PersoRunStatus;
+  reason?: string;
+  candidate_articles: number;
+  elapsed_ms: number;
+  cohort: PersoCohortFunnel;
+  matching: PersoMatchingStats;
+  dispatch: PersoDispatchStats;
+  config: PersoConfigSnapshot;
+  rates: PersoDerivedRates;
+}
+
+export interface PersoRunSummaryList {
+  country: string;
+  days: number;
+  count: number;
+  runs: PersoRunSummary[];
+}
+
+export const PersonalizationRunsService = {
+  /** GET /api/v1/news/admin/personalization/last-run/{country}?slot=N */
+  fetchLastRun: async (country: string, slot?: number): Promise<PersoRunSummary> => {
+    try {
+      const params: Record<string, any> = {};
+      if (slot !== undefined && slot !== null) {
+        params.slot = slot;
+      }
+      const response = await backendApi.get<PersoRunSummary>(
+        `/api/v1/news/admin/personalization/last-run/${encodeURIComponent(country)}`,
+        { params, skipToast: true } as any
+      );
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [PersonalizationRunsService] fetchLastRun error for ${country}:`, e);
+      throw e;
+    }
+  },
+
+  /** GET /api/v1/news/admin/personalization/runs/{country}?days=N */
+  fetchRecentRuns: async (country: string, days: number = 7): Promise<PersoRunSummaryList> => {
+    try {
+      const response = await backendApi.get<PersoRunSummaryList>(
+        `/api/v1/news/admin/personalization/runs/${encodeURIComponent(country)}`,
+        { params: { days }, skipToast: true } as any
+      );
+      return response.data;
+    } catch (e) {
+      console.error(`❌ [PersonalizationRunsService] fetchRecentRuns error for ${country}:`, e);
+      throw e;
+    }
+  }
+};
+
