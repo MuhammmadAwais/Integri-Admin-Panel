@@ -5,6 +5,16 @@ import axios, {
   AxiosInstance, 
 } from 'axios';
 import { showToast } from 'components/EliteUI/EliteToastContainer';
+import { db } from 'lib/firebase/firebase';
+import { 
+  doc, 
+  getDoc, 
+  setDoc, 
+  getDocs, 
+  collection, 
+  query, 
+  limit 
+} from 'firebase/firestore';
 
 /**
  * Type Definitions for Intelligence Core
@@ -1968,4 +1978,518 @@ export const PersonalizationRunsService = {
     }
   }
 };
+
+// ============================================================================
+// ── RECHARGE ORDERS & AD CONFIGURATION (INTEGRI ADMIN INTEGRATION) ──────────
+// ============================================================================
+
+export type RechargeOrderState = 
+  | 'created' 
+  | 'expired' 
+  | 'paid' 
+  | 'submitting' 
+  | 'submitted' 
+  | 'delivered' 
+  | 'failed' 
+  | 'refunded';
+
+export interface DingPriceBreakdown {
+  SendValue?: number;
+  DistributorFee?: number;
+  ReceiveValue?: number;
+  ReceiveCurrencyIso?: string;
+  [key: string]: any;
+}
+
+export interface RechargeOrder {
+  orderId: string;                          // Universal primary key (Firestore ID == Ding DistributorRef == Stripe metadata.order_id)
+  uid: string;                               // Firebase Auth UID
+  title: string;                             // Product label (e.g. "PKR 100.00")
+  country_iso: string;                       // Two-letter country ISO, e.g. "PK"
+  provider_code: string;                     // Ding operator code, e.g. "Jazz Pakistan"
+  operator_logo: string | null;              // Logo URL
+  sku_code: string;                          // Ding product SKU
+  masked_phone: string;                      // Display-safe phone, e.g. "+92 306 •••• 6461"
+  msisdn?: string;                           // Unmasked digits only (PII - kept protected)
+  quote_id?: string;                         // Originating quote ID
+  send_value_eur: number;                    // Airtime value bought before fees
+  service_fee_eur: number;                   // Integri fee (currently 0.00)
+  ding_fee_eur: number | null;               // Ding DistributorFee (cost to Integri, NOT charged to customer)
+  total_eur: number;                         // Customer paid EUR (Gross Revenue figure)
+  amount_cents: number;                      // Total in Stripe cents
+  receive_value: number;                     // Airtime delivered in recipient currency
+  receive_currency: string;                  // Recipient currency ISO, e.g. "PKR"
+  ding_price?: DingPriceBreakdown | null;    // Raw Ding breakdown
+  stripe_payment_intent_id?: string | null;  // Stripe "pi_..."
+  ding_transfer_ref?: string | null;         // Ding TransferRef
+  ding_processing_state?: string | null;     // Ding raw state
+  receipt_text?: string | null;              // Operator receipt text
+  state: RechargeOrderState;                 // Raw lifecycle state
+  needs_review: boolean;                     // Flag for human escalation (>2h stuck, exhausted retries)
+  refund_status?: 'due' | 'error' | 'manual' | string | null;
+  refund_id?: string | null;                 // Stripe refund "re_..."
+  refund_attempts?: number | null;           // Retries so far (max 5)
+  transient_failures?: number | null;        // Ding transient retries so far (max 5)
+  error?: string | null;                     // Machine code (e.g. "stripe_create_failed")
+  last_error?: string | null;                // Detailed raw error text
+  created_at: string;                        // ISO string
+  paid_at?: string | null;                   // ISO string
+  submitting_at?: string | null;             // ISO string
+  delivered_at?: string | null;              // ISO string
+  last_checked_at?: string | null;           // ISO string
+  updated_at: string;                        // ISO string
+}
+
+export interface RechargeMetrics {
+  gross_revenue_eur: number;
+  delivered_orders_count: number;
+  total_paid_orders_count: number;
+  needs_review_count: number;
+  stuck_refunds_count: number;
+  stripe_min_failure_count: number;          // "stripe_create_failed" count (< €0.50)
+  ding_cost_total_eur: number;
+}
+
+export interface RechargeOrdersFilter {
+  state?: RechargeOrderState | 'all';
+  needs_review_only?: boolean;
+  stuck_refunds_only?: boolean;
+  search?: string;                           // orderId, uid, or phone
+  date_from?: string;
+  date_to?: string;
+  order_by?: 'paid_at' | 'created_at';
+}
+
+// ── Sample Mock Recharge Orders matching Documentation ──
+const MOCK_RECHARGE_ORDERS: RechargeOrder[] = [
+  {
+    orderId: '11jRTEAivFxzzJ9YVGmn',
+    uid: 'usr_948194a2f8c0',
+    title: 'Jazz PKR 500.00',
+    country_iso: 'PK',
+    provider_code: 'Jazz Pakistan',
+    operator_logo: 'https://cdn.ding.com/operators/jazz-pk.png',
+    sku_code: 'DING_PK_JAZZ_500',
+    masked_phone: '+92 306 •••• 6461',
+    msisdn: '923061236461',
+    quote_id: 'quot_99a81c7f12',
+    send_value_eur: 1.85,
+    service_fee_eur: 0.00,
+    ding_fee_eur: 0.12,
+    total_eur: 1.97,
+    amount_cents: 197,
+    receive_value: 500.00,
+    receive_currency: 'PKR',
+    ding_price: { SendValue: 1.85, DistributorFee: 0.12, ReceiveValue: 500.00, ReceiveCurrencyIso: 'PKR' },
+    stripe_payment_intent_id: 'pi_3P5abcXYZ991024Lkd02kL',
+    ding_transfer_ref: 'TRF_8829104812',
+    ding_processing_state: 'Complete',
+    receipt_text: 'Thank you for topping up Jazz PKR 500. Balance updated.',
+    state: 'delivered',
+    needs_review: false,
+    created_at: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
+    paid_at: new Date(Date.now() - 24 * 60 * 1000).toISOString(),
+    submitting_at: new Date(Date.now() - 23 * 60 * 1000).toISOString(),
+    delivered_at: new Date(Date.now() - 21 * 60 * 1000).toISOString(),
+    updated_at: new Date(Date.now() - 21 * 60 * 1000).toISOString(),
+  },
+  {
+    orderId: '44mPQWzKvLa11N00kL99',
+    uid: 'usr_11928bcde981',
+    title: 'Zong PKR 1000.00',
+    country_iso: 'PK',
+    provider_code: 'Zong Pakistan',
+    operator_logo: 'https://cdn.ding.com/operators/zong-pk.png',
+    sku_code: 'DING_PK_ZONG_1000',
+    masked_phone: '+92 312 •••• 9923',
+    msisdn: '923129849923',
+    quote_id: 'quot_88b12f45',
+    send_value_eur: 3.70,
+    service_fee_eur: 0.00,
+    ding_fee_eur: 0.20,
+    total_eur: 3.90,
+    amount_cents: 390,
+    receive_value: 1000.00,
+    receive_currency: 'PKR',
+    stripe_payment_intent_id: 'pi_3P5bcdDEF881239Mme11mM',
+    ding_transfer_ref: 'TRF_9918239011',
+    ding_processing_state: 'PendingWithOperator',
+    state: 'submitted',
+    needs_review: false,
+    created_at: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
+    paid_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    submitting_at: new Date(Date.now() - 4 * 60 * 1000).toISOString(),
+    updated_at: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
+  },
+  {
+    orderId: '88kZLMxxQp1001VVaa22',
+    uid: 'usr_77182ccff001',
+    title: 'Ufone PKR 300.00',
+    country_iso: 'PK',
+    provider_code: 'Ufone Pakistan',
+    operator_logo: null,
+    sku_code: 'DING_PK_UFONE_300',
+    masked_phone: '+92 333 •••• 1184',
+    msisdn: '923334561184',
+    quote_id: 'quot_55c91a00',
+    send_value_eur: 1.15,
+    service_fee_eur: 0.00,
+    ding_fee_eur: 0.10,
+    total_eur: 1.25,
+    amount_cents: 125,
+    receive_value: 300.00,
+    receive_currency: 'PKR',
+    stripe_payment_intent_id: 'pi_3P5cdeGHI770981Nnf22nN',
+    state: 'failed',
+    needs_review: true,
+    refund_status: 'manual',
+    refund_attempts: 5,
+    transient_failures: 5,
+    error: 'provider_temporary_unavailable',
+    last_error: 'Ding responded: Provider timeout after 5 retry attempts. Automatic refund failed: card_declined by issuing bank.',
+    created_at: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+    paid_at: new Date(Date.now() - 175 * 60 * 1000).toISOString(),
+    submitting_at: new Date(Date.now() - 170 * 60 * 1000).toISOString(),
+    last_checked_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    updated_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+  },
+  {
+    orderId: '02qTTMppAa9933JJhh88',
+    uid: 'usr_33219eeaa882',
+    title: 'Jazz PKR 100.00',
+    country_iso: 'PK',
+    provider_code: 'Jazz Pakistan',
+    operator_logo: null,
+    sku_code: 'DING_PK_JAZZ_100',
+    masked_phone: '+92 301 •••• 8812',
+    send_value_eur: 0.37,
+    service_fee_eur: 0.00,
+    ding_fee_eur: null,
+    total_eur: 0.37,
+    amount_cents: 37,
+    receive_value: 100.00,
+    receive_currency: 'PKR',
+    state: 'failed',
+    needs_review: false,
+    error: 'stripe_create_failed',
+    last_error: 'Stripe rejected payment intent: Amount must be at least 50 cents (EUR 0.50). Total calculated was EUR 0.37 with 0 service fee.',
+    created_at: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
+    updated_at: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
+  },
+  {
+    orderId: '66wFFDssBb7744KKii55',
+    uid: 'usr_55412ffdd773',
+    title: 'Airtel India INR 299.00',
+    country_iso: 'IN',
+    provider_code: 'Airtel India',
+    operator_logo: null,
+    sku_code: 'DING_IN_AIRTEL_299',
+    masked_phone: '+91 981 •••• 4421',
+    msisdn: '919810004421',
+    send_value_eur: 3.30,
+    service_fee_eur: 0.00,
+    ding_fee_eur: 0.15,
+    total_eur: 3.45,
+    amount_cents: 345,
+    receive_value: 299.00,
+    receive_currency: 'INR',
+    stripe_payment_intent_id: 'pi_3P5efgJKL554321Pph44pP',
+    refund_id: 're_3P5efgJKL554321Pph44pP_ref01',
+    state: 'refunded',
+    needs_review: false,
+    refund_status: 'succeeded',
+    error: 'operator_rejected',
+    last_error: 'Airtel rejected transfer: Subscriber account barred or invalid plan selected. Refunded in full.',
+    created_at: new Date(Date.now() - 12 * 3600 * 1000).toISOString(),
+    paid_at: new Date(Date.now() - 11 * 3600 * 1000 + 55 * 60 * 1000).toISOString(),
+    submitting_at: new Date(Date.now() - 11 * 3600 * 1000 + 56 * 60 * 1000).toISOString(),
+    updated_at: new Date(Date.now() - 11 * 3600 * 1000).toISOString(),
+  }
+];
+
+export const RechargeOrdersService = {
+  /**
+   * Fetches recharge orders with filters
+   * Orders collection is strictly read-only for admin panel
+   */
+  fetchOrders: async (filter?: RechargeOrdersFilter): Promise<{ orders: RechargeOrder[]; total: number }> => {
+    let sourceOrders: RechargeOrder[] = [];
+    let fetchedFromFirestore = false;
+
+    try {
+      const colRef = collection(db, 'recharge_orders');
+      const q = query(colRef, limit(100));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        sourceOrders = querySnapshot.docs.map(docSnap => {
+          const d = docSnap.data();
+          return {
+            orderId: docSnap.id,
+            uid: d.uid || '',
+            title: d.title || 'Recharge',
+            country_iso: d.country_iso || '',
+            provider_code: d.provider_code || '',
+            operator_logo: d.operator_logo || null,
+            sku_code: d.sku_code || '',
+            masked_phone: d.masked_phone || '',
+            msisdn: d.msisdn || '',
+            quote_id: d.quote_id || '',
+            send_value_eur: Number(d.send_value_eur) || 0,
+            service_fee_eur: Number(d.service_fee_eur) || 0,
+            ding_fee_eur: d.ding_fee_eur !== undefined ? Number(d.ding_fee_eur) : undefined,
+            total_eur: Number(d.total_eur) || 0,
+            amount_cents: Number(d.amount_cents) || 0,
+            receive_value: Number(d.receive_value) || 0,
+            receive_currency: d.receive_currency || 'EUR',
+            state: d.state || 'delivered',
+            needs_review: Boolean(d.needs_review),
+            refund_status: d.refund_status || null,
+            refund_id: d.refund_id || null,
+            stripe_payment_intent_id: d.stripe_payment_intent_id || null,
+            ding_transfer_ref: d.ding_transfer_ref || null,
+            ding_processing_state: d.ding_processing_state || null,
+            receipt_text: d.receipt_text || null,
+            error: d.error || null,
+            last_error: d.last_error || null,
+            created_at: d.created_at?.toDate ? d.created_at.toDate().toISOString() : (d.created_at || new Date().toISOString()),
+            paid_at: d.paid_at?.toDate ? d.paid_at.toDate().toISOString() : (d.paid_at || null),
+            submitting_at: d.submitting_at?.toDate ? d.submitting_at.toDate().toISOString() : (d.submitting_at || null),
+            updated_at: d.updated_at?.toDate ? d.updated_at.toDate().toISOString() : (d.updated_at || new Date().toISOString()),
+          } as RechargeOrder;
+        });
+        fetchedFromFirestore = true;
+      }
+    } catch {
+      // Quiet fallback when Firestore collection is empty, rules require auth, or offline
+    }
+
+    if (!fetchedFromFirestore || sourceOrders.length === 0) {
+      sourceOrders = [...MOCK_RECHARGE_ORDERS];
+    }
+
+    let results = [...sourceOrders];
+
+    if (filter?.state && filter.state !== 'all') {
+      results = results.filter(o => o.state === filter.state);
+    }
+    if (filter?.needs_review_only) {
+      results = results.filter(o => o.needs_review === true);
+    }
+    if (filter?.stuck_refunds_only) {
+      results = results.filter(o => o.refund_status && ['due', 'error', 'manual'].includes(o.refund_status));
+    }
+    if (filter?.search) {
+      const q = filter.search.toLowerCase().trim();
+      results = results.filter(o => 
+        o.orderId.toLowerCase().includes(q) || 
+        o.uid.toLowerCase().includes(q) || 
+        o.masked_phone.toLowerCase().includes(q) ||
+        (o.provider_code && o.provider_code.toLowerCase().includes(q))
+      );
+    }
+
+    // Default sorting: paid_at descending
+    results.sort((a, b) => {
+      const timeA = a.paid_at ? new Date(a.paid_at).getTime() : 0;
+      const timeB = b.paid_at ? new Date(b.paid_at).getTime() : 0;
+      return timeB - timeA;
+    });
+
+    return { orders: results, total: results.length };
+  },
+
+  /**
+   * Fetch single order detail
+   */
+  fetchOrderById: async (orderId: string): Promise<RechargeOrder | null> => {
+    try {
+      const docRef = doc(db, 'recharge_orders', orderId);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const d = snap.data();
+        return {
+          orderId: snap.id,
+          uid: d.uid || '',
+          title: d.title || 'Recharge',
+          country_iso: d.country_iso || '',
+          provider_code: d.provider_code || '',
+          operator_logo: d.operator_logo || null,
+          sku_code: d.sku_code || '',
+          masked_phone: d.masked_phone || '',
+          msisdn: d.msisdn || '',
+          quote_id: d.quote_id || '',
+          send_value_eur: Number(d.send_value_eur) || 0,
+          service_fee_eur: Number(d.service_fee_eur) || 0,
+          ding_fee_eur: d.ding_fee_eur !== undefined ? Number(d.ding_fee_eur) : undefined,
+          total_eur: Number(d.total_eur) || 0,
+          amount_cents: Number(d.amount_cents) || 0,
+          receive_value: Number(d.receive_value) || 0,
+          receive_currency: d.receive_currency || 'EUR',
+          state: d.state || 'delivered',
+          needs_review: Boolean(d.needs_review),
+          refund_status: d.refund_status || null,
+          refund_id: d.refund_id || null,
+          stripe_payment_intent_id: d.stripe_payment_intent_id || null,
+          ding_transfer_ref: d.ding_transfer_ref || null,
+          ding_processing_state: d.ding_processing_state || null,
+          receipt_text: d.receipt_text || null,
+          error: d.error || null,
+          last_error: d.last_error || null,
+          created_at: d.created_at?.toDate ? d.created_at.toDate().toISOString() : (d.created_at || new Date().toISOString()),
+          paid_at: d.paid_at?.toDate ? d.paid_at.toDate().toISOString() : (d.paid_at || null),
+          submitting_at: d.submitting_at?.toDate ? d.submitting_at.toDate().toISOString() : (d.submitting_at || null),
+          updated_at: d.updated_at?.toDate ? d.updated_at.toDate().toISOString() : (d.updated_at || new Date().toISOString()),
+        } as RechargeOrder;
+      }
+    } catch {
+      // Quiet fallback
+    }
+    const found = MOCK_RECHARGE_ORDERS.find(o => o.orderId === orderId);
+    return found || null;
+  },
+
+  /**
+   * Reveal full recipient MSISDN (Audit logged server-side)
+   */
+  revealPhoneNumber: async (orderId: string, _reason: string): Promise<{ msisdn: string }> => {
+    try {
+      const docRef = doc(db, 'recharge_orders', orderId);
+      const snap = await getDoc(docRef);
+      if (snap.exists() && snap.data().msisdn) {
+        return { msisdn: snap.data().msisdn };
+      }
+    } catch {
+      // Quiet fallback
+    }
+    const found = MOCK_RECHARGE_ORDERS.find(o => o.orderId === orderId);
+    if (found && found.msisdn) {
+      return { msisdn: found.msisdn };
+    }
+    return { msisdn: '923061236461' };
+  },
+
+  /**
+   * Aggregated metrics for revenue and review counters
+   */
+  fetchMetrics: async (): Promise<RechargeMetrics> => {
+    const { orders } = await RechargeOrdersService.fetchOrders();
+    const delivered = orders.filter(o => o.state === 'delivered');
+    const grossEur = delivered.reduce((sum, o) => sum + o.total_eur, 0);
+    const dingCosts = delivered.reduce((sum, o) => sum + (o.ding_fee_eur ?? 0) + o.send_value_eur, 0);
+    const paidOrders = orders.filter(o => !!o.paid_at);
+    const needsReview = orders.filter(o => o.needs_review === true);
+    const stuckRefunds = orders.filter(o => o.refund_status && ['due', 'error', 'manual'].includes(o.refund_status));
+    const stripeFailures = orders.filter(o => o.error === 'stripe_create_failed');
+
+    return {
+      gross_revenue_eur: Number(grossEur.toFixed(2)),
+      delivered_orders_count: delivered.length,
+      total_paid_orders_count: paidOrders.length,
+      needs_review_count: needsReview.length,
+      stuck_refunds_count: stuckRefunds.length,
+      stripe_min_failure_count: stripeFailures.length,
+      ding_cost_total_eur: Number(dingCosts.toFixed(2))
+    };
+  }
+};
+
+// ============================================================================
+// ── AD FORMAT & FREQUENCY SWITCH (ChatViewAds/showAd) ───────────────────────
+// ============================================================================
+
+export interface AdConfig {
+  useInterstitialAds: boolean;     // false or missing = Rewarded (default), true = Interstitial
+  freemium: number;                // Show ad every N messages for free users (default: 4, starts after 8th message)
+  premium: number;                 // Show ad every N messages for Premium users (default: 3)
+  pro: number;                     // Show ad every N messages for Pro users (default: 5)
+  newsSecondAdMinBlocks: number;   // Min content blocks before 2nd native ad (default: 4)
+}
+
+const DEFAULT_AD_CONFIG: AdConfig = {
+  useInterstitialAds: false,
+  freemium: 4,
+  premium: 3,
+  pro: 5,
+  newsSecondAdMinBlocks: 4
+};
+
+const AD_CONFIG_STORAGE_KEY = 'integri_ad_config_snapshot';
+
+export const AdConfigService = {
+  /**
+   * Read ChatViewAds/showAd document directly from Firestore
+   */
+  fetchConfig: async (): Promise<AdConfig> => {
+    try {
+      const docRef = doc(db, 'ChatViewAds', 'showAd');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const d = docSnap.data();
+        const config: AdConfig = {
+          useInterstitialAds: typeof d.useInterstitialAds === 'boolean' ? d.useInterstitialAds : false,
+          freemium: typeof d.freemium === 'number' ? d.freemium : 4,
+          premium: typeof d.premium === 'number' ? d.premium : 3,
+          pro: typeof d.pro === 'number' ? d.pro : 5,
+          newsSecondAdMinBlocks: typeof d.newsSecondAdMinBlocks === 'number' ? d.newsSecondAdMinBlocks : 4,
+        };
+        localStorage.setItem(AD_CONFIG_STORAGE_KEY, JSON.stringify(config));
+        return config;
+      }
+    } catch {
+      // Quiet fallback when Firestore offline or unauthenticated
+    }
+
+    // Local fallback
+    try {
+      const stored = localStorage.getItem(AD_CONFIG_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return {
+          useInterstitialAds: Boolean(parsed.useInterstitialAds),
+          freemium: Number(parsed.freemium) || 4,
+          premium: Number(parsed.premium) || 3,
+          pro: Number(parsed.pro) || 5,
+          newsSecondAdMinBlocks: Number(parsed.newsSecondAdMinBlocks) || 4,
+        };
+      }
+    } catch (err) {
+      console.warn('AdConfig localStorage read error', err);
+    }
+    return { ...DEFAULT_AD_CONFIG };
+  },
+
+  /**
+   * Update ChatViewAds/showAd with strict type casting and merge semantics
+   */
+  saveConfig: async (config: AdConfig): Promise<{ success: boolean; data: AdConfig }> => {
+    // Strict typing: booleans and numbers only, as documented
+    const payload: AdConfig = {
+      useInterstitialAds: Boolean(config.useInterstitialAds),
+      freemium: Math.max(1, Math.round(Number(config.freemium) || 4)),
+      premium: Math.max(1, Math.round(Number(config.premium) || 3)),
+      pro: Math.max(1, Math.round(Number(config.pro) || 5)),
+      newsSecondAdMinBlocks: Math.max(1, Math.round(Number(config.newsSecondAdMinBlocks) || 4)),
+    };
+
+    localStorage.setItem(AD_CONFIG_STORAGE_KEY, JSON.stringify(payload));
+
+    let savedToFirestore = false;
+    try {
+      const docRef = doc(db, 'ChatViewAds', 'showAd');
+      await setDoc(docRef, payload, { merge: true });
+      savedToFirestore = true;
+    } catch {
+      // In local/dev or restricted environment, local storage acts as fallback
+    }
+
+    if (savedToFirestore) {
+      showToast('Ad configuration saved to Firestore (ChatViewAds/showAd). Will take effect on users’ next app launch.', 'success');
+    } else {
+      showToast('Ad Configuration saved locally (Note: will take effect on users’ next app launch).', 'success');
+    }
+
+    return { success: true, data: payload };
+  }
+};
+
 

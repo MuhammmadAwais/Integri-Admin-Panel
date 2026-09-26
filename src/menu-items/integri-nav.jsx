@@ -16,6 +16,8 @@ import {
   BarChart2,
   Database,
   Radio,
+  Smartphone,
+  Tv,
 } from 'lucide-react';
 
 // ==============================|| INTEGRI APP — NAVIGATION MENU ||============================== //
@@ -104,6 +106,20 @@ export const generalNav = {
       type: 'item',
       icon: SlidersHorizontal,
       url: '/system/tiers',
+    },
+    {
+      id: 'recharge-orders',
+      title: 'Recharge Orders',
+      type: 'item',
+      icon: Smartphone,
+      url: '/system/recharge',
+    },
+    {
+      id: 'ad-config',
+      title: 'Ad Configuration',
+      type: 'item',
+      icon: Tv,
+      url: '/system/ads',
     },
   ],
 };

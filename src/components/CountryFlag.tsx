@@ -68,7 +68,9 @@ const COUNTRY_TO_ISO: Record<string, string> = {
 
 interface CountryFlagProps {
   /** Full country name (e.g. "Germany") OR an ISO 2-letter code (e.g. "de") */
-  country: string;
+  country?: string;
+  /** Optional alias for ISO 2-letter code */
+  countryCode?: string;
   /** Pixel size for width and height. Default: 24 */
   size?: number;
   /** Extra inline styles */
@@ -79,22 +81,28 @@ interface CountryFlagProps {
 /**
  * Renders a country flag image from /countries-flags/<iso>.webp.
  * Accepts either a full country name or an ISO-2 code.
- * Falls back to a Globe icon if the asset is missing.
+ * Falls back to a Globe icon if the asset is missing or input is undefined.
  */
-const CountryFlag: React.FC<CountryFlagProps> = ({ country, size = 24, style, className }) => {
+const CountryFlag: React.FC<CountryFlagProps> = ({ country, countryCode, size = 24, style, className }) => {
   const [error, setError] = useState(false);
 
-  // Resolve the ISO code: first check the map, then lowercase as ISO fallback
-  const iso = COUNTRY_TO_ISO[country] ?? country.toLowerCase();
+  const rawCountry = country || countryCode;
 
-  if (error) {
+  if (!rawCountry || typeof rawCountry !== 'string') {
+    return <Globe size={size} color="#D4AF37" style={{ opacity: 0.7, flexShrink: 0, ...style }} className={className} />;
+  }
+
+  // Resolve the ISO code: first check the map, then lowercase as ISO fallback
+  const iso = COUNTRY_TO_ISO[rawCountry] ?? rawCountry.trim().toLowerCase();
+
+  if (error || !iso) {
     return <Globe size={size} color="#D4AF37" style={{ opacity: 0.7, flexShrink: 0, ...style }} className={className} />;
   }
 
   return (
     <img
       src={`/countries-flags/${iso}.webp`}
-      alt={country}
+      alt={rawCountry}
       onError={() => setError(true)}
       style={{
         width: size,
