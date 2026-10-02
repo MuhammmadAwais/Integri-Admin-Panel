@@ -23,24 +23,30 @@ import './tier-configuration.scss';
 const DEFAULT_LIMITS: Record<TierName, TierLimitsConfig> = {
   freemium: {
     daily_messages: 40,
-    voice_minutes: 10,
+    daily_tokens: 35000,
+    monthly_tokens: 800000,
+    voice_minutes: 40,
     image_generation: 2,
-    file_input_token_cap: 50000,
-    default_model_on_limit: 'gpt-4o-mini'
+    file_input_token_cap: 7000,
+    default_model_on_limit: 'integri'
   },
   premium: {
-    daily_messages: 150,
-    voice_minutes: 45,
-    image_generation: 15,
-    file_input_token_cap: 250000,
-    default_model_on_limit: 'gpt-4o'
+    daily_messages: 60,
+    daily_tokens: 60000,
+    monthly_tokens: 1700000,
+    voice_minutes: 400,
+    image_generation: 30,
+    file_input_token_cap: 20000,
+    default_model_on_limit: 'integri'
   },
   pro: {
-    daily_messages: 1000,
-    voice_minutes: 300,
-    image_generation: 100,
-    file_input_token_cap: 1000000,
-    default_model_on_limit: 'o3-mini'
+    daily_messages: 70,
+    daily_tokens: 80000,
+    monthly_tokens: 3000000,
+    voice_minutes: 900,
+    image_generation: 150,
+    file_input_token_cap: 50000,
+    default_model_on_limit: 'integri'
   }
 };
 
@@ -82,8 +88,13 @@ export default function TierConfigurationPage() {
             (Object.keys(DEFAULT_LIMITS) as TierName[]).forEach((tier) => {
               if (fetchedLimits[tier]) {
                 sanitized[tier] = {
-                  ...DEFAULT_LIMITS[tier],
-                  ...fetchedLimits[tier]
+                  daily_messages: fetchedLimits[tier].daily_messages ?? DEFAULT_LIMITS[tier].daily_messages,
+                  daily_tokens: fetchedLimits[tier].daily_tokens ?? DEFAULT_LIMITS[tier].daily_tokens,
+                  monthly_tokens: fetchedLimits[tier].monthly_tokens ?? DEFAULT_LIMITS[tier].monthly_tokens,
+                  voice_minutes: fetchedLimits[tier].voice_minutes ?? DEFAULT_LIMITS[tier].voice_minutes,
+                  image_generation: fetchedLimits[tier].image_generation ?? DEFAULT_LIMITS[tier].image_generation,
+                  file_input_token_cap: fetchedLimits[tier].file_input_token_cap ?? DEFAULT_LIMITS[tier].file_input_token_cap,
+                  default_model_on_limit: fetchedLimits[tier].default_model_on_limit || DEFAULT_LIMITS[tier].default_model_on_limit
                 };
               }
             });
@@ -156,6 +167,8 @@ export default function TierConfigurationPage() {
       // Integer fields validations
       const integerFields: (keyof Omit<TierLimitsConfig, 'default_model_on_limit'>)[] = [
         'daily_messages',
+        'daily_tokens',
+        'monthly_tokens',
         'voice_minutes',
         'image_generation',
         'file_input_token_cap'
@@ -236,10 +249,29 @@ export default function TierConfigurationPage() {
       setError(null);
 
       console.log('🚀 [TierLimits] Sending partial payload delta:', delta);
-      await TierLimitsService.updateTierLimits(delta);
+      const res = await TierLimitsService.updateTierLimits(delta);
 
-      // Upon success, sync currentLimits to initialLimits
-      setInitialLimits(JSON.parse(JSON.stringify(currentLimits)));
+      // Upon success, sync state
+      if (res?.limits) {
+        const sanitized: Record<TierName, TierLimitsConfig> = { ...DEFAULT_LIMITS };
+        (Object.keys(DEFAULT_LIMITS) as TierName[]).forEach((tier) => {
+          if (res.limits[tier]) {
+            sanitized[tier] = {
+              daily_messages: res.limits[tier].daily_messages ?? currentLimits[tier].daily_messages,
+              daily_tokens: res.limits[tier].daily_tokens ?? currentLimits[tier].daily_tokens,
+              monthly_tokens: res.limits[tier].monthly_tokens ?? currentLimits[tier].monthly_tokens,
+              voice_minutes: res.limits[tier].voice_minutes ?? currentLimits[tier].voice_minutes,
+              image_generation: res.limits[tier].image_generation ?? currentLimits[tier].image_generation,
+              file_input_token_cap: res.limits[tier].file_input_token_cap ?? currentLimits[tier].file_input_token_cap,
+              default_model_on_limit: res.limits[tier].default_model_on_limit || currentLimits[tier].default_model_on_limit
+            };
+          }
+        });
+        setInitialLimits(sanitized);
+        setCurrentLimits(JSON.parse(JSON.stringify(sanitized)));
+      } else {
+        setInitialLimits(JSON.parse(JSON.stringify(currentLimits)));
+      }
       
       const timeStr = new Date().toLocaleTimeString(undefined, { 
         hour: '2-digit', 
@@ -249,7 +281,8 @@ export default function TierConfigurationPage() {
       setLastSaved(timeStr);
     } catch (err: any) {
       console.error('❌ Failed to update tier limits:', err);
-      setError(err?.response?.data?.message || 'Could not save your changes. Please check your internet connection.');
+      const msg = err?.response?.data?.message || err?.response?.data?.detail || 'Could not save your changes. Please check your internet connection.';
+      setError(typeof msg === 'string' ? msg : JSON.stringify(msg));
     } finally {
       setSaving(false);
     }
@@ -298,7 +331,7 @@ export default function TierConfigurationPage() {
         <div className="title-group">
           <h1>Tier Limits Configuration</h1>
           <div className="subtitle">
-            Set daily limits, file sizes, and fallback models for each user plan.
+            Set daily messages, token caps, voice minutes, image generation, and fallback models for each tier.
           </div>
         </div>
 
@@ -386,7 +419,7 @@ export default function TierConfigurationPage() {
                       handleInputChange(tier, 'daily_messages', val as any);
                     }}
                     className={errors.daily_messages ? 'input-error' : ''}
-                    placeholder="e.g. 50"
+                    placeholder="e.g. 40"
                     aria-label={`${metadata.title} daily message limit`}
                     disabled={saving}
                   />
@@ -396,7 +429,57 @@ export default function TierConfigurationPage() {
                 )}
               </div>
 
-              {/* 2. Voice Minutes Limit */}
+              {/* 2. Daily Tokens Cap */}
+              <div className="form-group-custom">
+                <label htmlFor={`${tier}-daily-tokens`}>Daily Tokens Limit</label>
+                <div className="input-wrapper">
+                  <input
+                    id={`${tier}-daily-tokens`}
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={config.daily_tokens === undefined ? '' : config.daily_tokens}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? '' : parseInt(e.target.value, 10);
+                      handleInputChange(tier, 'daily_tokens', val as any);
+                    }}
+                    className={errors.daily_tokens ? 'input-error' : ''}
+                    placeholder="e.g. 35000"
+                    aria-label={`${metadata.title} daily tokens limit`}
+                    disabled={saving}
+                  />
+                </div>
+                {errors.daily_tokens && (
+                  <span className="error-text">{errors.daily_tokens}</span>
+                )}
+              </div>
+
+              {/* 3. Monthly Tokens Cap */}
+              <div className="form-group-custom">
+                <label htmlFor={`${tier}-monthly-tokens`}>Monthly Tokens Limit (0 = Unlimited)</label>
+                <div className="input-wrapper">
+                  <input
+                    id={`${tier}-monthly-tokens`}
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={config.monthly_tokens === undefined ? '' : config.monthly_tokens}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? '' : parseInt(e.target.value, 10);
+                      handleInputChange(tier, 'monthly_tokens', val as any);
+                    }}
+                    className={errors.monthly_tokens ? 'input-error' : ''}
+                    placeholder="e.g. 800000"
+                    aria-label={`${metadata.title} monthly tokens limit`}
+                    disabled={saving}
+                  />
+                </div>
+                {errors.monthly_tokens && (
+                  <span className="error-text">{errors.monthly_tokens}</span>
+                )}
+              </div>
+
+              {/* 4. Voice Minutes Limit */}
               <div className="form-group-custom">
                 <label htmlFor={`${tier}-voice-minutes`}>Voice Minutes Limit</label>
                 <div className="input-wrapper">
@@ -411,7 +494,7 @@ export default function TierConfigurationPage() {
                       handleInputChange(tier, 'voice_minutes', val as any);
                     }}
                     className={errors.voice_minutes ? 'input-error' : ''}
-                    placeholder="e.g. 15"
+                    placeholder="e.g. 400"
                     aria-label={`${metadata.title} voice minutes limit`}
                     disabled={saving}
                   />
@@ -421,7 +504,7 @@ export default function TierConfigurationPage() {
                 )}
               </div>
 
-              {/* 3. Image Generation Limit */}
+              {/* 5. Image Generation Limit */}
               <div className="form-group-custom">
                 <label htmlFor={`${tier}-image-generation`}>Image Generations</label>
                 <div className="input-wrapper">
@@ -436,7 +519,7 @@ export default function TierConfigurationPage() {
                       handleInputChange(tier, 'image_generation', val as any);
                     }}
                     className={errors.image_generation ? 'input-error' : ''}
-                    placeholder="e.g. 5"
+                    placeholder="e.g. 150"
                     aria-label={`${metadata.title} image generation limit`}
                     disabled={saving}
                   />
@@ -446,9 +529,9 @@ export default function TierConfigurationPage() {
                 )}
               </div>
 
-              {/* 4. Token Cap per Ingestion */}
+              {/* 6. Token Cap per Ingestion */}
               <div className="form-group-custom">
-                <label htmlFor={`${tier}-token-cap`}>File Upload Size Limit (Tokens)</label>
+                <label htmlFor={`${tier}-token-cap`}>File Input Token Cap</label>
                 <div className="input-wrapper">
                   <input
                     id={`${tier}-token-cap`}
@@ -461,7 +544,7 @@ export default function TierConfigurationPage() {
                       handleInputChange(tier, 'file_input_token_cap', val as any);
                     }}
                     className={errors.file_input_token_cap ? 'input-error' : ''}
-                    placeholder="e.g. 100000"
+                    placeholder="e.g. 50000"
                     aria-label={`${metadata.title} file token cap`}
                     disabled={saving}
                   />
@@ -471,7 +554,7 @@ export default function TierConfigurationPage() {
                 )}
               </div>
 
-              {/* 5. Default Fallback Model */}
+              {/* 7. Default Fallback Model */}
               <div className="form-group-custom">
                 <label htmlFor={`${tier}-fallback-model`}>Fallback AI Model</label>
                 <div className="input-wrapper">
@@ -506,7 +589,7 @@ export default function TierConfigurationPage() {
                       value={config.default_model_on_limit || ''}
                       onChange={(e) => handleInputChange(tier, 'default_model_on_limit', e.target.value)}
                       className={errors.default_model_on_limit ? 'input-error' : ''}
-                      placeholder="e.g. gpt-4o-mini"
+                      placeholder="e.g. integri"
                       aria-label={`${metadata.title} fallback model entry`}
                       disabled={saving}
                     />
@@ -525,7 +608,7 @@ export default function TierConfigurationPage() {
       <div className="policy-card">
         <Info size={20} color="#D4AF37" className="flex-shrink-0" style={{ marginTop: '2px' }} />
         <div style={{ fontSize: '0.85rem', color: '#a8956b', lineHeight: '1.5' }}>
-          <strong style={{ color: '#D4AF37' }}>Important Note:</strong> These limits are active immediately when you save them. They apply to all users in each tier. The fallback model is used automatically if a user goes over their limit.
+          <strong style={{ color: '#D4AF37' }}>Important Note:</strong> Partial updates are allowed—only modified tiers and fields are sent. Changes are persisted to DynamoDB and the Redis cache is refreshed immediately. Daily messages, daily tokens, and monthly tokens are evaluated concurrently for message, voice, image, and file checks.
         </div>
       </div>
     </div>

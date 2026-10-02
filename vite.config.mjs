@@ -29,8 +29,14 @@ export default defineConfig(({ mode }) => {
           target: BACKEND_TARGET,
           changeOrigin: true,   // rewrites Host header to match the target
           secure: true,         // validate SSL certificate
-          // Optionally log proxied requests in the terminal:
-          // configure: (proxy) => { proxy.on('proxyReq', (r) => console.log('[proxy]', r.path)); },
+          configure: (proxy) => {
+            proxy.on('proxyReq', (proxyReq) => {
+              // Strip browser cookies accumulated across localhost ports (zentris, camp, etc.)
+              // The Integri backend uses Bearer token authorization and does not use cookies.
+              // Large localhost cookie headers trigger Nginx "400 Request Header Or Cookie Too Large".
+              proxyReq.removeHeader('cookie');
+            });
+          },
         },
       },
     },

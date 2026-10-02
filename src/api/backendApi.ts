@@ -287,8 +287,23 @@ const getSuccessMessage = (response: AxiosResponse): string => {
 const getErrorMessage = (error: AxiosError): string => {
   if (error.response?.data) {
     const data = error.response.data as any;
-    if (typeof data === 'string') return data;
+    if (typeof data === 'string') {
+      if (data.includes('<html') || data.includes('<!DOCTYPE') || data.includes('<!doctype')) {
+        const titleMatch = data.match(/<title>([^<]+)<\/title>/i);
+        if (titleMatch?.[1]) return titleMatch[1].trim();
+        const h1Match = data.match(/<h1>([^<]+)<\/h1>/i);
+        if (h1Match?.[1]) return h1Match[1].trim();
+        return `Server error (${error.response?.status || 'Bad Request'})`;
+      }
+      return data;
+    }
     if (data.message) return data.message;
+    if (data.detail) {
+      if (typeof data.detail === 'string') return data.detail;
+      if (Array.isArray(data.detail) && data.detail.length > 0) {
+        return data.detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ');
+      }
+    }
     if (data.error) {
       if (typeof data.error === 'string') return data.error;
       if (data.error.message) return data.error.message;
@@ -1325,6 +1340,8 @@ export const ModelsService = {
 
 export interface TierLimitsConfig {
   daily_messages: number;
+  daily_tokens: number;
+  monthly_tokens: number;
   voice_minutes: number;
   image_generation: number;
   file_input_token_cap: number;
@@ -1335,7 +1352,13 @@ export type TierName = 'freemium' | 'premium' | 'pro';
 
 export interface TierLimitsResponse {
   source: string;
-  limits: Record<TierName, TierLimitsConfig>;
+  limits: Record<TierName, TierLimitsConfig & { file_upload_mb?: number }>;
+}
+
+export interface TierLimitsUpdateResponse {
+  status: string;
+  message: string;
+  limits: Record<TierName, TierLimitsConfig & { file_upload_mb?: number }>;
 }
 
 export const TierLimitsService = {
@@ -1349,9 +1372,9 @@ export const TierLimitsService = {
     }
   },
 
-  updateTierLimits: async (payload: Partial<Record<TierName, Partial<TierLimitsConfig>>>): Promise<any> => {
+  updateTierLimits: async (payload: Partial<Record<TierName, Partial<TierLimitsConfig>>>): Promise<TierLimitsUpdateResponse> => {
     try {
-      const response = await backendApi.put<any>('/api/v1/admin/tier-limits', payload);
+      const response = await backendApi.put<TierLimitsUpdateResponse>('/api/v1/admin/tier-limits', payload);
       return response.data;
     } catch (e) {
       console.error('❌ [TierLimitsService] updateTierLimits error:', e);
