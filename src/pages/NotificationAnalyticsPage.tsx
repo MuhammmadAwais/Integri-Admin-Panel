@@ -39,6 +39,7 @@ import {
   MapPin,
   Clock,
   Newspaper,
+  CheckCircle,
 } from 'lucide-react';
 import CountryFlag from 'components/CountryFlag';
 import { getLocalizedStr } from 'features/news/hooks/useAdminNews';
@@ -57,6 +58,14 @@ const CHART_COLORS = [
 // ─── helpers ───────────────────────────────────────────────────────────────────
 const truncate = (s: string, max: number) =>
   s.length > max ? s.slice(0, max - 1) + '…' : s;
+
+const getTodayDateStr = () => {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
 
 // ─── chart panel wrapper ────────────────────────────────────────────────────────
 const ChartPanel = memo(
@@ -421,29 +430,42 @@ interface Props {
 }
 
 export default function NotificationAnalyticsPage({ onBack }: Props) {
-  const [country, setCountry] = useState('');
-  const [date, setDate] = useState('');
+  const [country, setCountry] = useState('Germany');
+  const [date, setDate] = useState(getTodayDateStr);
+  const [includeUnsent, setIncludeUnsent] = useState(true);
   const [newsId, setNewsId] = useState('');
   const [limit, setLimit] = useState<number>(100);
-  const [params, setParams] = useState<NotificationOpensParams>({ limit: 100 });
+  const [params, setParams] = useState<NotificationOpensParams>(() => ({
+    country: 'Germany',
+    date: getTodayDateStr(),
+    include_unsent: true,
+    limit: 100,
+  }));
   const [hasQueried, setHasQueried] = useState(true);
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
   const handleExecute = useCallback(() => {
-    const p: NotificationOpensParams = { limit };
+    const p: NotificationOpensParams = { limit, include_unsent: includeUnsent };
     if (country.trim()) p.country = country.trim();
     if (date.trim()) p.date = date.trim();
     if (newsId.trim()) p.news_id = newsId.trim();
     setParams(p);
     setHasQueried(true);
-  }, [country, date, newsId, limit]);
+  }, [country, date, newsId, limit, includeUnsent]);
 
   const handleReset = useCallback(() => {
-    setCountry('');
-    setDate('');
+    const today = getTodayDateStr();
+    setCountry('Germany');
+    setDate(today);
     setNewsId('');
+    setIncludeUnsent(true);
     setLimit(100);
-    setParams({ limit: 100 });
+    setParams({
+      country: 'Germany',
+      date: today,
+      include_unsent: true,
+      limit: 100,
+    });
     setHasQueried(true);
   }, []);
 
@@ -603,8 +625,13 @@ export default function NotificationAnalyticsPage({ onBack }: Props) {
           zIndex: 10,
         }}
       >
-        <div style={{ color: 'var(--news-text-dim)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.4px', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Layers size={13} /> Query Parameters
+        <div style={{ color: 'var(--news-text-dim)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.4px', marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Layers size={13} /> Query Parameters
+          </span>
+          <span style={{ color: '#D4AF37', textTransform: 'none', letterSpacing: 'normal', fontFamily: 'monospace', fontSize: '0.74rem', background: 'rgba(212,175,55,0.08)', padding: '2px 8px', borderRadius: 4, border: '1px solid rgba(212,175,55,0.2)' }}>
+            GET /news/admin/notification-opens
+          </span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 18, marginBottom: 20 }}>
@@ -642,6 +669,42 @@ export default function NotificationAnalyticsPage({ onBack }: Props) {
               onFocus={e => (e.target.style.borderColor = '#D4AF37')}
               onBlur={e => (e.target.style.borderColor = 'var(--news-glass-border)')}
             />
+          </div>
+
+          {/* Include Unsent */}
+          <div>
+            <label style={labelStyle}>
+              <CheckCircle size={12} /> Include Unsent
+            </label>
+            <div
+              id="na-include-unsent-toggle"
+              onClick={() => setIncludeUnsent(prev => !prev)}
+              style={{
+                ...inputStyle,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                cursor: 'pointer',
+                userSelect: 'none',
+              }}
+            >
+              <input
+                id="na-include-unsent"
+                type="checkbox"
+                checked={includeUnsent}
+                onChange={e => setIncludeUnsent(e.target.checked)}
+                onClick={e => e.stopPropagation()}
+                style={{
+                  width: 16,
+                  height: 16,
+                  accentColor: '#D4AF37',
+                  cursor: 'pointer',
+                }}
+              />
+              <span style={{ fontSize: '0.82rem', color: includeUnsent ? '#D4AF37' : 'var(--news-text-dim)', fontWeight: 700 }}>
+                {includeUnsent ? 'true' : 'false'}
+              </span>
+            </div>
           </div>
 
           {/* Limit */}

@@ -740,6 +740,7 @@ export interface NotificationOpensParams {
   date?: string;
   news_id?: string;
   limit?: number;
+  include_unsent?: boolean;
 }
 
 export interface TopArticleOpens {
@@ -1048,11 +1049,12 @@ export const NewsService = {
    */
   fetchNotificationOpens: async (params: NotificationOpensParams): Promise<NotificationOpensResponse> => {
     try {
-      const cleanParams: Record<string, string | number> = {};
+      const cleanParams: Record<string, string | number | boolean> = {};
       if (params.country) cleanParams.country = params.country;
       if (params.date) cleanParams.date = params.date;
       if (params.news_id) cleanParams.news_id = params.news_id;
       if (params.limit !== undefined) cleanParams.limit = params.limit;
+      if (params.include_unsent !== undefined) cleanParams.include_unsent = params.include_unsent;
       const response = await backendApi.get<NotificationOpensResponse>(
         '/api/v1/news/admin/notification-opens',
         { params: cleanParams, skipToast: true } as any
