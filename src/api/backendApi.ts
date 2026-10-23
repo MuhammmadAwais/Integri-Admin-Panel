@@ -1324,10 +1324,26 @@ export const UserService = {
 //  🤖 MODELS — Types & Services
 // ─────────────────────────────────────────────────────────────────────────────
 
+export interface ModelUsage {
+  feature: string;
+  source: string;
+  note?: string;
+}
+
+export interface BackendModelItem {
+  id: string;
+  in_user_picker: boolean;
+  used_by: ModelUsage[];
+}
+
+export interface ModelsApiResponse {
+  models: BackendModelItem[];
+}
+
 export const ModelsService = {
-  fetchModels: async (): Promise<string[]> => {
+  fetchModels: async (): Promise<ModelsApiResponse> => {
     try {
-      const response = await backendApi.get<string[]>('/api/v1/models');
+      const response = await backendApi.get<ModelsApiResponse>('/api/v1/models');
       return response.data;
     } catch (e) {
       console.error('❌ [ModelsService] fetchModels error:', e);

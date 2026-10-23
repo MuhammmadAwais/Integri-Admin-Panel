@@ -107,7 +107,13 @@ export default function TierConfigurationPage() {
         }
 
         if (modelsRes.status === 'fulfilled') {
-          setAvailableModels(modelsRes.value || []);
+          const val = modelsRes.value;
+          const list: string[] = Array.isArray(val)
+            ? val.map((m: any) => typeof m === 'string' ? m : m.id)
+            : (val && Array.isArray((val as any).models))
+              ? (val as any).models.map((m: any) => typeof m === 'string' ? m : m.id)
+              : [];
+          setAvailableModels(list);
         } else {
           console.warn('⚠️ Failed to fetch active models:', modelsRes.reason);
         }

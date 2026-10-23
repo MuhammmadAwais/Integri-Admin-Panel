@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ModelsService, CustomGptService, type CustomGpt } from 'api/backendApi';
+import { ModelsService, CustomGptService, type CustomGpt, type BackendModelItem } from 'api/backendApi';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import {
@@ -8,7 +8,7 @@ import {
   Bot, Eye, EyeOff, CheckCircle, XCircle, RefreshCw, Hash,
   Check, X, AlertTriangle, Loader2, Sparkles, Users, Calendar,
   BookOpen, ChevronRight, ToggleRight, Plus, Trash2,
-  ChevronDown, Search, Wand2, Save
+  ChevronDown, Search, Wand2, Save, Copy, ExternalLink, Filter
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { gsap } from 'gsap';
@@ -47,7 +47,8 @@ const MODEL_PROVIDER_MAP: Record<string, string> = {
 const deriveProvider = (modelId: string): string => {
   if (MODEL_PROVIDER_MAP[modelId]) return MODEL_PROVIDER_MAP[modelId];
   const lower = modelId.toLowerCase();
-  if (lower.startsWith('gpt') || lower.startsWith('o3')) return 'openai';
+  if (lower === 'integri') return 'integri';
+  if (lower.startsWith('gpt') || lower.startsWith('o3') || lower.startsWith('whisper')) return 'openai';
   if (lower.includes('gemini')) return 'gemini';
   if (lower.includes('grok')) return 'grok';
   if (lower.includes('claude')) return 'claude';
@@ -55,6 +56,7 @@ const deriveProvider = (modelId: string): string => {
   if (lower.includes('sonar') || lower.includes('perplexity')) return 'perplexity';
   if (lower.includes('mistral')) return 'mistral';
   if (lower.includes('glm')) return 'glm';
+  if (lower.includes('kimi') || lower.includes('moonshot')) return 'moonshot';
   return 'openai';
 };
 
@@ -64,25 +66,47 @@ const ModelLogo = ({ groupName, isDark }: { groupName: string; isDark: boolean }
   const [imgError, setImgError] = useState(false);
 
   let imgPath = '';
-  if (groupName === 'OpenAI (GPT & o-series)') {
+  if (groupName.includes('OpenAI')) {
     imgPath = isDark ? '/dark-theme-openai.png' : '/light-theme-openai.png';
-  } else if (groupName === 'Anthropic (Claude)') {
+  } else if (groupName.includes('Claude') || groupName.includes('Anthropic')) {
     imgPath = '/claude.png';
-  } else if (groupName === 'Google (Gemini)') {
+  } else if (groupName.includes('Gemini') || groupName.includes('Google')) {
     imgPath = '/gemini.png';
-  } else if (groupName === 'xAI (Grok)') {
+  } else if (groupName.includes('Grok') || groupName.includes('xAI')) {
     imgPath = isDark ? '/dark-theme-grok.png' : '/light-theme-grok.png';
-  } else if (groupName === 'DeepSeek') {
+  } else if (groupName.includes('DeepSeek')) {
     imgPath = '/deepseek.png';
-  } else if (groupName === 'Mistral') {
+  } else if (groupName.includes('Mistral')) {
     imgPath = '/mistral.png';
-  } else if (groupName === 'Perplexity (Sonar)') {
+  } else if (groupName.includes('Sonar') || groupName.includes('Perplexity')) {
     imgPath = '/perplexity.png';
-  } else if (groupName === 'Integri Core') {
+  } else if (groupName.includes('Integri')) {
     imgPath = isDark ? '/dark-theme-logo.png' : '/light-theme-logo.png';
   }
 
   if (imgError || !imgPath) {
+    if (groupName.includes('Moonshot') || groupName.includes('Kimi')) {
+      return (
+        <div style={{
+          width: '28px', height: '28px', borderRadius: '6px',
+          background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }} className="flex-shrink-0" title={groupName}>
+          <Wand2 size={16} color={isDark ? '#D4AF37' : '#b48a04'} />
+        </div>
+      );
+    }
+    if (groupName.includes('Zhipu') || groupName.includes('GLM')) {
+      return (
+        <div style={{
+          width: '28px', height: '28px', borderRadius: '6px',
+          background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }} className="flex-shrink-0" title={groupName}>
+          <Box size={16} color="#3b82f6" />
+        </div>
+      );
+    }
     return <Cpu size={28} color={isDark ? '#D4AF37' : '#000'} style={{ opacity: 0.8 }} className="flex-shrink-0" />;
   }
 
@@ -1727,6 +1751,281 @@ const GptCard: React.FC<GptCardProps> = ({ gpt, isDark, onClick, index }) => {
   );
 };
 
+// ─── Model Inspector Modal ───────────────────────────────────────────────────
+
+interface ModelInspectorModalProps {
+  model: BackendModelItem | null;
+  isDark: boolean;
+  onClose: () => void;
+}
+
+const ModelInspectorModal: React.FC<ModelInspectorModalProps> = ({ model, isDark, onClose }) => {
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const gold = '#D4AF37';
+  const textPrimary = isDark ? '#f4f4f5' : '#111827';
+  const textMuted = isDark ? '#71717a' : '#9ca3af';
+
+  useEffect(() => {
+    if (!model) return;
+    document.body.style.overflow = 'hidden';
+    const tl = gsap.timeline();
+    tl.fromTo(overlayRef.current, { opacity: 0 }, { opacity: 1, duration: 0.25, ease: 'power2.out' });
+    tl.fromTo(
+      panelRef.current,
+      { x: '100%', opacity: 0 },
+      { x: '0%', opacity: 1, duration: 0.38, ease: 'power3.out' },
+      '-=0.12'
+    );
+
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [model]);
+
+  if (!model) return null;
+
+  const provider = deriveProvider(model.id);
+
+  const handleClose = () => {
+    const tl = gsap.timeline({ onComplete: onClose });
+    tl.to(panelRef.current, { x: '100%', opacity: 0, duration: 0.24, ease: 'power3.in' });
+    tl.to(overlayRef.current, { opacity: 0, duration: 0.16 }, '-=0.1');
+  };
+
+  const copyText = (txt: string, label: string) => {
+    navigator.clipboard.writeText(txt);
+    showToast(`Copied ${label} to clipboard`, 'success');
+  };
+
+  return (
+    <ElitePortal>
+      <div
+        ref={overlayRef}
+        onClick={handleClose}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 1050,
+          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(5px)',
+          display: 'flex', justifyContent: 'flex-end',
+        }}
+      >
+        <div
+          ref={panelRef}
+          onClick={e => e.stopPropagation()}
+          style={{
+            width: '100%', maxWidth: '600px', height: '100%',
+            background: isDark ? '#09090b' : '#ffffff',
+            borderLeft: `1px solid ${isDark ? 'rgba(212,175,55,0.22)' : 'rgba(212,175,55,0.35)'}`,
+            boxShadow: '-8px 0 36px rgba(0,0,0,0.5)',
+            display: 'flex', flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Header */}
+          <div style={{
+            padding: '20px 24px',
+            borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: isDark ? 'rgba(212,175,55,0.03)' : 'rgba(212,175,55,0.04)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+              <div style={{
+                background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.25)',
+                borderRadius: '8px', padding: '8px', display: 'flex', alignItems: 'center'
+              }}>
+                <Cpu size={22} color={gold} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '0.72rem', color: textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                  Model Route & Bindings Inspector
+                </div>
+                <h5 style={{ margin: 0, color: textPrimary, fontWeight: 800, fontFamily: 'monospace', fontSize: '1.05rem', wordBreak: 'break-all' }}>
+                  {model.id}
+                </h5>
+              </div>
+            </div>
+
+            <button
+              onClick={handleClose}
+              style={{
+                background: 'transparent', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                borderRadius: '8px', width: '34px', height: '34px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: textMuted, cursor: 'pointer', transition: 'all 0.18s'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = '#ef4444'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = textMuted; e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'; }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div style={{
+            flex: 1, overflowY: 'auto', padding: '24px',
+            display: 'flex', flexDirection: 'column', gap: '20px',
+            scrollbarWidth: 'thin', scrollbarColor: `${gold}50 transparent`
+          }}>
+            {/* Quick Actions */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => copyText(model.id, 'Model ID')}
+                style={{
+                  background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)',
+                  color: gold, borderRadius: '6px', padding: '6px 12px', fontSize: '0.78rem',
+                  fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                  transition: 'all 0.15s'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = gold; e.currentTarget.style.color = '#000'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(212,175,55,0.1)'; e.currentTarget.style.color = gold; }}
+              >
+                <Copy size={13} /> Copy Model ID
+              </button>
+
+              <span style={{
+                background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                color: textPrimary, borderRadius: '6px', padding: '6px 12px', fontSize: '0.78rem',
+                fontWeight: 700, textTransform: 'uppercase'
+              }}>
+                Provider: {provider}
+              </span>
+            </div>
+
+            {/* Status Panel */}
+            <div style={{
+              background: model.in_user_picker ? 'rgba(16,185,129,0.06)' : 'rgba(168,85,247,0.06)',
+              border: `1px solid ${model.in_user_picker ? 'rgba(16,185,129,0.25)' : 'rgba(168,85,247,0.25)'}`,
+              borderRadius: '10px', padding: '16px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                {model.in_user_picker ? (
+                  <>
+                    <CheckCircle size={18} color="#10b981" />
+                    <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#10b981' }}>
+                      In User Chat Picker (ALLOWED_MODELS)
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Terminal size={18} color="#c084fc" />
+                    <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#c084fc' }}>
+                      Backend / Pipeline Only (Excluded from Picker)
+                    </span>
+                  </>
+                )}
+              </div>
+              <p style={{ margin: 0, fontSize: '0.82rem', color: textMuted, lineHeight: 1.5 }}>
+                {model.in_user_picker
+                  ? 'This model is included in ALLOWED_MODELS. End-users can select it directly from the chat model dropdown.'
+                  : 'This model is NOT exposed in the user-facing chat picker. It is exclusively pinned to backend agent pipelines, audio/transcription, image generation, or background tasks.'}
+              </p>
+            </div>
+
+            {/* Pinned Subsystems & Usages */}
+            <div>
+              <div style={{
+                fontSize: '0.74rem', fontWeight: 800, textTransform: 'uppercase',
+                letterSpacing: '1px', color: gold, marginBottom: '10px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+              }}>
+                <span>Feature Bindings ({model.used_by?.length || 0})</span>
+                {model.used_by?.length === 0 && (
+                  <span style={{ fontSize: '0.7rem', color: textMuted, fontStyle: 'italic', textTransform: 'none' }}>
+                    Available in picker, not hardcoded
+                  </span>
+                )}
+              </div>
+
+              {model.used_by && model.used_by.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {model.used_by.map((usage, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+                        border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+                        borderRadius: '8px', padding: '14px', position: 'relative'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
+                        <span style={{ fontWeight: 800, color: textPrimary, fontSize: '0.88rem' }}>
+                          {usage.feature}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => copyText(usage.source, 'Source Path')}
+                          title="Copy source path"
+                          style={{
+                            background: 'transparent', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                            borderRadius: '4px', padding: '3px 7px', color: textMuted, fontSize: '0.7rem',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.color = gold; e.currentTarget.style.borderColor = gold; }}
+                          onMouseLeave={e => { e.currentTarget.style.color = textMuted; e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'; }}
+                        >
+                          <Copy size={11} /> Copy source
+                        </button>
+                      </div>
+
+                      <div style={{
+                        background: isDark ? '#000' : '#f4f4f5',
+                        border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+                        borderRadius: '6px', padding: '8px 10px',
+                        fontFamily: 'monospace', fontSize: '0.74rem', color: gold,
+                        wordBreak: 'break-all', marginBottom: usage.note ? '8px' : '0'
+                      }}>
+                        {usage.source}
+                      </div>
+
+                      {usage.note && (
+                        <div style={{ fontSize: '0.74rem', color: isDark ? '#d4d4d8' : '#52525b', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                          <Info size={13} color={gold} className="flex-shrink-0" />
+                          <span>Note: {usage.note}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{
+                  padding: '24px 16px', textAlign: 'center',
+                  background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                  border: `1px dashed ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                  borderRadius: '8px', color: textMuted, fontSize: '0.82rem'
+                }}>
+                  This model is not pinned to any internal feature pipeline or backend agent. It is available in the user picker catalog as a general-purpose model.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div style={{
+            padding: '16px 24px',
+            borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+            display: 'flex', justifyContent: 'flex-end',
+            background: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.02)'
+          }}>
+            <button
+              type="button"
+              onClick={handleClose}
+              style={{
+                background: gold, color: '#000', border: 'none',
+                borderRadius: '8px', padding: '8px 20px', fontWeight: 800,
+                fontSize: '0.85rem', cursor: 'pointer'
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </ElitePortal>
+  );
+};
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ModelsPage() {
@@ -1734,12 +2033,81 @@ export default function ModelsPage() {
   const queryClient = useQueryClient();
 
   // ── AI Models ──
-  const { data: models, isLoading: modelsLoading, isError: modelsError } = useQuery({
+  const {
+    data: modelsData,
+    isLoading: modelsLoading,
+    isError: modelsError,
+    refetch: refetchModels,
+    isFetching: modelsFetching
+  } = useQuery({
     queryKey: ['aiModels'],
     queryFn: ModelsService.fetchModels,
   });
 
-  // ── Tab State ──
+  // Extract raw array of BackendModelItem safely
+  const modelItems: BackendModelItem[] = useMemo(() => {
+    if (!modelsData) return [];
+    if (Array.isArray(modelsData)) {
+      return (modelsData as any[]).map(m =>
+        typeof m === 'string' ? { id: m, in_user_picker: true, used_by: [] } : m
+      );
+    }
+    if (Array.isArray((modelsData as any).models)) {
+      return (modelsData as any).models;
+    }
+    return [];
+  }, [modelsData]);
+
+  // Model ID list for Custom GPT modal selects
+  const modelIds = useMemo(() => modelItems.map(m => m.id), [modelItems]);
+
+  // Filter state for AI Models section
+  const [modelSearch, setModelSearch] = useState('');
+  const [modelFilter, setModelFilter] = useState<'all' | 'picker' | 'pinned' | 'internal'>('all');
+  const [selectedProvider, setSelectedProvider] = useState<string>('all');
+  const [inspectingModel, setInspectingModel] = useState<BackendModelItem | null>(null);
+
+  // Stats calculation
+  const modelStats = useMemo(() => {
+    const total = modelItems.length;
+    const inPicker = modelItems.filter(m => m.in_user_picker).length;
+    const pinned = modelItems.filter(m => m.used_by && m.used_by.length > 0).length;
+    const internal = modelItems.filter(m => !m.in_user_picker).length;
+    return { total, inPicker, pinned, internal };
+  }, [modelItems]);
+
+  // Filtered models
+  const filteredModels = useMemo(() => {
+    return modelItems.filter(item => {
+      // Tab filter
+      if (modelFilter === 'picker' && !item.in_user_picker) return false;
+      if (modelFilter === 'pinned' && (!item.used_by || item.used_by.length === 0)) return false;
+      if (modelFilter === 'internal' && item.in_user_picker) return false;
+
+      // Provider filter
+      if (selectedProvider !== 'all') {
+        const prov = deriveProvider(item.id);
+        if (prov !== selectedProvider) return false;
+      }
+
+      // Search query
+      if (modelSearch.trim()) {
+        const query = modelSearch.toLowerCase().trim();
+        const idMatch = item.id.toLowerCase().includes(query);
+        const featureMatch = item.used_by?.some(u =>
+          u.feature.toLowerCase().includes(query) ||
+          u.source.toLowerCase().includes(query) ||
+          (u.note && u.note.toLowerCase().includes(query))
+        );
+        const providerMatch = deriveProvider(item.id).toLowerCase().includes(query);
+        if (!idMatch && !featureMatch && !providerMatch) return false;
+      }
+
+      return true;
+    });
+  }, [modelItems, modelFilter, selectedProvider, modelSearch]);
+
+  // ── Tab State for GPTs ──
   const [gptTab, setGptTab] = useState<'all' | 'public' | 'private'>('all');
 
   // ── All Admin GPTs ──
@@ -1803,10 +2171,9 @@ export default function ModelsPage() {
 
   // ── Grouped Models ──
   const groupedModels = useMemo(() => {
-    if (!models) return {};
-
-    const groups: Record<string, string[]> = {
-      'OpenAI (GPT & o-series)': [],
+    const groups: Record<string, BackendModelItem[]> = {
+      'Integri Core': [],
+      'OpenAI (GPT, o-series & Voice/Image)': [],
       'Anthropic (Claude)': [],
       'Google (Gemini)': [],
       'xAI (Grok)': [],
@@ -1814,14 +2181,16 @@ export default function ModelsPage() {
       'Mistral': [],
       'Zhipu (GLM)': [],
       'Perplexity (Sonar)': [],
-      'Integri Core': [],
+      'Moonshot (Kimi)': [],
       'Other': []
     };
 
-    models.forEach(model => {
-      const lower = model.toLowerCase();
-      if (lower.startsWith('gpt') || lower.startsWith('o3')) {
-        groups['OpenAI (GPT & o-series)'].push(model);
+    filteredModels.forEach(model => {
+      const lower = model.id.toLowerCase();
+      if (lower === 'integri') {
+        groups['Integri Core'].push(model);
+      } else if (lower.startsWith('gpt') || lower.startsWith('o3') || lower.startsWith('whisper')) {
+        groups['OpenAI (GPT, o-series & Voice/Image)'].push(model);
       } else if (lower.includes('claude')) {
         groups['Anthropic (Claude)'].push(model);
       } else if (lower.includes('gemini')) {
@@ -1834,10 +2203,10 @@ export default function ModelsPage() {
         groups['Mistral'].push(model);
       } else if (lower.includes('glm')) {
         groups['Zhipu (GLM)'].push(model);
-      } else if (lower.includes('sonar')) {
+      } else if (lower.includes('sonar') || lower.includes('perplexity')) {
         groups['Perplexity (Sonar)'].push(model);
-      } else if (lower === 'integri') {
-        groups['Integri Core'].push(model);
+      } else if (lower.includes('kimi') || lower.includes('moonshot')) {
+        groups['Moonshot (Kimi)'].push(model);
       } else {
         groups['Other'].push(model);
       }
@@ -1848,16 +2217,20 @@ export default function ModelsPage() {
     });
 
     return groups;
-  }, [models]);
+  }, [filteredModels]);
 
   const getGroupIcon = (groupName: string) => {
     switch (groupName) {
-      case 'OpenAI (GPT & o-series)': return <Zap size={18} />;
+      case 'Integri Core': return <Cpu size={18} />;
+      case 'OpenAI (GPT, o-series & Voice/Image)': return <Zap size={18} />;
       case 'Anthropic (Claude)': return <Layers size={18} />;
       case 'Google (Gemini)': return <Globe size={18} />;
       case 'xAI (Grok)': return <Terminal size={18} />;
       case 'DeepSeek': return <Activity size={18} />;
-      case 'Integri Core': return <Cpu size={18} />;
+      case 'Mistral': return <Sparkles size={18} />;
+      case 'Zhipu (GLM)': return <Box size={18} />;
+      case 'Perplexity (Sonar)': return <Search size={18} />;
+      case 'Moonshot (Kimi)': return <Wand2 size={18} />;
       default: return <Box size={18} />;
     }
   };
@@ -1866,6 +2239,12 @@ export default function ModelsPage() {
 
   const handleGptCardClick = (gpt: CustomGpt) => {
     setSelectedGptId(gpt.gpt_id);
+  };
+
+  const copyModelId = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    navigator.clipboard.writeText(id);
+    showToast(`Copied ${id} to clipboard`, 'success');
   };
 
   const handleManualToggleConfirm = async () => {
@@ -1904,15 +2283,52 @@ export default function ModelsPage() {
           background: ${surfaceBg};
           backdrop-filter: blur(10px);
           border: 1px solid ${surfaceBorder};
-          border-radius: 8px;
+          border-radius: 10px;
           transition: all 0.22s ease;
-          cursor: default;
+          cursor: pointer;
+          position: relative;
         }
         .model-card-item:hover {
-          background: ${isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.9)'};
-          border-color: ${isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.2)'};
+          background: ${isDark ? 'rgba(212,175,55,0.06)' : 'rgba(212,175,55,0.06)'};
+          border-color: ${gold};
           transform: translateY(-2px);
-          box-shadow: 0 6px 22px rgba(0,0,0,0.18);
+          box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+        }
+
+        .model-stat-card {
+          background: ${surfaceBg};
+          backdrop-filter: blur(10px);
+          border: 1px solid ${surfaceBorder};
+          border-radius: 10px;
+          padding: 16px 20px;
+          transition: all 0.2s ease;
+          cursor: pointer;
+        }
+        .model-stat-card:hover {
+          transform: translateY(-2px);
+          border-color: ${gold};
+          box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        }
+
+        .model-filter-pill {
+          padding: 6px 14px;
+          border-radius: 999px;
+          font-size: 0.78rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.18s ease;
+          border: 1px solid transparent;
+          background: ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'};
+          color: ${textMuted};
+        }
+        .model-filter-pill:hover {
+          color: ${textPrimary};
+          border-color: ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'};
+        }
+        .model-filter-pill.active {
+          background: rgba(212,175,55,0.18);
+          border-color: ${gold};
+          color: ${gold};
         }
 
         .models-header-card {
@@ -2000,19 +2416,287 @@ export default function ModelsPage() {
       {/* Header */}
       <Row className="mb-4">
         <Col md={12}>
-          <div className="models-header-card p-4 d-flex align-items-center gap-3">
-            <Info size={26} color={gold} className="flex-shrink-0" />
+          <div className="models-header-card p-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div className="d-flex align-items-center gap-3">
+              <div style={{
+                background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)',
+                borderRadius: '10px', padding: '10px', display: 'flex', alignItems: 'center'
+              }}>
+                <Cpu size={26} color={gold} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h4 style={{ color: isDark ? gold : goldDim, margin: 0, fontWeight: 800, letterSpacing: '-0.3px' }}>
+                    Active Intelligence Models & Subsystem Routing
+                  </h4>
+                  <span style={{
+                    background: 'rgba(16,185,129,0.12)', color: '#10b981',
+                    border: '1px solid rgba(16,185,129,0.3)', borderRadius: '6px',
+                    padding: '2px 7px', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase'
+                  }}>
+                    Live API
+                  </span>
+                </div>
+                <p style={{ color: isDark ? '#a8956b' : '#6b7280', margin: '4px 0 0', fontSize: '0.85rem', fontWeight: 500 }}>
+                  Dynamic model catalog resolved from ALLOWED_MODELS and feature pins (agents, memory, voice, vision, grounding).
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => refetchModels()}
+              disabled={modelsFetching}
+              style={{
+                background: 'rgba(212,175,55,0.1)', border: `1px solid ${gold}`,
+                color: gold, borderRadius: '8px', padding: '8px 16px',
+                fontSize: '0.82rem', fontWeight: 700, cursor: modelsFetching ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: '7px', transition: 'all 0.2s'
+              }}
+              onMouseEnter={e => { if (!modelsFetching) { e.currentTarget.style.background = gold; e.currentTarget.style.color = '#000'; } }}
+              onMouseLeave={e => { if (!modelsFetching) { e.currentTarget.style.background = 'rgba(212,175,55,0.1)'; e.currentTarget.style.color = gold; } }}
+            >
+              <RefreshCw size={14} style={{ animation: modelsFetching ? 'spin 1s linear infinite' : 'none' }} />
+              {modelsFetching ? 'Syncing...' : 'Refresh Catalog'}
+            </button>
+          </div>
+        </Col>
+      </Row>
+
+      {/* KPI Stats Row */}
+      <Row className="g-3 mb-4">
+        {/* Total Models */}
+        <Col xl={3} lg={6} sm={6} xs={12}>
+          <div
+            className="model-stat-card d-flex align-items-center justify-content-between"
+            onClick={() => { setModelFilter('all'); setSelectedProvider('all'); setModelSearch(''); }}
+            style={{
+              borderColor: modelFilter === 'all' && selectedProvider === 'all' && !modelSearch ? gold : surfaceBorder
+            }}
+          >
             <div>
-              <h4 style={{ color: isDark ? gold : goldDim, margin: 0, fontWeight: 700 }}>
-                Active Intelligence Models
-              </h4>
-              <p style={{ color: isDark ? '#a8956b' : '#6b7280', margin: '6px 0 0', fontSize: '0.9rem', fontWeight: 500 }}>
-                Currently active AI models available across the Integri platform. Tiers and access are managed via User Tier configurations.
-              </p>
+              <div style={{ fontSize: '0.72rem', color: textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                Total Platform Models
+              </div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: textPrimary, lineHeight: 1.2, marginTop: '4px' }}>
+                {modelsLoading ? '—' : modelStats.total}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: textMuted, marginTop: '3px' }}>
+                Integrated across all providers
+              </div>
+            </div>
+            <div style={{
+              background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.25)',
+              borderRadius: '10px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <Layers size={22} color={gold} />
+            </div>
+          </div>
+        </Col>
+
+        {/* In User Chat Picker */}
+        <Col xl={3} lg={6} sm={6} xs={12}>
+          <div
+            className="model-stat-card d-flex align-items-center justify-content-between"
+            onClick={() => setModelFilter('picker')}
+            style={{
+              borderColor: modelFilter === 'picker' ? '#10b981' : surfaceBorder
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '0.72rem', color: textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                In User Chat Picker
+              </div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#10b981', lineHeight: 1.2, marginTop: '4px' }}>
+                {modelsLoading ? '—' : modelStats.inPicker}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: textMuted, marginTop: '3px' }}>
+                Available in ALLOWED_MODELS
+              </div>
+            </div>
+            <div style={{
+              background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)',
+              borderRadius: '10px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <CheckCircle size={22} color="#10b981" />
+            </div>
+          </div>
+        </Col>
+
+        {/* Feature-Pinned */}
+        <Col xl={3} lg={6} sm={6} xs={12}>
+          <div
+            className="model-stat-card d-flex align-items-center justify-content-between"
+            onClick={() => setModelFilter('pinned')}
+            style={{
+              borderColor: modelFilter === 'pinned' ? gold : surfaceBorder
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '0.72rem', color: textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                Feature-Pinned
+              </div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: gold, lineHeight: 1.2, marginTop: '4px' }}>
+                {modelsLoading ? '—' : modelStats.pinned}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: textMuted, marginTop: '3px' }}>
+                Bound to internal agents & tools
+              </div>
+            </div>
+            <div style={{
+              background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.25)',
+              borderRadius: '10px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <Zap size={22} color={gold} />
+            </div>
+          </div>
+        </Col>
+
+        {/* Backend Pipeline Only */}
+        <Col xl={3} lg={6} sm={6} xs={12}>
+          <div
+            className="model-stat-card d-flex align-items-center justify-content-between"
+            onClick={() => setModelFilter('internal')}
+            style={{
+              borderColor: modelFilter === 'internal' ? '#c084fc' : surfaceBorder
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '0.72rem', color: textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                Backend Only
+              </div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#c084fc', lineHeight: 1.2, marginTop: '4px' }}>
+                {modelsLoading ? '—' : modelStats.internal}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: textMuted, marginTop: '3px' }}>
+                Hidden from user chat picker
+              </div>
+            </div>
+            <div style={{
+              background: 'rgba(192,132,252,0.12)', border: '1px solid rgba(192,132,252,0.25)',
+              borderRadius: '10px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <Terminal size={22} color="#c084fc" />
             </div>
           </div>
         </Col>
       </Row>
+
+      {/* Filter Toolbar */}
+      <div className="mb-4 d-flex flex-wrap align-items-center justify-content-between gap-3 p-3" style={{
+        background: surfaceBg, border: `1px solid ${surfaceBorder}`, borderRadius: '10px', backdropFilter: 'blur(10px)'
+      }}>
+        {/* Search */}
+        <div style={{ position: 'relative', minWidth: '280px', flex: '1 1 300px' }}>
+          <Search size={16} color={textMuted} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+          <input
+            type="text"
+            placeholder="Search by model ID, feature (e.g. Legal Advisor), source..."
+            value={modelSearch}
+            onChange={e => setModelSearch(e.target.value)}
+            style={{
+              width: '100%', padding: '8px 34px 8px 36px',
+              background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+              borderRadius: '8px', color: textPrimary, fontSize: '0.82rem', outline: 'none'
+            }}
+          />
+          {modelSearch && (
+            <button
+              type="button"
+              onClick={() => setModelSearch('')}
+              style={{
+                position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                background: 'transparent', border: 'none', color: textMuted, cursor: 'pointer', padding: 0
+              }}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Pills */}
+        <div className="d-flex align-items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            className={`model-filter-pill ${modelFilter === 'all' ? 'active' : ''}`}
+            onClick={() => setModelFilter('all')}
+          >
+            All ({modelStats.total})
+          </button>
+          <button
+            type="button"
+            className={`model-filter-pill ${modelFilter === 'picker' ? 'active' : ''}`}
+            onClick={() => setModelFilter('picker')}
+          >
+            Chat Picker ({modelStats.inPicker})
+          </button>
+          <button
+            type="button"
+            className={`model-filter-pill ${modelFilter === 'pinned' ? 'active' : ''}`}
+            onClick={() => setModelFilter('pinned')}
+          >
+            Pinned Features ({modelStats.pinned})
+          </button>
+          <button
+            type="button"
+            className={`model-filter-pill ${modelFilter === 'internal' ? 'active' : ''}`}
+            onClick={() => setModelFilter('internal')}
+          >
+            Backend Only ({modelStats.internal})
+          </button>
+        </div>
+
+        {/* Provider Dropdown */}
+        <div className="d-flex align-items-center gap-2">
+          <Filter size={15} color={gold} />
+          <select
+            value={selectedProvider}
+            onChange={e => setSelectedProvider(e.target.value)}
+            style={{
+              background: isDark ? '#18181b' : '#ffffff',
+              color: textPrimary,
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.15)'}`,
+              borderRadius: '8px', padding: '7px 12px', fontSize: '0.8rem',
+              fontWeight: 600, outline: 'none', cursor: 'pointer'
+            }}
+          >
+            <option value="all">All Providers</option>
+            <option value="openai">OpenAI</option>
+            <option value="claude">Anthropic (Claude)</option>
+            <option value="gemini">Google (Gemini)</option>
+            <option value="grok">xAI (Grok)</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="mistral">Mistral</option>
+            <option value="glm">Zhipu (GLM)</option>
+            <option value="perplexity">Perplexity (Sonar)</option>
+            <option value="moonshot">Moonshot (Kimi)</option>
+            <option value="integri">Integri Core</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Models count / status readout */}
+      <div className="d-flex align-items-center justify-content-between mb-3 px-1">
+        <div style={{ fontSize: '0.8rem', color: textMuted }}>
+          Showing <span style={{ color: gold, fontWeight: 700 }}>{filteredModels.length}</span> of {modelItems.length} models
+          {(modelFilter !== 'all' || selectedProvider !== 'all' || modelSearch) && (
+            <button
+              type="button"
+              onClick={() => { setModelFilter('all'); setSelectedProvider('all'); setModelSearch(''); }}
+              style={{
+                background: 'transparent', border: 'none', color: gold, fontSize: '0.78rem',
+                textDecoration: 'underline', marginLeft: '10px', cursor: 'pointer'
+              }}
+            >
+              Reset filters
+            </button>
+          )}
+        </div>
+        <div style={{ fontSize: '0.75rem', color: textMuted }}>
+          Click any card to inspect internal source bindings
+        </div>
+      </div>
 
       {/* Models content */}
       {modelsLoading ? (
@@ -2024,7 +2708,7 @@ export default function ModelsPage() {
               </h5>
               <Row className="g-3">
                 {[1, 2, 3, 4].map(card => (
-                  <Col xl={3} lg={4} md={6} sm={12} key={`card-${card}`}>
+                  <Col xl={4} lg={6} md={6} sm={12} key={`card-${card}`}>
                     <div className="model-card-item p-3 h-100 placeholder-glow d-flex gap-3 align-items-center">
                       <span className="placeholder rounded-circle bg-secondary" style={{ width: '28px', height: '28px' }} />
                       <div className="flex-grow-1">
@@ -2038,32 +2722,176 @@ export default function ModelsPage() {
             </Col>
           ))}
         </Row>
-      ) : modelsError || !models ? (
+      ) : modelsError || !modelsData ? (
         <div className="text-center p-5 mt-3 text-danger fw-bold">Failed to load active AI models.</div>
+      ) : filteredModels.length === 0 ? (
+        <div style={{
+          padding: '60px 20px', textAlign: 'center', marginBottom: '3rem',
+          background: surfaceBg, border: `1px dashed ${surfaceBorder}`, borderRadius: '12px'
+        }}>
+          <Cpu size={36} color={gold} style={{ opacity: 0.6, marginBottom: '12px' }} />
+          <h5 style={{ color: textPrimary, fontWeight: 700, margin: '0 0 6px' }}>No models match your filter</h5>
+          <p style={{ color: textMuted, fontSize: '0.85rem', margin: '0 0 16px' }}>
+            Try adjusting your search query, provider selection, or active filter tab.
+          </p>
+          <button
+            type="button"
+            onClick={() => { setModelFilter('all'); setSelectedProvider('all'); setModelSearch(''); }}
+            style={{
+              background: gold, color: '#000', border: 'none', borderRadius: '8px',
+              padding: '8px 18px', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer'
+            }}
+          >
+            Reset All Filters
+          </button>
+        </div>
       ) : (
         <Row className="g-5 mb-5">
           {Object.entries(groupedModels).map(([groupName, groupModels]) => (
             <Col md={12} key={groupName}>
               <h5 className="section-group-title">
-                {getGroupIcon(groupName)} {groupName}
+                <span className="d-flex align-items-center gap-2">
+                  {getGroupIcon(groupName)} {groupName}
+                </span>
+                <span style={{
+                  fontSize: '0.72rem', background: isDark ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.18)',
+                  color: gold, padding: '2px 8px', borderRadius: '999px', fontWeight: 800
+                }}>
+                  {groupModels.length}
+                </span>
               </h5>
               <Row className="g-3">
-                {(groupModels as string[]).map(model => (
-                  <Col xl={3} lg={4} md={6} sm={12} key={model}>
-                    <div className="model-card-item p-3 h-100 d-flex align-items-center gap-3">
-                      <ModelLogo groupName={groupName} isDark={isDark} />
-                      <div className="d-flex flex-column justify-content-center overflow-hidden">
-                        <div style={{
-                          color: textPrimary, fontWeight: 700, fontSize: '0.9rem',
-                          textTransform: 'uppercase', whiteSpace: 'nowrap',
-                          overflow: 'hidden', textOverflow: 'ellipsis'
-                        }} title={model}>
-                          {model}
+                {groupModels.map(model => (
+                  <Col xl={4} lg={6} md={6} sm={12} key={model.id}>
+                    <div
+                      className="model-card-item p-3 h-100 d-flex flex-column justify-content-between"
+                      onClick={() => setInspectingModel(model)}
+                    >
+                      {/* Top Row: Provider Logo + Model ID + Badges */}
+                      <div>
+                        <div className="d-flex align-items-start justify-content-between gap-2 mb-2">
+                          <div className="d-flex align-items-center gap-2 overflow-hidden">
+                            <ModelLogo groupName={groupName} isDark={isDark} />
+                            <div
+                              style={{
+                                color: textPrimary, fontWeight: 800, fontSize: '0.85rem',
+                                fontFamily: 'monospace', whiteSpace: 'nowrap',
+                                overflow: 'hidden', textOverflow: 'ellipsis'
+                              }}
+                              title={model.id}
+                            >
+                              {model.id}
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={(e) => copyModelId(model.id, e)}
+                            title="Copy Model ID"
+                            style={{
+                              background: 'transparent', border: 'none', color: textMuted,
+                              cursor: 'pointer', padding: '2px 4px', borderRadius: '4px',
+                              display: 'flex', alignItems: 'center'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.color = gold}
+                            onMouseLeave={e => e.currentTarget.style.color = textMuted}
+                          >
+                            <Copy size={13} />
+                          </button>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                          <span style={{ color: textMuted, fontSize: '0.7rem', fontWeight: 600 }}>STATUS:</span>
-                          <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>ACTIVE</span>
+
+                        {/* Badges Row */}
+                        <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
+                          {model.in_user_picker ? (
+                            <span style={{
+                              background: 'rgba(16,185,129,0.12)', color: '#10b981',
+                              border: '1px solid rgba(16,185,129,0.3)', borderRadius: '4px',
+                              padding: '1px 6px', fontSize: '0.66rem', fontWeight: 800, textTransform: 'uppercase'
+                            }}>
+                              Chat Picker
+                            </span>
+                          ) : (
+                            <span style={{
+                              background: 'rgba(192,132,252,0.12)', color: '#c084fc',
+                              border: '1px solid rgba(192,132,252,0.3)', borderRadius: '4px',
+                              padding: '1px 6px', fontSize: '0.66rem', fontWeight: 800, textTransform: 'uppercase'
+                            }}>
+                              Backend Only
+                            </span>
+                          )}
+
+                          {model.used_by && model.used_by.length > 0 ? (
+                            <span style={{
+                              background: 'rgba(212,175,55,0.12)', color: gold,
+                              border: '1px solid rgba(212,175,55,0.3)', borderRadius: '4px',
+                              padding: '1px 6px', fontSize: '0.66rem', fontWeight: 800
+                            }}>
+                              {model.used_by.length} {model.used_by.length === 1 ? 'Pin' : 'Pins'}
+                            </span>
+                          ) : (
+                            <span style={{
+                              background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
+                              color: textMuted, border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+                              borderRadius: '4px', padding: '1px 6px', fontSize: '0.66rem', fontWeight: 600
+                            }}>
+                              Unpinned
+                            </span>
+                          )}
                         </div>
+
+                        {/* Pinned features preview */}
+                        {model.used_by && model.used_by.length > 0 ? (
+                          <div style={{
+                            background: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.02)',
+                            border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+                            borderRadius: '6px', padding: '6px 8px', marginTop: '6px'
+                          }}>
+                            <div style={{ fontSize: '0.68rem', color: textMuted, fontWeight: 700, marginBottom: '4px', textTransform: 'uppercase' }}>
+                              Pinned To:
+                            </div>
+                            <div className="d-flex flex-wrap gap-1">
+                              {model.used_by.slice(0, 2).map((ub, idx) => (
+                                <span
+                                  key={idx}
+                                  title={`${ub.feature} (${ub.source})`}
+                                  style={{
+                                    background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+                                    color: textPrimary, borderRadius: '4px', padding: '1px 5px',
+                                    fontSize: '0.68rem', fontWeight: 600, maxWidth: '100%',
+                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  {ub.feature}
+                                </span>
+                              ))}
+                              {model.used_by.length > 2 && (
+                                <span style={{ fontSize: '0.68rem', color: gold, fontWeight: 700, alignSelf: 'center' }}>
+                                  +{model.used_by.length - 2} more
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{
+                            marginTop: '6px', fontSize: '0.72rem', color: textMuted, fontStyle: 'italic'
+                          }}>
+                            Available in picker catalog; no hardcoded backend dependency.
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer Link */}
+                      <div className="d-flex align-items-center justify-content-between mt-3 pt-2" style={{
+                        borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+                        fontSize: '0.72rem', color: textMuted
+                      }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                          ACTIVE
+                        </span>
+                        <span style={{ color: gold, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          Inspect <ChevronRight size={12} />
+                        </span>
                       </div>
                     </div>
                   </Col>
@@ -2345,7 +3173,7 @@ export default function ModelsPage() {
         <GptDetailModal
           gptId={selectedGptId}
           isDark={isDark}
-          models={models ?? []}
+          models={modelIds}
           onClose={() => setSelectedGptId(null)}
           onUpdated={() => {
             queryClient.invalidateQueries({ queryKey: ['publicGpts'] });
@@ -2369,12 +3197,21 @@ export default function ModelsPage() {
       {createOpen && (
         <CreateAgentModal
           isDark={isDark}
-          models={models ?? []}
+          models={modelIds}
           onClose={() => setCreateOpen(false)}
           onCreated={() => {
             queryClient.invalidateQueries({ queryKey: ['publicGpts'] });
             queryClient.invalidateQueries({ queryKey: ['allAdminGpts'] });
           }}
+        />
+      )}
+
+      {/* Model Inspector slide-over */}
+      {inspectingModel && (
+        <ModelInspectorModal
+          model={inspectingModel}
+          isDark={isDark}
+          onClose={() => setInspectingModel(null)}
         />
       )}
     </div>
