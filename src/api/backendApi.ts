@@ -1340,6 +1340,36 @@ export interface ModelsApiResponse {
   models: BackendModelItem[];
 }
 
+export interface ModelStatsItem {
+  id: string;
+  in_user_picker: boolean;
+  calls: number;
+  tokens: number;
+  alltime_calls: number;
+  alltime_tokens: number;
+  used_by: ModelUsage[];
+}
+
+export interface ModelStatsWindow {
+  from: string;
+  to: string;
+  days: number;
+  scope: string;
+}
+
+export interface ModelStatsTotals {
+  calls: number;
+  tokens: number;
+  alltime_calls: number;
+  alltime_tokens: number;
+}
+
+export interface ModelsStatsResponse {
+  window: ModelStatsWindow;
+  models: ModelStatsItem[];
+  totals: ModelStatsTotals;
+}
+
 export const ModelsService = {
   fetchModels: async (): Promise<ModelsApiResponse> => {
     try {
@@ -1347,6 +1377,18 @@ export const ModelsService = {
       return response.data;
     } catch (e) {
       console.error('❌ [ModelsService] fetchModels error:', e);
+      throw e;
+    }
+  },
+
+  fetchModelStats: async (params?: { date?: string; days?: number }): Promise<ModelsStatsResponse> => {
+    try {
+      const response = await backendApi.get<ModelsStatsResponse>('/api/v1/models/stats', {
+        params
+      });
+      return response.data;
+    } catch (e) {
+      console.error('❌ [ModelsService] fetchModelStats error:', e);
       throw e;
     }
   }

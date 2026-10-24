@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ModelsService, CustomGptService, type CustomGpt, type BackendModelItem } from 'api/backendApi';
 import Row from 'react-bootstrap/Row';
@@ -14,6 +15,7 @@ import { useSelector } from 'react-redux';
 import { gsap } from 'gsap';
 import ElitePortal from 'components/EliteUI/ElitePortal';
 import { showToast } from 'components/EliteUI/EliteToastContainer';
+import ModelUsageTab from './ModelUsageTab';
 
 // ─── Provider map (model → provider) derived from the AVAILABLE_MODELS constant ──
 // Keep this co-located so it's easy to update when models change.
@@ -2061,6 +2063,18 @@ export default function ModelsPage() {
   // Model ID list for Custom GPT modal selects
   const modelIds = useMemo(() => modelItems.map(m => m.id), [modelItems]);
 
+  // ── Top-level Tab Switcher (Models & Agents vs. Model Usage) ──
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentMainTab = searchParams.get('tab') === 'usage' ? 'usage' : 'models';
+
+  const handleMainTabChange = (tab: 'models' | 'usage') => {
+    if (tab === 'usage') {
+      setSearchParams({ tab: 'usage' });
+    } else {
+      setSearchParams({});
+    }
+  };
+
   // Filter state for AI Models section
   const [modelSearch, setModelSearch] = useState('');
   const [modelFilter, setModelFilter] = useState<'all' | 'picker' | 'pinned' | 'internal'>('all');
@@ -2409,12 +2423,84 @@ export default function ModelsPage() {
         ::-webkit-scrollbar-thumb:hover { background: rgba(212,175,55,0.6); }
       `}</style>
 
-      {/* ═══════════════════════════════════════════════════
-          SECTION 1 — AI MODELS
-      ═══════════════════════════════════════════════════ */}
+      {/* ── Top-level Navigation Switcher: Models vs Usage ── */}
+      <div className="d-flex align-items-center gap-2 mb-4 p-1" style={{
+        background: isDark ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.03)',
+        border: `1px solid ${isDark ? 'rgba(212,175,55,0.22)' : 'rgba(212,175,55,0.3)'}`,
+        borderRadius: '12px',
+        width: 'fit-content'
+      }}>
+        <button
+          type="button"
+          onClick={() => handleMainTabChange('models')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 20px',
+            borderRadius: '9px',
+            fontSize: '0.86rem',
+            fontWeight: 800,
+            background: currentMainTab === 'models' ? (isDark ? 'rgba(212,175,55,0.18)' : 'rgba(212,175,55,0.22)') : 'transparent',
+            border: currentMainTab === 'models' ? '1px solid rgba(212,175,55,0.45)' : '1px solid transparent',
+            color: currentMainTab === 'models' ? gold : textMuted,
+            cursor: 'pointer',
+            transition: 'all 0.18s'
+          }}
+        >
+          <Layers size={16} color={currentMainTab === 'models' ? gold : 'inherit'} />
+          <span>Models & Agents Catalog</span>
+          <span style={{
+            fontSize: '0.72rem', background: currentMainTab === 'models' ? 'rgba(212,175,55,0.2)' : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'),
+            padding: '1px 7px', borderRadius: '999px', fontWeight: 800
+          }}>
+            {modelItems.length}
+          </span>
+        </button>
 
-      {/* Header */}
-      <Row className="mb-4">
+        <button
+          type="button"
+          onClick={() => handleMainTabChange('usage')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 20px',
+            borderRadius: '9px',
+            fontSize: '0.86rem',
+            fontWeight: 800,
+            background: currentMainTab === 'usage' ? (isDark ? 'rgba(212,175,55,0.18)' : 'rgba(212,175,55,0.22)') : 'transparent',
+            border: currentMainTab === 'usage' ? '1px solid rgba(212,175,55,0.45)' : '1px solid transparent',
+            color: currentMainTab === 'usage' ? gold : textMuted,
+            cursor: 'pointer',
+            transition: 'all 0.18s'
+          }}
+        >
+          <Activity size={16} color={currentMainTab === 'usage' ? gold : 'inherit'} />
+          <span>Model Usage & Stats</span>
+          <span style={{
+            fontSize: '0.7rem', background: 'rgba(56,189,248,0.15)', color: '#38bdf8',
+            border: '1px solid rgba(56,189,248,0.3)', padding: '1px 6px', borderRadius: '4px',
+            fontWeight: 800, textTransform: 'uppercase'
+          }}>
+            Telemetry
+          </span>
+        </button>
+      </div>
+
+      {currentMainTab === 'usage' ? (
+        <ModelUsageTab
+          isDark={isDark}
+          onInspectModel={(model) => setInspectingModel(model)}
+        />
+      ) : (
+        <>
+          {/* ═══════════════════════════════════════════════════
+              SECTION 1 — AI MODELS
+          ═══════════════════════════════════════════════════ */}
+
+          {/* Header */}
+          <Row className="mb-4">
         <Col md={12}>
           <div className="models-header-card p-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
             <div className="d-flex align-items-center gap-3">
@@ -3163,6 +3249,8 @@ export default function ModelsPage() {
           </div>
         )}
       </div>
+        </>
+      )}
 
       {/* ═══════════════════════════════════════════════════
           MODALS
